@@ -10,6 +10,8 @@ import ScenarioSimulator from './components/ScenarioSimulator';
 import DocumentIntel from './components/DocumentIntel';
 import CommandConsole from './components/CommandConsole';
 import ReportCenter from './components/ReportCenter';
+import StudentManagement from './components/StudentManagement';
+import SchoolProfile from './components/SchoolProfile';
 
 import { School, Recommendation } from './types';
 import { Menu, PanelLeftClose, PanelLeft } from 'lucide-react';
@@ -87,6 +89,10 @@ export default function App() {
         return <ScenarioSimulator />;
       case 'documents':
         return <DocumentIntel />;
+      case 'students':
+        return <StudentManagement />;
+      case 'school-profile':
+        return <SchoolProfile selectedNpsn={undefined} onBack={() => setCurrentModule('dashboard')} />;
       case 'reports':
         return <ReportCenter />;
       default:

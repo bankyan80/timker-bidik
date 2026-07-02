@@ -1,0 +1,254 @@
+import React, { useState, useEffect } from 'react';
+import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter } from 'lucide-react';
+import { ALL_SCHOOLS } from '../data/mockData';
+
+interface Student {
+  id: string; school_npsn: string; nama: string; nisn: string | null;
+  nik: string | null; jenis_kelamin: string | null; tempat_lahir: string | null;
+  tanggal_lahir: string | null; jenjang: string; kelas_kelompok: string;
+  rombel: string | null; status_siswa: string; tahun_pelajaran: string;
+}
+
+const THEME = 'dark';
+const npsnToSchool = new Map(ALL_SCHOOLS.map(s => [s.npsn, s.name]));
+const kelasList = ['Kelas 1', 'Kelas 2', 'Kelas 3', 'Kelas 4', 'Kelas 5', 'Kelas 6'];
+
+export default function StudentManagement() {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [filtered, setFiltered] = useState<Student[]>([]);
+  const [search, setSearch] = useState('');
+  const [filterSchool, setFilterSchool] = useState('ALL');
+  const [filterKelas, setFilterKelas] = useState('ALL');
+  const [loading, setLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    school_npsn: '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki',
+    tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: 'Kelas 1',
+    rombel: '', tahun_pelajaran: '2025/2026'
+  });
+
+  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    let f = students;
+    if (search) { const q = search.toLowerCase(); f = f.filter(s => s.nama.toLowerCase().includes(q) || (s.nisn && s.nisn.includes(q))); }
+    if (filterSchool !== 'ALL') f = f.filter(s => s.school_npsn === filterSchool);
+    if (filterKelas !== 'ALL') f = f.filter(s => s.kelas_kelompok === filterKelas);
+    setFiltered(f);
+  }, [search, filterSchool, filterKelas, students]);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/students');
+      if (r.ok) setStudents(await r.json());
+    } catch {}
+    setLoading(false);
+  }
+
+  async function save() {
+    if (editId) {
+      await fetch(`/api/students/${editId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        nama: form.nama, nisn: form.nisn || null, nik: form.nik || null,
+        jenis_kelamin: form.jenis_kelamin, tempat_lahir: form.tempat_lahir || null,
+        tanggal_lahir: form.tanggal_lahir || null, kelas_kelompok: form.kelas_kelompok,
+        rombel: form.rombel || null
+      })});
+    } else {
+      await fetch('/api/students', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        ...form, nisn: form.nisn || null, nik: form.nik || null,
+        jenjang: 'SD', status_siswa: 'aktif'
+      })});
+    }
+    setFormOpen(false); setEditId(null); resetForm(); load();
+  }
+
+  async function remove(id: string) {
+    if (!confirm('Hapus siswa ini?')) return;
+    await fetch(`/api/students/${id}`, { method: 'DELETE' });
+    load();
+  }
+
+  function resetForm() { setForm({ school_npsn: '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki', tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: 'Kelas 1', rombel: '', tahun_pelajaran: '2025/2026' }); }
+
+  function openEdit(s: Student) {
+    setEditId(s.id);
+    setForm({ school_npsn: s.school_npsn, nama: s.nama, nisn: s.nisn || '', nik: s.nik || '', jenis_kelamin: s.jenis_kelamin || 'Laki-laki', tempat_lahir: s.tempat_lahir || '', tanggal_lahir: s.tanggal_lahir || '', kelas_kelompok: s.kelas_kelompok, rombel: s.rombel || '', tahun_pelajaran: s.tahun_pelajaran });
+    setFormOpen(true);
+  }
+
+  const total = students.length;
+  const laki = students.filter(s => s.jenis_kelamin?.toLowerCase().includes('laki')).length;
+  const perempuan = students.filter(s => s.jenis_kelamin?.toLowerCase().includes('perempuan')).length;
+  const schools = new Set(students.map(s => s.school_npsn));
+  const rombels = [...new Set(students.filter(s => s.rombel).map(s => s.rombel))];
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Manajemen Siswa</h1>
+          <p className="text-sm text-slate-400 mt-1">Data siswa aktif SD Negeri se-Kecamatan Lemahabang</p>
+        </div>
+        <button onClick={() => { setEditId(null); resetForm(); setFormOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors">
+          <Plus className="h-4 w-4" /> Tambah Siswa
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-4">
+        {[
+          { label: 'Total Siswa', value: total, icon: Users, color: 'text-cyan-400 bg-cyan-950/40 border-cyan-900' },
+          { label: 'Laki-laki', value: laki, icon: Users, color: 'text-blue-400 bg-blue-950/40 border-blue-900' },
+          { label: 'Perempuan', value: perempuan, icon: Users, color: 'text-pink-400 bg-pink-950/40 border-pink-900' },
+          { label: 'Sekolah', value: schools.size, icon: School, color: 'text-emerald-400 bg-emerald-950/40 border-emerald-900' },
+        ].map((c, i) => (
+          <div key={i} className={`p-4 rounded-xl border ${c.color}`}>
+            <div className="flex items-center gap-3">
+              <c.icon className="h-5 w-5 opacity-70" />
+              <span className="text-xs font-mono opacity-60">{c.label}</span>
+            </div>
+            <p className="text-3xl font-bold mt-2 tracking-tight">{c.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama atau NISN..." className="w-full pl-9 pr-4 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-700"/>
+        </div>
+        <select value={filterSchool} onChange={e => setFilterSchool(e.target.value)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
+          <option value="ALL">Semua Sekolah</option>
+          {ALL_SCHOOLS.map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
+        </select>
+        <select value={filterKelas} onChange={e => setFilterKelas(e.target.value)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
+          <option value="ALL">Semua Kelas</option>
+          {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
+        </select>
+      </div>
+
+      {/* Table */}
+      <div className="border border-slate-800 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-900/60 text-slate-400 text-[10px] font-mono uppercase tracking-wider">
+                <th className="text-left px-4 py-3">Nama</th>
+                <th className="text-left px-4 py-3">NISN</th>
+                <th className="text-left px-4 py-3">JK</th>
+                <th className="text-left px-4 py-3">Kelas</th>
+                <th className="text-left px-4 py-3">Rombel</th>
+                <th className="text-left px-4 py-3">Sekolah</th>
+                <th className="text-left px-4 py-3">Status</th>
+                <th className="text-right px-4 py-3">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800">
+              {loading ? (
+                <tr><td colSpan={8} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={8} className="text-center py-12 text-slate-500">Tidak ada data siswa</td></tr>
+              ) : filtered.map(s => (
+                <tr key={s.id} className="hover:bg-slate-800/30 transition-colors">
+                  <td className="px-4 py-3 text-white font-medium">{s.nama}</td>
+                  <td className="px-4 py-3 text-slate-400 font-mono text-[11px]">{s.nisn || '-'}</td>
+                  <td className="px-4 py-3">
+                    <span className={`text-[11px] px-1.5 py-0.5 rounded font-mono ${s.jenis_kelamin?.toLowerCase().includes('laki') ? 'text-blue-400 bg-blue-950/40' : 'text-pink-400 bg-pink-950/40'}`}>
+                      {s.jenis_kelamin === 'Laki-laki' ? 'L' : 'P'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-300">{s.kelas_kelompok}</td>
+                  <td className="px-4 py-3 text-slate-400 text-[11px]">{s.rombel || '-'}</td>
+                  <td className="px-4 py-3 text-slate-300 text-[11px]">{npsnToSchool.get(s.school_npsn) || s.school_npsn}</td>
+                  <td className="px-4 py-3">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono uppercase ${s.status_siswa === 'aktif' ? 'text-emerald-400 bg-emerald-950/40' : 'text-red-400 bg-red-950/40'}`}>{s.status_siswa}</span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => openEdit(s)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-cyan-400"><Edit3 className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => remove(s.id)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="px-4 py-2 border-t border-slate-800 text-[10px] text-slate-500 font-mono flex justify-between">
+          <span>Total: {filtered.length} siswa {filterSchool !== 'ALL' || filterKelas !== 'ALL' ? '(difilter)' : ''}</span>
+          <span>{students.length} total seluruh sekolah</span>
+        </div>
+      </div>
+
+      {/* Form Modal */}
+      {formOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setFormOpen(false)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-lg space-y-4" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-white">{editId ? 'Edit Siswa' : 'Tambah Siswa Baru'}</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="text-[10px] font-mono text-slate-400 uppercase">Nama Lengkap</label>
+                <input value={form.nama} onChange={e => setForm({...form, nama: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
+              </div>
+              {!editId && (
+                <div className="col-span-2">
+                  <label className="text-[10px] font-mono text-slate-400 uppercase">Sekolah</label>
+                  <select value={form.school_npsn} onChange={e => setForm({...form, school_npsn: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
+                    <option value="">Pilih Sekolah</option>
+                    {ALL_SCHOOLS.map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label className="text-[10px] font-mono text-slate-400 uppercase">NISN</label>
+                <input value={form.nisn} onChange={e => setForm({...form, nisn: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
+              </div>
+              <div>
+                <label className="text-[10px] font-mono text-slate-400 uppercase">NIK</label>
+                <input value={form.nik} onChange={e => setForm({...form, nik: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
+              </div>
+              <div>
+                <label className="text-[10px] font-mono text-slate-400 uppercase">Jenis Kelamin</label>
+                <select value={form.jenis_kelamin} onChange={e => setForm({...form, jenis_kelamin: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
+                  <option>Laki-laki</option><option>Perempuan</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-mono text-slate-400 uppercase">Tempat Lahir</label>
+                <input value={form.tempat_lahir} onChange={e => setForm({...form, tempat_lahir: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
+              </div>
+              <div>
+                <label className="text-[10px] font-mono text-slate-400 uppercase">Tgl Lahir</label>
+                <input type="date" value={form.tanggal_lahir} onChange={e => setForm({...form, tanggal_lahir: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
+              </div>
+              <div>
+                <label className="text-[10px] font-mono text-slate-400 uppercase">Kelas</label>
+                <select value={form.kelas_kelompok} onChange={e => setForm({...form, kelas_kelompok: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
+                  {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-mono text-slate-400 uppercase">Rombel</label>
+                <input value={form.rombel} onChange={e => setForm({...form, rombel: e.target.value})} placeholder="cth: A, B, C" className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
+              </div>
+              <div>
+                <label className="text-[10px] font-mono text-slate-400 uppercase">Tahun Pelajaran</label>
+                <input value={form.tahun_pelajaran} onChange={e => setForm({...form, tahun_pelajaran: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setFormOpen(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Batal</button>
+              <button onClick={save} disabled={!form.nama || (!editId && !form.school_npsn)} className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg transition-colors">
+                {editId ? 'Simpan' : 'Tambah'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

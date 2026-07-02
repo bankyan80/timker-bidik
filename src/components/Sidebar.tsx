@@ -13,7 +13,9 @@ import {
   Sun,
   Moon,
   MonitorCheck,
-  Leaf
+  Leaf,
+  GraduationCap,
+  School
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -44,14 +46,16 @@ export default function Sidebar({ currentModule, setCurrentModule, theme, setThe
     {
       title: 'GUDANG DATA',
       items: [
-        { id: 'warehouse', label: 'Eksplorasi Data', icon: Database }
+        { id: 'warehouse', label: 'Eksplorasi Data', icon: Database },
+        { id: 'students', label: 'Manajemen Siswa', icon: GraduationCap }
       ]
     },
     {
       title: 'ANALISIS DATA',
       items: [
         { id: 'hr', label: 'Sumber Daya Manusia', icon: Users },
-        { id: 'infrastructure', label: 'Audit Infrastruktur', icon: Building2 }
+        { id: 'infrastructure', label: 'Audit Infrastruktur', icon: Building2 },
+        { id: 'school-profile', label: 'Profil Sekolah', icon: School }
       ]
     },
     {

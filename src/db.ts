@@ -631,4 +631,101 @@ export async function upsertSchool(npsn: string, data: Partial<School> & { name:
   });
 }
 
+// ── Student CRUD ──
+
+export async function getStudents(): Promise<StudentRow[]> {
+  const client = getDb();
+  if (!client) return [];
+  const result = await client.execute('SELECT * FROM students ORDER BY jenjang, kelas_kelompok, nama');
+  return result.rows as unknown as StudentRow[];
+}
+
+export async function getStudentsBySchool(npsn: string): Promise<StudentRow[]> {
+  const client = getDb();
+  if (!client) return [];
+  const result = await client.execute({
+    sql: 'SELECT * FROM students WHERE school_npsn = ? ORDER BY kelas_kelompok, nama',
+    args: [npsn]
+  });
+  return result.rows as unknown as StudentRow[];
+}
+
+export async function getStudentsByRombel(npsn: string, rombel: string): Promise<StudentRow[]> {
+  const client = getDb();
+  if (!client) return [];
+  const result = await client.execute({
+    sql: 'SELECT * FROM students WHERE school_npsn = ? AND rombel = ? ORDER BY nama',
+    args: [npsn, rombel]
+  });
+  return result.rows as unknown as StudentRow[];
+}
+
+export async function getRombelList(): Promise<{ npsn: string; rombel: string; count: number }[]> {
+  const client = getDb();
+  if (!client) return [];
+  const result = await client.execute(`
+    SELECT school_npsn, rombel, COUNT(*) as cnt
+    FROM students WHERE LOWER(status_siswa) = 'aktif' AND rombel IS NOT NULL
+    GROUP BY school_npsn, rombel
+    ORDER BY school_npsn, rombel
+  `);
+  return result.rows.map(r => ({
+    npsn: r.school_npsn as string,
+    rombel: r.rombel as string,
+    count: Number(r.cnt),
+  }));
+}
+
+export async function insertStudent(data: {
+  school_npsn: string; nama: string; nisn?: string | null; nik?: string | null;
+  jenis_kelamin?: string | null; tempat_lahir?: string | null;
+  tanggal_lahir?: string | null; jenjang: string; kelas_kelompok: string;
+  rombel?: string | null; status_siswa?: string; tahun_pelajaran: string;
+}): Promise<StudentRow | null> {
+  const client = getDb();
+  if (!client) return null;
+  const id = `STU-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  try {
+    await client.execute({
+      sql: `INSERT INTO students (id, school_npsn, nama, nisn, nik, jenis_kelamin, tempat_lahir, tanggal_lahir, jenjang, kelas_kelompok, rombel, status_siswa, tahun_pelajaran)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 'aktif'), ?)`,
+      args: [id, data.school_npsn, data.nama, data.nisn ?? null, data.nik ?? null,
+             data.jenis_kelamin ?? null, data.tempat_lahir ?? null,
+             data.tanggal_lahir ?? null, data.jenjang, data.kelas_kelompok,
+             data.rombel ?? null, data.status_siswa ?? 'aktif', data.tahun_pelajaran]
+    });
+    const result = await client.execute({ sql: 'SELECT * FROM students WHERE id = ?', args: [id] });
+    return result.rows[0] as unknown as StudentRow;
+  } catch { return null; }
+}
+
+export async function updateStudent(id: string, data: Partial<{
+  nama: string; nisn: string; nik: string; jenis_kelamin: string;
+  tempat_lahir: string; tanggal_lahir: string; kelas_kelompok: string;
+  rombel: string; status_siswa: string;
+}>): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  const sets: string[] = [];
+  const args: any[] = [];
+  for (const [key, val] of Object.entries(data)) {
+    if (val !== undefined) { sets.push(`${key} = ?`); args.push(val); }
+  }
+  if (sets.length === 0) return false;
+  args.push(id);
+  try {
+    await client.execute({ sql: `UPDATE students SET ${sets.join(', ')} WHERE id = ?`, args });
+    return true;
+  } catch { return false; }
+}
+
+export async function deleteStudent(id: string): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  try {
+    await client.execute({ sql: 'DELETE FROM students WHERE id = ?', args: [id] });
+    return true;
+  } catch { return false; }
+}
+
 export { ALL_SCHOOLS as FALLBACK_SCHOOLS };

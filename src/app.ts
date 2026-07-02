@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { GoogleGenAI } from '@google/genai';
 import { SimulationScenario, SimulationResult } from './types';
-import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument } from './db';
+import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent } from './db';
 
 const app = express();
 app.use(express.json());
@@ -544,6 +544,55 @@ app.get('/api/document-search', async (req, res) => {
   }
 
   res.json(docs);
+});
+
+// 7. Student API
+app.get('/api/students', async (req, res) => {
+  const { school, rombel } = req.query;
+  let students;
+  if (rombel && school) students = await getStudentsByRombel(school as string, rombel as string);
+  else if (school) students = await getStudentsBySchool(school as string);
+  else students = await getStudents();
+  res.json(students);
+});
+
+app.get('/api/students/rombels', async (req, res) => {
+  const list = await getRombelList();
+  res.json(list);
+});
+
+app.post('/api/students', async (req, res) => {
+  const stu = await insertStudent(req.body);
+  if (!stu) return res.status(400).json({ error: 'Gagal menambah siswa' });
+  res.status(201).json(stu);
+});
+
+app.put('/api/students/:id', async (req, res) => {
+  const ok = await updateStudent(req.params.id, req.body);
+  if (!ok) return res.status(400).json({ error: 'Gagal mengupdate siswa' });
+  res.json({ success: true });
+});
+
+app.delete('/api/students/:id', async (req, res) => {
+  const ok = await deleteStudent(req.params.id);
+  if (!ok) return res.status(400).json({ error: 'Gagal menghapus siswa' });
+  res.json({ success: true });
+});
+
+// 8. School Profile API
+app.get('/api/schools/:npsn', async (req, res) => {
+  const schools = await getAllSchools();
+  const school = schools.find(s => s.npsn === req.params.npsn);
+  if (!school) return res.status(404).json({ error: 'Sekolah tidak ditemukan' });
+
+  const studentAgg = await getStudentAggregates();
+  const teacherAgg = await getTeacherAggregates();
+  const stats = {
+    ...school,
+    studentStats: studentAgg[req.params.npsn] || null,
+    teacherStats: teacherAgg[req.params.npsn] || null,
+  };
+  res.json(stats);
 });
 
 // 7. Alerts & Recommendations API
