@@ -298,20 +298,7 @@ app.get('/api/document-search', async (req, res) => {
   res.json(await searchDocuments(query));
 });
 
-// Initialize DB and serve static files
-
-const getDistPath = () => {
-  if (typeof __dirname !== 'undefined') return __dirname;
-  return path.join(process.cwd(), 'dist');
-};
-const distPath = getDistPath();
-app.use(express.static(distPath));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'), (err) => {
-    if (err) res.status(404).json({ error: 'Not found' });
-  });
-});
-
+// Initialize DB
 (async () => {
   try {
     await initSchema();
