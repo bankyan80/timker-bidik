@@ -301,7 +301,11 @@ app.get('/api/document-search', async (req, res) => {
 // Initialize DB and serve static files
 import { initSchema, seedData } from './db';
 
-const distPath = path.join(process.cwd(), 'dist');
+const getDistPath = () => {
+  if (typeof __dirname !== 'undefined') return __dirname;
+  return path.join(process.cwd(), 'dist');
+};
+const distPath = getDistPath();
 app.use(express.static(distPath));
 app.get('*', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'), (err) => {
