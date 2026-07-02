@@ -118,6 +118,7 @@ export async function loadEmployees(): Promise<Employee[]> {
             fileSize: formatBytes(matched.file_size),
             fileType: matched.mime_type.includes('pdf') ? 'PDF' : matched.mime_type.includes('png') ? 'PNG' : matched.mime_type.includes('jpg') || matched.mime_type.includes('jpeg') ? 'JPG' : 'PDF',
             issue: hasIssue ? (matched.catatan_revisi || 'Menunggu verifikasi') : undefined,
+            driveUrl: matched.drive_url || undefined,
           }
         }
 
@@ -147,6 +148,7 @@ export async function loadEmployees(): Promise<Employee[]> {
             fileSize: formatBytes(doc.file_size),
             fileType: doc.mime_type.includes('pdf') ? 'PDF' : doc.mime_type.includes('png') ? 'PNG' : 'PDF',
             issue: doc.catatan_revisi || undefined,
+            driveUrl: doc.drive_url || undefined,
           })
         }
       }
@@ -177,6 +179,7 @@ export interface DocumentItem {
   fileSize?: string;
   fileType?: 'PDF' | 'JPG' | 'JPEG' | 'PNG';
   issue?: string; // Reason for warning (corrupt, empty, invalid format, outdated, etc.)
+  driveUrl?: string; // Google Drive URL to the actual uploaded file
 }
 
 export interface Employee {

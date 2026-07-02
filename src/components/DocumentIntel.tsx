@@ -40,6 +40,11 @@ import {
   loadEmployees
 } from '../data/employeeDocsData';
 
+function extractDriveFileId(url: string): string | null {
+  const m = url.match(/\/file\/d\/([^/]+)/) || url.match(/[?&]id=([^&]+)/);
+  return m ? m[1] : null;
+}
+
 export default function DocumentIntel() {
   // Theme Detection State
   const [theme, setTheme] = useState<'light' | 'dark' | 'command' | 'emerald'>('dark');
@@ -1487,9 +1492,15 @@ export default function DocumentIntel() {
                   <button className="p-1.5 rounded bg-[#0c0e12] border border-[#1f2937] text-slate-400 hover:text-white text-[10px] flex items-center gap-1" title="Cetak File">
                     <Printer className="h-3.5 w-3.5" />
                   </button>
-                  <button className="p-1.5 rounded bg-[#0c0e12] border border-[#1f2937] text-slate-400 hover:text-white text-[10px] flex items-center gap-1" title="Download File">
+                  <a
+                    href={previewDoc.doc.driveUrl || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 rounded bg-[#0c0e12] border border-[#1f2937] text-slate-400 hover:text-white text-[10px] flex items-center gap-1"
+                    title="Download File"
+                  >
                     <Download className="h-3.5 w-3.5" />
-                  </button>
+                  </a>
                   <div className="h-5 w-px bg-slate-800 mx-1" />
                   <button
                     onClick={() => setPreviewDoc(null)}
@@ -1502,84 +1513,21 @@ export default function DocumentIntel() {
 
               {/* Preview Body (Split Screen) */}
               <div className="flex-1 flex overflow-hidden">
-                {/* Left Side: Mock Document View (High Fidelity representation) */}
-                <div className="flex-1 bg-[#1a1f2c] overflow-y-auto p-8 flex justify-center scrollbar-thin">
-                  <div className="w-[595px] h-[842px] bg-white text-[#111] p-10 flex flex-col justify-between shadow-2xl relative select-none scale-[0.85] origin-top border border-slate-300">
-                    {/* Watermark */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none overflow-hidden">
-                      <div className="text-7xl font-extrabold font-serif rotate-45 select-none">
-                        TIMKER BIDIK
-                      </div>
+                {/* Left Side: Real Document View from Google Drive */}
+                <div className="flex-1 bg-[#1a1f2c] overflow-hidden flex items-center justify-center">
+                  {previewDoc.doc.driveUrl ? (
+                    <iframe
+                      src={`https://drive.google.com/file/d/${extractDriveFileId(previewDoc.doc.driveUrl)}/preview`}
+                      className="w-full h-full border-0"
+                      title={previewDoc.doc.name}
+                      allow="autoplay"
+                    />
+                  ) : (
+                    <div className="text-slate-500 text-xs font-mono text-center p-8">
+                      <FileText className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                      <p>Tidak ada file untuk di-preview</p>
                     </div>
-
-                    {/* Official Letterhead */}
-                    <div className="text-center space-y-1.5 border-b-2 border-double border-slate-800 pb-4">
-                      <h3 className="text-[13px] font-bold tracking-widest font-serif">KEMENTERIAN PENDIDIKAN, KEBUDAYAAN, RISET, DAN TEKNOLOGI</h3>
-                      <h4 className="text-[12px] font-bold font-serif tracking-wider">DINAS PENDIDIKAN KECAMATAN LEMAHABANG</h4>
-                      <p className="text-[9px] font-mono font-medium">Jl. Raya Sindanglaut No. 45, Kecamatan Lemahabang, Kabupaten Cirebon</p>
-                    </div>
-
-                    {/* Content Document Mock */}
-                    <div className="flex-1 py-8 space-y-4 font-serif text-xs">
-                      <div className="text-center space-y-1">
-                        <h5 className="font-bold underline text-sm uppercase tracking-wide">
-                          {previewDoc.doc.name.split('_')[0]}
-                        </h5>
-                        <p className="text-[10px] font-mono">Nomor: 421.2/024/DISDIK/2025</p>
-                      </div>
-
-                      <div className="space-y-3 leading-relaxed text-[11px] text-justify text-slate-800">
-                        <p>
-                          Yang bertanda tangan di bawah ini, Kepala Dinas Pendidikan Kecamatan Lemahabang, dengan ini memberikan konfirmasi formal perihal pengarsipan berkas kepegawaian sebagai berikut:
-                        </p>
-
-                        <table className="w-full border border-slate-400 text-[10px] font-sans my-4">
-                          <tbody>
-                            <tr className="border-b border-slate-400">
-                              <td className="p-1 px-2.5 font-bold bg-slate-100 w-36">Nama Lengkap</td>
-                              <td className="p-1 px-2.5">{previewDoc.emp.name}</td>
-                            </tr>
-                            <tr className="border-b border-slate-400">
-                              <td className="p-1 px-2.5 font-bold bg-slate-100">NIP / NIK</td>
-                              <td className="p-1 px-2.5 font-mono">{previewDoc.emp.nipNik}</td>
-                            </tr>
-                            <tr className="border-b border-slate-400">
-                              <td className="p-1 px-2.5 font-bold bg-slate-100">Status Jabatan</td>
-                              <td className="p-1 px-2.5">{previewDoc.emp.position}</td>
-                            </tr>
-                            <tr>
-                              <td className="p-1 px-2.5 font-bold bg-slate-100">Sekolah Penempatan</td>
-                              <td className="p-1 px-2.5">{previewDoc.emp.school}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-
-                        <p>
-                          Berkas digital ini telah diverifikasi secara penuh menggunakan sistem validasi TIMKER BIDIK 360 Pendidikan Kecamatan Lemahabang. Seluruh klausa, tanggal terbit, dan nomor keputusan yang tertulis di dalam naskah ini adalah sah dan merupakan salinan asli dari dokumen fisik yang bersangkutan.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Official Signature Bottom */}
-                    <div className="flex justify-between items-end font-serif text-xs text-slate-800">
-                      <div>
-                        <p className="text-[9px] font-mono text-slate-400">ID: {previewDoc.doc.id}</p>
-                      </div>
-                      <div className="space-y-1 text-center pr-4">
-                        <p className="text-[10px]">Cirebon, {previewDoc.doc.uploadDate}</p>
-                        <p className="text-[10px] font-bold">Mengetahui Kepala Kantor,</p>
-                        <div className="h-14 flex items-center justify-center relative">
-                          {/* Mock signature stamp SVG overlay */}
-                          <div className="absolute opacity-65 border-2 border-dashed border-blue-600 rounded px-2 text-[10px] font-bold text-blue-600 font-mono select-none -rotate-12 uppercase scale-85">
-                            DINAS PENDIDIKAN<br />VERIFIED
-                          </div>
-                          <span className="text-[9px] font-mono text-slate-300 italic">Signature stamp</span>
-                        </div>
-                        <p className="text-[10px] font-bold underline">H. Tatang Wijaya, S.IP.</p>
-                        <p className="text-[9px] font-mono">NIP. 197204151996021002</p>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Right Side: OCR Summarization Sidebar */}
