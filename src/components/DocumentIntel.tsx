@@ -37,7 +37,7 @@ import {
   getRequiredDocsForStatus,
   calculateEmployeeStats,
   getGlobalStats,
-  getInitialEmployees
+  loadEmployees
 } from '../data/employeeDocsData';
 
 export default function DocumentIntel() {
@@ -69,11 +69,15 @@ export default function DocumentIntel() {
 
   // Initialize data
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setEmployees(getInitialEmployees());
+    (async () => {
+      try {
+        const data = await loadEmployees();
+        setEmployees(data);
+      } catch {
+        // fallback handled inside loadEmployees
+      }
       setLoading(false);
-    }, 450); // fast skeleton load simulator
-    return () => clearTimeout(timer);
+    })();
   }, []);
 
   // Filter States

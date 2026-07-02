@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
 dotenv.config();
+dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '.env.local') });
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 

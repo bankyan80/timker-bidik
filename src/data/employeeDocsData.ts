@@ -1,5 +1,180 @@
 import { ALL_SCHOOLS } from './mockData';
 
+// ── Types matching the DB rows from API ──
+interface EmployeeRow {
+  id: string;
+  sekolah_id: string;
+  nama: string;
+  nik: string;
+  nip: string | null;
+  nuptk: string | null;
+  email: string | null;
+  no_hp: string | null;
+  tempat_lahir: string | null;
+  tanggal_lahir: string | null;
+  jenis_kelamin: string | null;
+  jabatan: string | null;
+  status_pegawai: string | null;
+  pangkat_golongan: string | null;
+  pendidikan_terakhir: string | null;
+  sertifikasi: string | null;
+  tmt_kerja: string | null;
+  tanggal_bup: string | null;
+  foto_url: string | null;
+  is_active: number;
+}
+
+interface EmployeeDocumentRow {
+  id: string;
+  employee_id: string;
+  school_id: string;
+  kategori: string;
+  jenis_dokumen: string;
+  nama_file: string;
+  mime_type: string;
+  file_size: number;
+  drive_file_id: string;
+  drive_url: string;
+  status_upload: string;
+  status_verifikasi: string;
+  status_kelengkapan: string;
+  catatan_revisi: string | null;
+  uploaded_at: number | null;
+}
+
+// Build NPSN → school name lookup
+const npsnToSchool = new Map<string, string>()
+ALL_SCHOOLS.forEach(s => npsnToSchool.set(s.npsn, s.name))
+
+function mapStatusPegawai(sp: string | null): 'PNS' | 'PPPK' | 'Honorer' {
+  const s = (sp || '').toLowerCase()
+  if (s === 'pns') return 'PNS'
+  if (s.includes('pppk')) return 'PPPK'
+  return 'Honorer'
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+function mapDocToCategory(jenisDokumen: string, kategori: string): DocumentItem['category'] {
+  const k = kategori.toLowerCase()
+  const j = jenisDokumen.toLowerCase()
+  if (k.includes('identitas') || j.includes('ktp') || j.includes('kk') || j.includes('npwp') || j.includes('foto') || j.includes('ijazah') || j.includes('rekening')) return 'Identitas'
+  if (k.includes('pengangkatan') || j.includes('sk') || j.includes('sertifikat') || j.includes('spmt') || j.includes('kontrak') || j.includes('lamaran')) return 'Pengangkatan'
+  if (k.includes('kepangkatan') || j.includes('pangkat') || j.includes('jabatan') || j.includes('golongan')) return 'Kepangkatan'
+  if (k.includes('kinerja') || j.includes('skp') || j.includes('penilaian') || j.includes('absensi') || j.includes('kehadiran')) return 'Kinerja'
+  return 'Keuangan'
+}
+
+// ── Async loader from API ──
+
+export async function loadEmployees(): Promise<Employee[]> {
+  try {
+    const empRes = await fetch('/api/employees')
+    if (!empRes.ok) throw new Error('API not available')
+    const empRows: EmployeeRow[] = await empRes.json()
+
+    const employees: Employee[] = []
+
+    for (const row of empRows) {
+      // Fetch documents for this employee
+      let docRows: EmployeeDocumentRow[] = []
+      try {
+        const docRes = await fetch(`/api/employees/${row.id}/documents`)
+        if (docRes.ok) docRows = await docRes.json()
+      } catch { /* no docs */ }
+
+      const status = mapStatusPegawai(row.status_pegawai)
+      const requiredDocs = getRequiredDocsForStatus(status)
+      const schoolName = npsnToSchool.get(row.sekolah_id) || row.sekolah_id
+
+      // Build a set of real doc names for matching
+      const realDocNames = new Map<string, EmployeeDocumentRow>()
+      for (const doc of docRows) {
+        const key = doc.jenis_dokumen.toLowerCase().replace(/[^a-z0-9]/g, '')
+        realDocNames.set(key, doc)
+      }
+
+      const documents: DocumentItem[] = requiredDocs.map((req, index) => {
+        const reqKey = req.name.toLowerCase().replace(/[^a-z0-9]/g, '')
+        const docId = `DOC-${row.id}-${index + 1}`
+
+        // Try to match real document to required document
+        let matched: EmployeeDocumentRow | undefined
+        for (const [key, doc] of realDocNames) {
+          if (reqKey.includes(key) || key.includes(reqKey) ||
+              reqKey.split('').every(c => key.includes(c)) && reqKey.length > 3) {
+            matched = doc
+            break
+          }
+        }
+
+        if (matched) {
+          const isVerified = matched.status_verifikasi === 'sudah_diverifikasi'
+          const hasIssue = matched.status_kelengkapan !== 'lengkap' || matched.catatan_revisi
+          return {
+            id: docId,
+            name: matched.nama_file || matched.jenis_dokumen,
+            category: mapDocToCategory(matched.jenis_dokumen, matched.kategori),
+            status: isVerified && !hasIssue ? 'available' : 'warning',
+            uploadDate: matched.uploaded_at ? new Date(matched.uploaded_at).toISOString().slice(0, 10) : undefined,
+            fileSize: formatBytes(matched.file_size),
+            fileType: matched.mime_type.includes('pdf') ? 'PDF' : matched.mime_type.includes('png') ? 'PNG' : matched.mime_type.includes('jpg') || matched.mime_type.includes('jpeg') ? 'JPG' : 'PDF',
+            issue: hasIssue ? (matched.catatan_revisi || 'Menunggu verifikasi') : undefined,
+          }
+        }
+
+        return { id: docId, name: req.name, category: req.category, status: 'missing' }
+      })
+
+      // Add any real docs that don't match required docs as extras
+      const matchedReqKeys = new Set<string>()
+      for (const req of requiredDocs) {
+        const reqKey = req.name.toLowerCase().replace(/[^a-z0-9]/g, '')
+        for (const [key] of realDocNames) {
+          if (reqKey.includes(key) || key.includes(reqKey) ||
+              reqKey.split('').every(c => key.includes(c)) && reqKey.length > 3) {
+            matchedReqKeys.add(key)
+          }
+        }
+      }
+      let extraIndex = 0
+      for (const [key, doc] of realDocNames) {
+        if (!matchedReqKeys.has(key)) {
+          extraIndex++
+          documents.push({
+            id: `DOC-${row.id}-ext-${extraIndex}`,
+            name: doc.jenis_dokumen,
+            category: mapDocToCategory(doc.jenis_dokumen, doc.kategori),
+            status: doc.status_verifikasi === 'sudah_diverifikasi' ? 'available' : 'warning',
+            uploadDate: doc.uploaded_at ? new Date(doc.uploaded_at).toISOString().slice(0, 10) : undefined,
+            fileSize: formatBytes(doc.file_size),
+            fileType: doc.mime_type.includes('pdf') ? 'PDF' : doc.mime_type.includes('png') ? 'PNG' : 'PDF',
+            issue: doc.catatan_revisi || undefined,
+          })
+        }
+      }
+
+      employees.push({
+        id: row.id,
+        name: row.nama,
+        nipNik: row.nip || row.nik,
+        status,
+        school: schoolName,
+        position: row.jabatan || '-',
+        documents,
+      })
+    }
+
+    if (employees.length > 0) return employees
+  } catch { /* fallback to mock */ }
+
+  return getInitialEmployees()
+}
+
 export interface DocumentItem {
   id: string;
   name: string;

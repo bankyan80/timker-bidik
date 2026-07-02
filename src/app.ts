@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { GoogleGenAI } from '@google/genai';
 import { SimulationScenario, SimulationResult } from './types';
-import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments } from './db';
+import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments } from './db';
 
 const app = express();
 app.use(express.json());
@@ -287,7 +287,23 @@ Silakan ajukan pertanyaan atau pilih menu modul di samping untuk mulai memantau!
   });
 });
 
-// 4. Document OCR / Semantic Search Engine
+// 4. Employee & Document API
+app.get('/api/employees', async (req, res) => {
+  const employees = await getEmployees();
+  res.json(employees);
+});
+
+app.get('/api/employees/school/:npsn', async (req, res) => {
+  const employees = await getEmployeesBySchool(req.params.npsn);
+  res.json(employees);
+});
+
+app.get('/api/employees/:id/documents', async (req, res) => {
+  const docs = await getEmployeeDocuments(req.params.id);
+  res.json(docs);
+});
+
+// 5. Document OCR / Semantic Search Engine
 app.get('/api/document-search', async (req, res) => {
   const { q = '' } = req.query;
   const query = q.toString().toLowerCase();
