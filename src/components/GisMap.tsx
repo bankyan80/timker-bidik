@@ -20,9 +20,10 @@ import {
 interface GisMapProps {
   onSelectSchool: (school?: School) => void;
   selectedSchool?: School;
+  theme?: string;
 }
 
-export default function GisMap({ onSelectSchool, selectedSchool }: GisMapProps) {
+export default function GisMap({ onSelectSchool, selectedSchool, theme = 'dark' }: GisMapProps) {
   // Map control states
   const [mapMode, setMapMode] = useState<'standard' | 'satellite' | 'terrain' | 'heatmap' | '3d'>('standard');
   const [zoom, setZoom] = useState<number>(13);
@@ -76,7 +77,7 @@ export default function GisMap({ onSelectSchool, selectedSchool }: GisMapProps) 
     ];
   }, []);
 
-  // Filter school markers
+  // Filter school markers with computed positions
   const filteredSchools = useMemo(() => {
     return ALL_SCHOOLS.map(s => {
       const pos = getXY(s.coordinates.lat, s.coordinates.lng);
@@ -89,7 +90,7 @@ export default function GisMap({ onSelectSchool, selectedSchool }: GisMapProps) 
   }, []);
 
   // Details for selected or hovered marker
-  const [hoveredSchool, setHoveredSchool] = useState<School | null>(null);
+  const [hoveredSchool, setHoveredSchool] = useState<(School & { x: number; y: number }) | null>(null);
 
   return (
     <div className="flex flex-col lg:flex-row gap-5 h-full p-4 overflow-hidden" id="gis-module">
@@ -230,7 +231,7 @@ export default function GisMap({ onSelectSchool, selectedSchool }: GisMapProps) 
                       <text
                         x={lx}
                         y={ly}
-                        fill={mapMode === 'command' ? '#f59e0b' : '#94a3b8'}
+                        fill={theme === 'command' ? '#f59e0b' : '#94a3b8'}
                         fontSize="2.2"
                         fontWeight="bold"
                         fontFamily="monospace"
@@ -533,9 +534,9 @@ export default function GisMap({ onSelectSchool, selectedSchool }: GisMapProps) 
         <div className="p-4 border-t border-[#1f2937] bg-[#0c0e12]/80 flex flex-wrap gap-x-6 gap-y-2 items-center justify-between text-xs z-10">
           <div className="flex flex-wrap items-center gap-4 text-slate-400 font-mono">
             <span className="text-[10px] uppercase tracking-wider text-slate-500">KONDISI:</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" /> &gt;=75 Prima</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" /> {'>='}75 Prima</span>
             <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-500" /> 40-74 Cukup</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" /> &lt;40 Kritis</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" /> {'<'}40 Kritis</span>
           </div>
 
           <div className="text-[10px] text-slate-500 font-mono">

@@ -299,7 +299,6 @@ app.get('/api/document-search', async (req, res) => {
 });
 
 // Initialize DB and serve static files
-import { initSchema, seedData } from './db';
 
 const getDistPath = () => {
   if (typeof __dirname !== 'undefined') return __dirname;
