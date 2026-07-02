@@ -404,6 +404,31 @@ app.get('/api/employees', async (req, res) => {
   res.json(employees);
 });
 
+// 🚀 Batch endpoint: returns employees + their documents in 2 queries (not N+1)
+app.get('/api/employees-with-docs', async (req, res) => {
+  const { getDb } = await import('./db');
+  const db = getDb();
+  if (!db) return res.json([]);
+
+  const emps = await db.execute('SELECT * FROM employees WHERE is_active = 1 ORDER BY nama ASC');
+  const edocs = await db.execute('SELECT * FROM employee_documents ORDER BY employee_id, kategori ASC');
+
+  // Group docs by employee_id
+  const docsByEmp = new Map<string, any[]>();
+  for (const d of edocs.rows) {
+    const eid = (d as any).employee_id as string;
+    if (!docsByEmp.has(eid)) docsByEmp.set(eid, []);
+    docsByEmp.get(eid)!.push(d);
+  }
+
+  const result = emps.rows.map((row: any) => ({
+    ...row,
+    documents: docsByEmp.get(row.id as string) || [],
+  }));
+
+  res.json(result);
+});
+
 app.get('/api/employees/school/:npsn', async (req, res) => {
   const employees = await getEmployeesBySchool(req.params.npsn);
   res.json(employees);

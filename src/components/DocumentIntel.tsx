@@ -757,6 +757,7 @@ export default function DocumentIntel() {
                 <option value="Kepangkatan">Kepangkatan (Pangkat, Jabatan)</option>
                 <option value="Kinerja">Kinerja (SKP, Penilaian Kinerja)</option>
                 <option value="Keuangan">Keuangan (KGB, Slip Gaji, dll)</option>
+                <option value="PAK">PAK (Penetapan Angka Kredit)</option>
               </select>
             </div>
 
@@ -1068,7 +1069,7 @@ export default function DocumentIntel() {
                   <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest block">Daftar Dokumen Wajib</span>
                   
                   {/* Grouped lists */}
-                  {['Identitas', 'Pengangkatan', 'Kepangkatan', 'Kinerja', 'Keuangan'].map(cat => {
+                  {['Identitas', 'Pengangkatan', 'Kepangkatan', 'Kinerja', 'Keuangan', 'PAK'].map(cat => {
                     // Filter documents in category
                     const docsInCat = selectedEmployee.documents.filter(d => d.category === cat);
                     if (docsInCat.length === 0) return null;

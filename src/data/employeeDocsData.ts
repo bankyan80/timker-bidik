@@ -46,9 +46,10 @@ interface EmployeeDocumentRow {
 const npsnToSchool = new Map<string, string>()
 ALL_SCHOOLS.forEach(s => npsnToSchool.set(s.npsn, s.name))
 
-function mapStatusPegawai(sp: string | null): 'PNS' | 'PPPK' | 'Honorer' {
+function mapStatusPegawai(sp: string | null): 'PNS' | 'PPPK' | 'PPPK_PARUH_WAKTU' | 'Honorer' {
   const s = (sp || '').toLowerCase()
   if (s === 'pns') return 'PNS'
+  if (s === 'pppk_paruh_waktu') return 'PPPK_PARUH_WAKTU'
   if (s.includes('pppk')) return 'PPPK'
   return 'Honorer'
 }
@@ -62,6 +63,7 @@ function formatBytes(bytes: number): string {
 function mapDocToCategory(jenisDokumen: string, kategori: string): DocumentItem['category'] {
   const k = kategori.toLowerCase()
   const j = jenisDokumen.toLowerCase()
+  if (j.includes('pak') || k.includes('pak') || j.includes('angka kredit') || j.includes('penetapan') && j.includes('kredit')) return 'PAK'
   if (k.includes('identitas') || j.includes('ktp') || j.includes('kk') || j.includes('npwp') || j.includes('foto') || j.includes('ijazah') || j.includes('rekening')) return 'Identitas'
   if (k.includes('pengangkatan') || j.includes('sk') || j.includes('sertifikat') || j.includes('spmt') || j.includes('kontrak') || j.includes('lamaran')) return 'Pengangkatan'
   if (k.includes('kepangkatan') || j.includes('pangkat') || j.includes('jabatan') || j.includes('golongan')) return 'Kepangkatan'
@@ -73,25 +75,18 @@ function mapDocToCategory(jenisDokumen: string, kategori: string): DocumentItem[
 
 export async function loadEmployees(): Promise<Employee[]> {
   try {
-    const empRes = await fetch('/api/employees')
-    if (!empRes.ok) throw new Error('API not available')
-    const empRows: EmployeeRow[] = await empRes.json()
+    const res = await fetch('/api/employees-with-docs')
+    if (!res.ok) throw new Error('API not available')
+    const rows: any[] = await res.json()
 
     const employees: Employee[] = []
 
-    for (const row of empRows) {
-      // Fetch documents for this employee
-      let docRows: EmployeeDocumentRow[] = []
-      try {
-        const docRes = await fetch(`/api/employees/${row.id}/documents`)
-        if (docRes.ok) docRows = await docRes.json()
-      } catch { /* no docs */ }
-
+    for (const row of rows) {
+      const docRows: EmployeeDocumentRow[] = row.documents || []
       const status = mapStatusPegawai(row.status_pegawai)
       const requiredDocs = getRequiredDocsForStatus(status)
       const schoolName = npsnToSchool.get(row.sekolah_id) || row.sekolah_id
 
-      // Build a set of real doc names for matching
       const realDocNames = new Map<string, EmployeeDocumentRow>()
       for (const doc of docRows) {
         const key = doc.jenis_dokumen.toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -102,7 +97,6 @@ export async function loadEmployees(): Promise<Employee[]> {
         const reqKey = req.name.toLowerCase().replace(/[^a-z0-9]/g, '')
         const docId = `DOC-${row.id}-${index + 1}`
 
-        // Try to match real document to required document
         let matched: EmployeeDocumentRow | undefined
         for (const [key, doc] of realDocNames) {
           if (reqKey.includes(key) || key.includes(reqKey) ||
@@ -130,7 +124,6 @@ export async function loadEmployees(): Promise<Employee[]> {
         return { id: docId, name: req.name, category: req.category, status: 'missing' }
       })
 
-      // Add any real docs that don't match required docs as extras
       const matchedReqKeys = new Set<string>()
       for (const req of requiredDocs) {
         const reqKey = req.name.toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -178,7 +171,7 @@ export async function loadEmployees(): Promise<Employee[]> {
 export interface DocumentItem {
   id: string;
   name: string;
-  category: 'Identitas' | 'Pengangkatan' | 'Kepangkatan' | 'Kinerja' | 'Keuangan';
+  category: 'Identitas' | 'Pengangkatan' | 'Kepangkatan' | 'Kinerja' | 'Keuangan' | 'PAK';
   status: 'available' | 'missing' | 'warning';
   uploadDate?: string;
   fileSize?: string;
@@ -190,7 +183,7 @@ export interface Employee {
   id: string;
   name: string;
   nipNik: string;
-  status: 'PNS' | 'PPPK' | 'Honorer';
+  status: 'PNS' | 'PPPK' | 'PPPK_PARUH_WAKTU' | 'Honorer';
   school: string;
   position: string;
   documents: DocumentItem[];
@@ -204,12 +197,12 @@ export interface GlobalStats {
   incompleteCount: number;
   totalMissingDocs: number;
   globalCompleteness: number;
-  statusDistribution: { PNS: number; PPPK: number; Honorer: number };
+  statusDistribution: { PNS: number; PPPK: number; PPPK_PARUH_WAKTU: number; Honorer: number };
   schoolCompleteness: { name: string; rate: number; total: number }[];
 }
 
 // Automatically generate required documents for each status
-export function getRequiredDocsForStatus(status: 'PNS' | 'PPPK' | 'Honorer'): { name: string; category: DocumentItem['category'] }[] {
+export function getRequiredDocsForStatus(status: 'PNS' | 'PPPK' | 'PPPK_PARUH_WAKTU' | 'Honorer'): { name: string; category: DocumentItem['category'] }[] {
   const commonDocs: { name: string; category: DocumentItem['category'] }[] = [
     { name: 'KTP', category: 'Identitas' },
     { name: 'Kartu Keluarga (KK)', category: 'Identitas' },
@@ -251,6 +244,17 @@ export function getRequiredDocsForStatus(status: 'PNS' | 'PPPK' | 'Honorer'): { 
       // Keuangan
       { name: 'Slip Gaji', category: 'Keuangan' },
       { name: 'Dokumen Tunjangan', category: 'Keuangan' }
+    ];
+  } else if (status === 'PPPK_PARUH_WAKTU') {
+    return [
+      ...commonDocs,
+      { name: 'SK PPPK Paruh Waktu', category: 'Pengangkatan' },
+      { name: 'Surat Perjanjian Kerja / Kontrak', category: 'Pengangkatan' },
+      { name: 'Surat Tugas Kepala Sekolah', category: 'Pengangkatan' },
+      { name: 'Sasaran Kinerja Pegawai (SKP)', category: 'Kinerja' },
+      { name: 'Penilaian Kinerja', category: 'Kinerja' },
+      { name: 'Slip Honor', category: 'Keuangan' },
+      { name: 'Dokumen Tunjangan', category: 'Keuangan' },
     ];
   } else {
     // Honorer
@@ -304,7 +308,7 @@ export function getGlobalStats(employees: Employee[]): GlobalStats {
   let totalMissingDocs = 0;
   let totalPctSum = 0;
 
-  const statusDistribution = { PNS: 0, PPPK: 0, Honorer: 0 };
+  const statusDistribution = { PNS: 0, PPPK: 0, PPPK_PARUH_WAKTU: 0, Honorer: 0 };
   const schoolAccumulator: Record<string, { totalPct: number; count: number; schoolName: string }> = {};
 
   // Initialize schools
