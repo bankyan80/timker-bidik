@@ -5,6 +5,10 @@
       "src": "dist/app.cjs",
       "use": "@vercel/node",
       "config": { "includeFiles": ["dist/**"] }
+    },
+    {
+      "src": "dist/assets/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
