@@ -378,7 +378,7 @@ export async function getStudentAggregates(): Promise<Record<string, SchoolStude
       COUNT(*) as total,
       SUM(CASE WHEN LOWER(jenis_kelamin) LIKE '%laki%' THEN 1 ELSE 0 END) as male,
       SUM(CASE WHEN LOWER(jenis_kelamin) LIKE '%perempuan%' THEN 1 ELSE 0 END) as female
-    FROM students WHERE status_siswa = 'aktif'
+    FROM students WHERE LOWER(status_siswa) = 'aktif'
     GROUP BY school_npsn
   `);
   const agg: Record<string, SchoolStudentAggregate> = {};
@@ -394,7 +394,7 @@ export async function getStudentAggregates(): Promise<Record<string, SchoolStude
   // per-grade breakdown
   const byGrade = await client.execute(`
     SELECT school_npsn, jenjang, COUNT(*) as cnt
-    FROM students WHERE status_siswa = 'aktif'
+    FROM students WHERE LOWER(status_siswa) = 'aktif'
     GROUP BY school_npsn, jenjang
   `);
   for (const row of byGrade.rows) {
