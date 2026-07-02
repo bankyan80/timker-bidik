@@ -1,7 +1,6 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
   "builds": [
     {
       "src": "dist/app.cjs",
@@ -11,6 +10,7 @@
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/dist/app.cjs" },
+    { "src": "/assets/(.*)", "dest": "/dist/app.cjs" },
     { "src": "/(.*)", "dest": "/dist/app.cjs" }
   ]
 }

@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { GoogleGenAI } from '@google/genai';
 import { SimulationScenario, SimulationResult } from './types';
 import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments } from './db';
@@ -301,7 +302,14 @@ app.get('/api/document-search', async (req, res) => {
 // Initialize DB and serve static files (for production/Vercel deployment)
 
 const getDistPath = () => {
-  if (typeof __dirname !== 'undefined') return __dirname;
+  const candidates: string[] = [];
+  if (typeof __dirname !== 'undefined') candidates.push(__dirname);
+  candidates.push(path.join(process.cwd(), 'dist'), process.cwd());
+  for (const p of candidates) {
+    try {
+      if (fs.statSync(path.join(p, 'index.html')).isFile()) return p;
+    } catch { /* try next */ }
+  }
   return path.join(process.cwd(), 'dist');
 };
 const distPath = getDistPath();
