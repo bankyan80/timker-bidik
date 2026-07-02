@@ -112,7 +112,7 @@ export default function Sidebar({ currentModule, setCurrentModule, theme, setThe
                 'bg-[#11141a] border-slate-800'
               }`}>
                 <img 
-                  src="https://upload.wikimedia.org/wikipedia/commons/9/9c/Logo_Tut_Wuri_Handayani.png" 
+                  src="/tutwuri.png" 
                   alt="Tut Wuri Handayani" 
                   className={`h-9 w-9 object-contain transition-all duration-300 ${
                     theme === 'command' ? 'grayscale brightness-150 sepia hue-rotate-15 saturate-200' : ''

@@ -136,7 +136,7 @@ export default function ExecutiveDashboard({ onSelectSchool, setCurrentModule }:
             <div className="absolute -inset-1 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-500 opacity-20 blur-xs" />
             <div className="relative p-1.5 rounded-lg border border-cyan-500/30 bg-[#111827]">
               <img 
-                src="https://upload.wikimedia.org/wikipedia/commons/9/9c/Logo_Tut_Wuri_Handayani.png" 
+                src="/tutwuri.png" 
                 alt="Tut Wuri Handayani" 
                 className="h-12 w-12 object-contain"
                 referrerPolicy="no-referrer"
