@@ -2,6 +2,39 @@ import { createClient } from '@libsql/client';
 import { School, VillageStats, Recommendation, AlertMessage, DocumentMeta } from './types';
 import { VILLAGES, ALL_SCHOOLS, GET_VILLAGE_STATS } from './data/mockData';
 
+export type StudentRow = {
+  id: string;
+  school_npsn: string;
+  nama: string;
+  nisn: string | null;
+  nik: string | null;
+  jenis_kelamin: string | null;
+  tempat_lahir: string | null;
+  tanggal_lahir: string | null;
+  jenjang: string;
+  kelas_kelompok: string;
+  rombel: string | null;
+  status_siswa: string;
+  tahun_pelajaran: string;
+};
+
+export type SchoolStudentAggregate = {
+  npsn: string;
+  total: number;
+  male: number;
+  female: number;
+  byGrade: Record<string, number>;
+};
+
+export type SchoolTeacherAggregate = {
+  npsn: string;
+  total: number;
+  certified: number;
+  pns: number;
+  pppk: number;
+  honorer: number;
+};
+
 export type EmployeeRow = {
   id: string;
   sekolah_id: string;
@@ -173,6 +206,24 @@ export async function initSchema() {
       updated_at INTEGER NOT NULL
     )
   `);
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS students (
+      id TEXT PRIMARY KEY,
+      school_npsn TEXT NOT NULL,
+      nama TEXT NOT NULL,
+      nisn TEXT,
+      nik TEXT,
+      jenis_kelamin TEXT,
+      tempat_lahir TEXT,
+      tanggal_lahir TEXT,
+      jenjang TEXT NOT NULL,
+      kelas_kelompok TEXT NOT NULL,
+      rombel TEXT,
+      status_siswa TEXT NOT NULL DEFAULT 'aktif',
+      tahun_pelajaran TEXT NOT NULL
+    )
+  `);
 }
 
 export async function seedData() {
@@ -317,6 +368,86 @@ export async function getEmployeeCount(): Promise<number> {
   if (!client) return 0;
   const result = await client.execute('SELECT COUNT(*) as count FROM employees WHERE is_active = 1');
   return Number(result.rows[0].count);
+}
+
+export async function getStudentAggregates(): Promise<Record<string, SchoolStudentAggregate>> {
+  const client = getDb();
+  if (!client) return {};
+  const result = await client.execute(`
+    SELECT school_npsn,
+      COUNT(*) as total,
+      SUM(CASE WHEN LOWER(jenis_kelamin) LIKE '%laki%' THEN 1 ELSE 0 END) as male,
+      SUM(CASE WHEN LOWER(jenis_kelamin) LIKE '%perempuan%' THEN 1 ELSE 0 END) as female
+    FROM students WHERE status_siswa = 'aktif'
+    GROUP BY school_npsn
+  `);
+  const agg: Record<string, SchoolStudentAggregate> = {};
+  for (const row of result.rows) {
+    agg[row.school_npsn as string] = {
+      npsn: row.school_npsn as string,
+      total: Number(row.total),
+      male: Number(row.male),
+      female: Number(row.female),
+      byGrade: {},
+    };
+  }
+  // per-grade breakdown
+  const byGrade = await client.execute(`
+    SELECT school_npsn, jenjang, COUNT(*) as cnt
+    FROM students WHERE status_siswa = 'aktif'
+    GROUP BY school_npsn, jenjang
+  `);
+  for (const row of byGrade.rows) {
+    const npsn = row.school_npsn as string;
+    if (agg[npsn]) {
+      agg[npsn].byGrade[row.jenjang as string] = Number(row.cnt);
+    }
+  }
+  return agg;
+}
+
+export async function getTeacherAggregates(): Promise<Record<string, SchoolTeacherAggregate>> {
+  const client = getDb();
+  if (!client) return {};
+  const result = await client.execute(`
+    SELECT sekolah_id,
+      COUNT(*) as total,
+      SUM(CASE WHEN sertifikasi IS NOT NULL AND sertifikasi != '' THEN 1 ELSE 0 END) as certified,
+      SUM(CASE WHEN status_pegawai = 'PNS' THEN 1 ELSE 0 END) as pns,
+      SUM(CASE WHEN status_pegawai = 'PPPK' THEN 1 ELSE 0 END) as pppk,
+      SUM(CASE WHEN status_pegawai = 'Honorer' THEN 1 ELSE 0 END) as honorer
+    FROM employees WHERE is_active = 1
+    GROUP BY sekolah_id
+  `);
+  const agg: Record<string, SchoolTeacherAggregate> = {};
+  for (const row of result.rows) {
+    agg[row.sekolah_id as string] = {
+      npsn: row.sekolah_id as string,
+      total: Number(row.total),
+      certified: Number(row.certified),
+      pns: Number(row.pns),
+      pppk: Number(row.pppk),
+      honorer: Number(row.honorer),
+    };
+  }
+  return agg;
+}
+
+export async function upsertSchool(npsn: string, data: Partial<School> & { name: string; level: string; status: string; village: string }) {
+  const client = getDb();
+  if (!client) return;
+  await client.execute({
+    sql: `INSERT INTO schools (npsn, name, level, status, village, accreditation, lat, lng, students, teachers, facilities, health_score, risk_indicators)
+          VALUES (?, ?, ?, ?, ?, COALESCE(?, 'Belum'), 0, 0, '{}', '{}', '{}', 0, '[]')
+          ON CONFLICT(npsn) DO UPDATE SET
+            name = COALESCE(?, name),
+            level = COALESCE(?, level),
+            status = COALESCE(?, status),
+            village = COALESCE(?, village)`,
+    args: [npsn, data.name, data.level, data.status, data.village,
+           data.accreditation ?? null,
+           data.name, data.level, data.status, data.village]
+  });
 }
 
 export { ALL_SCHOOLS as FALLBACK_SCHOOLS };

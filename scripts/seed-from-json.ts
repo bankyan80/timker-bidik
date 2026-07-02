@@ -71,6 +71,23 @@ interface ArsipJson {
   updated_at: string
 }
 
+interface SiswaJson {
+  id: string
+  sekolahId: string
+  rombelId: string
+  tahunPelajaran: string
+  nisn: string
+  nik: string
+  namaLengkap: string
+  tempatLahir: string
+  tanggalLahir: string
+  jenisKelamin: string
+  jenjang: string
+  kelasKelompok: string
+  rombel: string
+  statusSiswa: string
+}
+
 function loadJson<T>(file: string): T[] {
   const raw = readFileSync(join(JSON_DIR, file), 'utf-8')
   return JSON.parse(raw) as T[]
@@ -199,6 +216,23 @@ async function ensureSchema() {
       updated_at INTEGER NOT NULL
     )
   `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS students (
+      id TEXT PRIMARY KEY,
+      school_npsn TEXT NOT NULL,
+      nama TEXT NOT NULL,
+      nisn TEXT,
+      nik TEXT,
+      jenis_kelamin TEXT,
+      tempat_lahir TEXT,
+      tanggal_lahir TEXT,
+      jenjang TEXT NOT NULL,
+      kelas_kelompok TEXT NOT NULL,
+      rombel TEXT,
+      status_siswa TEXT NOT NULL DEFAULT 'aktif',
+      tahun_pelajaran TEXT NOT NULL
+    )
+  `)
   console.log('  ✓ Schema ready')
 }
 
@@ -324,13 +358,143 @@ async function main() {
   }
   console.log(`  ✓ ${docStmts.length} documents inserted (${docSkipped} skipped)`)
 
+  // ── Build CMQ school ID → NPSN map ──
+  const cmqToNpsn = new Map<string, string>()
+  for (const sk of sekolahList) {
+    cmqToNpsn.set(sk.id, sk.npsn)
+  }
+
+  // ── Seed students ──
+  console.log('\nSeeding students...')
+  const siswaList = loadJson<SiswaJson>('Siswa.json')
+  const negeriCmqIds = new Set(negeriSekolah.map(sk => sk.id))
+  const siswaStmts: { sql: string; args: any[] }[] = []
+  let siswaSkipped = 0
+
+  for (const sis of siswaList) {
+    if (!negeriCmqIds.has(sis.sekolahId)) { siswaSkipped++; continue }
+    const npsn = cmqToNpsn.get(sis.sekolahId) || ''
+    if (!npsn) { siswaSkipped++; continue }
+    const jk = sis.jenisKelamin?.toLowerCase().includes('laki') ? 'laki-laki' : 'perempuan'
+    siswaStmts.push({
+      sql: `INSERT OR IGNORE INTO students (id, school_npsn, nama, nisn, nik, jenis_kelamin, tempat_lahir, tanggal_lahir, jenjang, kelas_kelompok, rombel, status_siswa, tahun_pelajaran)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        sis.id, npsn, sis.namaLengkap, sis.nisn || null, sis.nik || null,
+        jk, sis.tempatLahir || null, sis.tanggalLahir || null,
+        sis.jenjang, sis.kelasKelompok, sis.rombel || null,
+        sis.statusSiswa || 'Aktif', sis.tahunPelajaran,
+      ]
+    })
+  }
+  for (let i = 0; i < siswaStmts.length; i += BATCH_SIZE) {
+    await db.batch(siswaStmts.slice(i, i + BATCH_SIZE))
+  }
+  console.log(`  ✓ ${siswaStmts.length} students inserted (${siswaSkipped} skipped out of ${siswaList.length})`)
+
+  // ── Update schools with real student & teacher stats ──
+  console.log('\nUpdating schools with real stats...')
+
+  const studentAgg = await db.execute(`
+    SELECT school_npsn,
+      COUNT(*) as total,
+      SUM(CASE WHEN LOWER(jenis_kelamin) = 'laki-laki' THEN 1 ELSE 0 END) as male,
+      SUM(CASE WHEN LOWER(jenis_kelamin) = 'perempuan' THEN 1 ELSE 0 END) as female
+    FROM students WHERE LOWER(status_siswa) = 'aktif'
+    GROUP BY school_npsn
+  `)
+  const studentByNpsn = new Map<string, { total: number; male: number; female: number }>()
+  for (const row of studentAgg.rows) {
+    studentByNpsn.set(row.school_npsn as string, {
+      total: Number(row.total),
+      male: Number(row.male),
+      female: Number(row.female),
+    })
+  }
+
+  const gradeAgg = await db.execute(`
+    SELECT school_npsn, jenjang, COUNT(*) as cnt
+    FROM students WHERE LOWER(status_siswa) = 'aktif'
+    GROUP BY school_npsn, jenjang
+  `)
+  const gradeByNpsn = new Map<string, Record<string, number>>()
+  for (const row of gradeAgg.rows) {
+    const npsn = row.school_npsn as string
+    if (!gradeByNpsn.has(npsn)) gradeByNpsn.set(npsn, {})
+    gradeByNpsn.get(npsn)![row.jenjang as string] = Number(row.cnt)
+  }
+
+  const teacherAgg = await db.execute(`
+    SELECT sekolah_id,
+      COUNT(*) as total,
+      SUM(CASE WHEN sertifikasi IS NOT NULL AND sertifikasi != '' THEN 1 ELSE 0 END) as certified,
+      SUM(CASE WHEN LOWER(status_pegawai) = 'pns' THEN 1 ELSE 0 END) as pns,
+      SUM(CASE WHEN LOWER(status_pegawai) LIKE '%pppk%' THEN 1 ELSE 0 END) as pppk,
+      SUM(CASE WHEN LOWER(status_pegawai) NOT IN ('pns','pppk','pppk_paruh_waktu') THEN 1 ELSE 0 END) as honorer
+    FROM employees WHERE is_active = 1
+    GROUP BY sekolah_id
+  `)
+  const teacherByNpsn = new Map<string, { total: number; certified: number; pns: number; pppk: number; honorer: number }>()
+  for (const row of teacherAgg.rows) {
+    teacherByNpsn.set(row.sekolah_id as string, {
+      total: Number(row.total),
+      certified: Number(row.certified),
+      pns: Number(row.pns),
+      pppk: Number(row.pppk),
+      honorer: Number(row.honorer),
+    })
+  }
+
+  const negeriNpsnArray = negeriSekolah.map(sk => sk.npsn)
+  let schoolsUpdated = 0
+  for (const npsn of negeriNpsnArray) {
+    const s = studentByNpsn.get(npsn) || { total: 0, male: 0, female: 0 }
+    const t = teacherByNpsn.get(npsn) || { total: 0, certified: 0, pns: 0, pppk: 0, honorer: 0 }
+    const byGrade = gradeByNpsn.get(npsn) || {}
+    const growthTrend = [0, 0, 0, 0, 0]
+
+    const teacherRatio = s.total > 0 && t.total > 0 ? Math.min(s.total / t.total, 40) : 0
+    const certRatio = t.total > 0 ? t.certified / t.total : 0
+    const pnsRatio = t.total > 0 ? (t.pns + t.pppk) / t.total : 0
+    const healthScore = Math.round(
+      (teacherRatio >= 16 && teacherRatio <= 20 ? 30 : teacherRatio > 0 && teacherRatio <= 30 ? 20 : 10)
+      + (certRatio >= 0.4 ? 20 : certRatio >= 0.2 ? 15 : 10)
+      + (pnsRatio >= 0.3 ? 20 : pnsRatio >= 0.15 ? 15 : 10)
+      + (s.total > 150 && s.total < 500 ? 15 : 10)
+      + (s.total > 0 && t.total > 0 ? 15 : 5)
+    )
+
+    const studentsData = JSON.stringify({ total: s.total, male: s.male, female: s.female, byGrade, growthTrend })
+    const teachersData = JSON.stringify({
+      total: t.total, certified: t.certified, pns: t.pns, pppk: t.pppk, honorer: t.honorer,
+      subjects: {}, pendingCertification: t.total - t.certified, retiringSoon: 0,
+    })
+    const riskIndicators = JSON.stringify({
+      teacherShortage: t.total === 0 || teacherRatio > 25 || t.total < 6,
+      studentOverload: s.total > 500,
+      infrastructureCritical: false,
+      retirementExposure: false,
+    })
+
+    await db.execute({
+      sql: `UPDATE schools SET
+        students = ?, teachers = ?, health_score = ?, risk_indicators = ?
+        WHERE npsn = ?`,
+      args: [studentsData, teachersData, healthScore, riskIndicators, npsn]
+    })
+    schoolsUpdated++
+  }
+  console.log(`  ✓ ${schoolsUpdated} schools updated with real stats`)
+
   // ── Summary ──
   const totalEmps = await db.execute('SELECT COUNT(*) as count FROM employees WHERE is_active = 1')
   const totalDocs = await db.execute('SELECT COUNT(*) as count FROM employee_documents')
+  const totalSis = await db.execute('SELECT COUNT(*) as count FROM students')
   console.log('\n══════════════════════════════════════════')
   console.log('  Seed completed!')
   console.log(`  Employees in DB: ${totalEmps.rows[0].count}`)
   console.log(`  Documents in DB: ${totalDocs.rows[0].count}`)
+  console.log(`  Students in DB:  ${totalSis.rows[0].count}`)
   console.log('══════════════════════════════════════════')
 }
 
