@@ -1,16 +1,14 @@
 {
   "version": 2,
-  "buildCommand": "vite build",
-  "outputDirectory": "dist",
+  "buildCommand": "npm run build",
   "builds": [
     {
-      "src": "api/index.ts",
+      "src": "dist/app.cjs",
       "use": "@vercel/node",
-      "config": { "includeFiles": ["dist/**"] }
+      "config": { "includeFiles": ["dist/assets/**", "dist/index.html", "dist/tutwuri.png"] }
     }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "api/index.ts" },
-    { "src": "/(.*)", "dest": "api/index.ts" }
+    { "src": "/(.*)", "dest": "dist/app.cjs" }
   ]
 }
