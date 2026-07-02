@@ -337,36 +337,30 @@ app.get('/api/document-search', async (req, res) => {
 });
 
 // Serve static assets in production, otherwise mount Vite in development
-async function initApp() {
-  try {
-    await initSchema();
-    await seedData();
-    console.log('Turso database initialized successfully.');
-  } catch (err) {
-    console.warn('Turso database unavailable, falling back to in-memory mock data:', (err as Error).message);
-  }
-  if (process.env.NODE_ENV === 'production') {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-    console.log('Serving compiled static distribution from /dist.');
-  }
+// Initialize DB and serve static files in production
+try {
+  await initSchema();
+  await seedData();
+  console.log('Turso database initialized successfully.');
+} catch (err) {
+  console.warn('Turso database unavailable, falling back to in-memory mock data:', (err as Error).message);
 }
 
-// Auto-start only when run directly (not when imported by Vercel)
+const distPath = path.join(process.cwd(), 'dist');
+app.use(express.static(distPath));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
+});
+
+// Start dev server only when run via `npm run dev` (not on Vercel)
 const isDirectRun = process.argv[1]?.includes('server');
-if (isDirectRun) {
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-    console.log('Vite middleware mounted successfully for full-stack integration.');
-  }
-  await initApp();
+if (isDirectRun && process.env.NODE_ENV !== 'production') {
+  const vite = await createViteServer({
+    server: { middlewareMode: true },
+    appType: 'spa',
+  });
+  app.use(vite.middlewares);
+  console.log('Vite middleware mounted successfully for full-stack integration.');
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`TIMKER BIDIK 360 Platform listening on http://localhost:${PORT}`);
   });
