@@ -1,7 +1,6 @@
 import express from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
-import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import { SimulationScenario, SimulationResult } from './src/types.ts';
 import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getVillageStats } from './src/db.ts';
@@ -355,6 +354,7 @@ app.get('*', (req, res) => {
 // Start dev server only when run via `npm run dev` (not on Vercel)
 const isDirectRun = process.argv[1]?.includes('server');
 if (isDirectRun && process.env.NODE_ENV !== 'production') {
+  const { createServer: createViteServer } = await import('vite');
   const vite = await createViteServer({
     server: { middlewareMode: true },
     appType: 'spa',
