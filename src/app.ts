@@ -301,14 +301,6 @@ app.get('/api/document-search', async (req, res) => {
 // Initialize DB and serve static files
 import { initSchema, seedData } from './db';
 
-try {
-  await initSchema();
-  await seedData();
-  console.log('Turso database initialized successfully.');
-} catch (err) {
-  console.warn('Turso database unavailable, falling back to in-memory mock data:', (err as Error).message);
-}
-
 const distPath = path.join(process.cwd(), 'dist');
 app.use(express.static(distPath));
 app.get('*', (req, res) => {
@@ -316,5 +308,15 @@ app.get('*', (req, res) => {
     if (err) res.status(404).json({ error: 'Not found' });
   });
 });
+
+(async () => {
+  try {
+    await initSchema();
+    await seedData();
+    console.log('Turso database initialized successfully.');
+  } catch (err) {
+    console.warn('Turso database unavailable, falling back to in-memory mock data:', (err as Error).message);
+  }
+})();
 
 export default app;
