@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import GisMap from './components/GisMap';
 import ExecutiveDashboard from './components/ExecutiveDashboard';
@@ -15,7 +15,21 @@ import { School, Recommendation } from './types';
 import { Menu, PanelLeftClose, PanelLeft } from 'lucide-react';
 
 export default function App() {
-  const [currentModule, setCurrentModule] = useState<string>('dashboard');
+  // Restore module from URL hash on mount
+  const [currentModule, setCurrentModuleState] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.hash.replace('#', '') || 'dashboard';
+    }
+    return 'dashboard';
+  });
+
+  // Sync hash whenever module changes
+  const setCurrentModule = (mod: string) => {
+    setCurrentModuleState(mod);
+    if (typeof window !== 'undefined') {
+      window.location.hash = mod;
+    }
+  };
   const [theme, setTheme] = useState<'light' | 'dark' | 'command' | 'emerald'>('dark');
   const [selectedSchool, setSelectedSchool] = useState<School | undefined>(undefined);
   const [recs, setRecs] = useState<Recommendation[]>([]);
