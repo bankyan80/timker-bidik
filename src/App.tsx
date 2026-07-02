@@ -12,14 +12,13 @@ import CommandConsole from './components/CommandConsole';
 import ReportCenter from './components/ReportCenter';
 
 import { School, Recommendation } from './types';
-import { MOCK_RECOMMENDATIONS } from './data/mockData';
 import { Menu, PanelLeftClose, PanelLeft } from 'lucide-react';
 
 export default function App() {
   const [currentModule, setCurrentModule] = useState<string>('dashboard');
   const [theme, setTheme] = useState<'light' | 'dark' | 'command' | 'emerald'>('dark');
   const [selectedSchool, setSelectedSchool] = useState<School | undefined>(undefined);
-  const [recs, setRecs] = useState<Recommendation[]>(MOCK_RECOMMENDATIONS);
+  const [recs, setRecs] = useState<Recommendation[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
 
   // Synced select school helper:

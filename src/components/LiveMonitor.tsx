@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { School, AlertMessage, Recommendation } from '../types';
-import { ALL_SCHOOLS, MOCK_ALERTS } from '../data/mockData';
+import { ALL_SCHOOLS } from '../data/mockData';
 import {
   Activity,
   AlertTriangle,
@@ -20,7 +20,7 @@ interface LiveMonitorProps {
 
 export default function LiveMonitor({ onSelectSchool, recs, setRecs }: LiveMonitorProps) {
   const [filterSeverity, setFilterSeverity] = useState<'ALL' | 'CRITICAL' | 'WARNING'>('ALL');
-  const [tickerAlerts, setTickerAlerts] = useState<AlertMessage[]>(MOCK_ALERTS);
+  const [tickerAlerts, setTickerAlerts] = useState<AlertMessage[]>([]);
 
   // Sorting critical schools queue based on the requested severity formula:
   // teacher shortage + student overload + infrastructure damage + retirement risk

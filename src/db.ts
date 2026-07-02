@@ -1,6 +1,6 @@
 import { createClient } from '@libsql/client';
 import { School, VillageStats, Recommendation, AlertMessage, DocumentMeta, SimulationScenario, SimulationResult } from './types';
-import { VILLAGES, ALL_SCHOOLS, GET_VILLAGE_STATS, MOCK_ALERTS, MOCK_DOCUMENTS, MOCK_RECOMMENDATIONS } from './data/mockData';
+import { VILLAGES, ALL_SCHOOLS, GET_VILLAGE_STATS } from './data/mockData';
 
 let db: ReturnType<typeof createClient> | null = null;
 
@@ -93,37 +93,7 @@ export async function seedData() {
     });
   }
 
-  for (const doc of MOCK_DOCUMENTS) {
-    await client.execute({
-      sql: `INSERT INTO documents (id, title, category, school_name, school_npsn, last_updated, status, ocr_content_sample, anomalies)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        doc.id, doc.title, doc.category, doc.schoolName ?? null,
-        doc.schoolNpsn ?? null, doc.lastUpdated, doc.status,
-        doc.ocrContentSample, JSON.stringify(doc.anomaliesDetected)
-      ]
-    });
-  }
 
-  for (const rec of MOCK_RECOMMENDATIONS) {
-    await client.execute({
-      sql: `INSERT INTO recommendations (id, title, description, urgency, impact_score, estimated_cost_miliar, timeline_months, target_school_npsn, category, applied)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        rec.id, rec.title, rec.description, rec.urgency, rec.impactScore,
-        rec.estimatedCostMiliar, rec.timelineMonths, rec.targetSchoolNpsn ?? null,
-        rec.category, rec.applied ? 1 : 0
-      ]
-    });
-  }
-
-  for (const alert of MOCK_ALERTS) {
-    await client.execute({
-      sql: `INSERT INTO alerts (id, timestamp, school_name, severity, message, category)
-            VALUES (?, ?, ?, ?, ?, ?)`,
-      args: [alert.id, alert.timestamp, alert.schoolName, alert.severity, alert.message, alert.category]
-    });
-  }
 }
 
 export async function getAllSchools(): Promise<School[]> {
@@ -152,7 +122,7 @@ export async function getVillageStats(): Promise<VillageStats[]> {
 
 export async function getAlerts(): Promise<AlertMessage[]> {
   const client = getDb();
-  if (!client) return MOCK_ALERTS;
+  if (!client) return [];
   const result = await client.execute('SELECT * FROM alerts ORDER BY timestamp DESC');
   return result.rows.map(row => ({
     id: row.id as string,
@@ -166,7 +136,7 @@ export async function getAlerts(): Promise<AlertMessage[]> {
 
 export async function getRecommendations(): Promise<Recommendation[]> {
   const client = getDb();
-  if (!client) return MOCK_RECOMMENDATIONS;
+  if (!client) return [];
   const result = await client.execute('SELECT * FROM recommendations ORDER BY impact_score DESC');
   return result.rows.map(row => ({
     id: row.id as string,
@@ -184,7 +154,7 @@ export async function getRecommendations(): Promise<Recommendation[]> {
 
 export async function getDocuments(): Promise<DocumentMeta[]> {
   const client = getDb();
-  if (!client) return MOCK_DOCUMENTS;
+  if (!client) return [];
   const result = await client.execute('SELECT * FROM documents');
   return result.rows.map(row => ({
     id: row.id as string,
