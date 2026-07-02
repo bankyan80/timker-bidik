@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Users, Wifi, Building2, Award, ChevronLeft, AlertTriangle, GraduationCap } from 'lucide-react';
+import { MapPin, Users, Wifi, Building2, Award, ChevronLeft, AlertTriangle, GraduationCap, Search, School as SchoolIcon } from 'lucide-react';
 import { ALL_SCHOOLS } from '../data/mockData';
 
 interface SchoolDetail {
@@ -15,12 +15,51 @@ interface SchoolDetail {
 
 const THEME = 'dark';
 const npsnToSchool = new Map(ALL_SCHOOLS.map(s => [s.npsn, s.name]));
-const npsnList = ALL_SCHOOLS.map(s => s.npsn);
+
+function SchoolCard({ school, onClick }: { school: any; onClick: () => void }) {
+  const s = school;
+  const studentCount = s.students?.total || s.studentStats?.total || 0;
+  const teacherCount = s.teachers?.total || s.teacherStats?.total || 0;
+  const ratio = teacherCount > 0 ? (studentCount / teacherCount).toFixed(1) : '-';
+  const certified = s.teachers?.certified || s.teacherStats?.certified || 0;
+  return (
+    <div onClick={onClick} className="border border-slate-800 rounded-xl p-4 hover:border-slate-700 hover:bg-slate-900/60 cursor-pointer transition-all">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold text-white truncate">{s.name}</h3>
+          <p className="text-[10px] font-mono text-slate-500 mt-0.5">NPSN: {s.npsn} • {s.village}</p>
+        </div>
+        <span className={`text-[10px] font-bold font-mono px-1.5 py-0.5 rounded shrink-0 ml-2 ${
+          s.accreditation === 'A' ? 'text-emerald-400 bg-emerald-950/40 border border-emerald-800' :
+          s.accreditation === 'B' ? 'text-amber-400 bg-amber-950/40 border border-amber-800' :
+          'text-slate-400 bg-slate-800 border border-slate-700'
+        }`}>{s.accreditation}</span>
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-center mb-3">
+        <div><p className="text-lg font-bold text-white">{studentCount}</p><p className="text-[9px] text-slate-500 font-mono">Siswa</p></div>
+        <div><p className="text-lg font-bold text-white">{teacherCount}</p><p className="text-[9px] text-slate-500 font-mono">Guru</p></div>
+        <div><p className="text-lg font-bold text-white">1:{ratio}</p><p className="text-[9px] text-slate-500 font-mono">S:G</p></div>
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-slate-500 font-mono">{certified} sertifikasi</span>
+        <div className="flex items-center gap-2">
+          <div className="w-12 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+            <div className={`h-full rounded-full ${s.healthScore >= 60 ? 'bg-emerald-500' : s.healthScore >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+              style={{width: `${s.healthScore}%`}} />
+          </div>
+          <span className={`text-xs font-bold ${s.healthScore >= 60 ? 'text-emerald-400' : s.healthScore >= 40 ? 'text-amber-400' : 'text-red-400'}`}>{s.healthScore}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function SchoolProfile({ selectedNpsn, onBack }: { selectedNpsn?: string; onBack?: () => void }) {
-  const [npsn, setNpsn] = useState(selectedNpsn || npsnList[0]);
+  const [npsn, setNpsn] = useState(selectedNpsn || null);
   const [data, setData] = useState<SchoolDetail | null>(null);
   const [tab, setTab] = useState<'siswa' | 'guru' | 'fasilitas'>('siswa');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'health' | 'students'>('name');
 
   useEffect(() => {
     if (!selectedNpsn) return;
@@ -28,6 +67,7 @@ export default function SchoolProfile({ selectedNpsn, onBack }: { selectedNpsn?:
   }, [selectedNpsn]);
 
   useEffect(() => {
+    if (!npsn) return;
     (async () => {
       try {
         const r = await fetch(`/api/schools/${npsn}`);
@@ -36,20 +76,79 @@ export default function SchoolProfile({ selectedNpsn, onBack }: { selectedNpsn?:
     })();
   }, [npsn]);
 
-  const school = ALL_SCHOOLS.find(s => s.npsn === npsn);
-  if (!school && !data) {
+  // List view (no school selected)
+  if (!npsn) {
+    let filtered = [...ALL_SCHOOLS];
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(s => s.name.toLowerCase().includes(q) || s.npsn.includes(q) || s.village.toLowerCase().includes(q));
+    }
+    if (sortBy === 'health') filtered.sort((a, b) => b.healthScore - a.healthScore);
+    else if (sortBy === 'students') filtered.sort((a, b) => b.students.total - a.students.total);
+    else filtered.sort((a, b) => a.name.localeCompare(b.name));
+
+    const avgHealth = Math.round(filtered.reduce((s, sc) => s + sc.healthScore, 0) / filtered.length);
+    const totalStudents = filtered.reduce((s, sc) => s + sc.students.total, 0);
+    const totalTeachers = filtered.reduce((s, sc) => s + sc.teachers.total, 0);
+    const critical = filtered.filter(s => s.healthScore < 40).length;
+
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          {onBack && <button onClick={onBack} className="p-2 hover:bg-slate-800 rounded-lg text-slate-400"><ChevronLeft className="h-5 w-5" /></button>}
-          <h1 className="text-2xl font-bold text-white">Profil Sekolah</h1>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Profil Sekolah</h1>
+            <p className="text-sm text-slate-400 mt-1">{ALL_SCHOOLS.length} sekolah di Kecamatan Lemahabang</p>
+          </div>
         </div>
-        <select value={npsn} onChange={e => setNpsn(e.target.value)} className="px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white">
-          {ALL_SCHOOLS.map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
-        </select>
-        <p className="text-slate-500">Pilih sekolah untuk melihat profil.</p>
+
+        {/* Summary */}
+        <div className="grid grid-cols-4 gap-4">
+          <div className="p-4 rounded-xl border border-slate-700 bg-slate-900/40">
+            <p className="text-[10px] font-mono text-slate-400 mb-1">Total Sekolah</p>
+            <p className="text-3xl font-bold text-white">{ALL_SCHOOLS.length}</p>
+          </div>
+          <div className="p-4 rounded-xl border border-blue-900 bg-blue-950/20">
+            <p className="text-[10px] font-mono text-blue-400 mb-1">Total Siswa</p>
+            <p className="text-3xl font-bold text-white">{totalStudents.toLocaleString()}</p>
+          </div>
+          <div className="p-4 rounded-xl border border-emerald-900 bg-emerald-950/20">
+            <p className="text-[10px] font-mono text-emerald-400 mb-1">Total Guru</p>
+            <p className="text-3xl font-bold text-white">{totalTeachers}</p>
+          </div>
+          <div className="p-4 rounded-xl border border-amber-900 bg-amber-950/20">
+            <p className="text-[10px] font-mono text-amber-400 mb-1">Rata-rata Health</p>
+            <p className="text-3xl font-bold text-white">{avgHealth}<span className="text-sm text-slate-500">/100</span></p>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cari sekolah, NPSN, desa..." className="w-full pl-9 pr-4 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-700"/>
+          </div>
+          <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
+            <option value="name">Nama A-Z</option>
+            <option value="health">Health Score</option>
+            <option value="students">Jumlah Siswa</option>
+          </select>
+        </div>
+
+        {/* School Grid */}
+        <div className="grid grid-cols-3 gap-4">
+          {filtered.map(s => (
+            <SchoolCard key={s.npsn} school={s} onClick={() => setNpsn(s.npsn)} />
+          ))}
+        </div>
+        {filtered.length === 0 && <p className="text-center text-slate-500 py-8">Tidak ada sekolah ditemukan</p>}
       </div>
     );
+  }
+
+  // Detail view
+  const school = ALL_SCHOOLS.find(s => s.npsn === npsn);
+  if (!school && !data) {
+    return <p className="text-slate-500">Memuat...</p>;
   }
 
   const d = data || school;
@@ -59,15 +158,13 @@ export default function SchoolProfile({ selectedNpsn, onBack }: { selectedNpsn?:
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        {onBack && <button onClick={onBack} className="p-2 hover:bg-slate-800 rounded-lg text-slate-400"><ChevronLeft className="h-5 w-5" /></button>}
+        <button onClick={() => { setNpsn(null); setData(null); }} className="p-2 hover:bg-slate-800 rounded-lg text-slate-400"><ChevronLeft className="h-5 w-5" /></button>
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-white">{d.name}</h1>
             <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${d.accreditation === 'A' ? 'text-emerald-400 bg-emerald-950/40 border border-emerald-800' : d.accreditation === 'B' ? 'text-amber-400 bg-amber-950/40 border border-amber-800' : 'text-slate-400 bg-slate-800 border border-slate-700'}`}>{d.accreditation}</span>
           </div>
-          <p className="text-sm text-slate-400 mt-1">
-            NPSN: {d.npsn} • {d.village} • {d.status} • {d.level}
-          </p>
+          <p className="text-sm text-slate-400 mt-1">NPSN: {d.npsn} • {d.village} • {d.status} • {d.level}</p>
         </div>
       </div>
 
@@ -137,9 +234,7 @@ export default function SchoolProfile({ selectedNpsn, onBack }: { selectedNpsn?:
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-sm text-slate-500">Data per kelas tidak tersedia</p>
-            )}
+            ) : <p className="text-sm text-slate-500">Data per kelas tidak tersedia</p>}
           </div>
           <div className="border border-slate-800 rounded-xl p-5">
             <h3 className="text-sm font-semibold text-white mb-4">Tren Pertumbuhan</h3>
@@ -188,14 +283,6 @@ export default function SchoolProfile({ selectedNpsn, onBack }: { selectedNpsn?:
               <div className="flex justify-between"><span className="text-slate-400">Total Guru</span><span className="text-white font-semibold">{s.teachers?.total || 0}</span></div>
               <div className="flex justify-between"><span className="text-slate-400">Pensiun &lt; 3 tahun</span><span className="text-red-400 font-semibold">{s.teachers?.retiringSoon || 0}</span></div>
               <div className="flex justify-between"><span className="text-slate-400">Rasio Siswa:Guru</span><span className="text-white font-semibold">{((s.students?.total || 0) / ((s.teachers?.total || 1))).toFixed(1)}:1</span></div>
-              {s.teachers?.subjects && (
-                <div className="mt-4">
-                  <p className="text-xs text-slate-400 font-mono mb-2">Guru per Mata Pelajaran</p>
-                  {Object.entries(s.teachers.subjects as Record<string, number>).map(([mapel, count]) => (
-                    <div key={mapel} className="flex justify-between text-xs py-0.5"><span className="text-slate-400">{mapel}</span><span className="text-slate-300">{count}</span></div>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         </div>
