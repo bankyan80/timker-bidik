@@ -3,13 +3,13 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
-import { ALL_SCHOOLS, GET_VILLAGE_STATS, MOCK_ALERTS, MOCK_DOCUMENTS, MOCK_RECOMMENDATIONS } from './src/data/mockData.ts';
 import { SimulationScenario, SimulationResult } from './src/types.ts';
+import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getVillageStats } from './src/db.ts';
 
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
 app.use(express.json());
 
@@ -44,14 +44,15 @@ app.get('/api/health', (req, res) => {
 });
 
 // 1. Predictive Engine Endpoint
-app.post('/api/predict', (req, res) => {
+app.post('/api/predict', async (req, res) => {
   const { years = 1 } = req.body;
   const numYears = parseInt(years);
+  const schools = await getAllSchools();
 
   // Compute projections based on current warehouse state
-  const totalStudents = ALL_SCHOOLS.reduce((sum, s) => sum + s.students.total, 0);
-  const totalTeachers = ALL_SCHOOLS.reduce((sum, s) => sum + s.teachers.total, 0);
-  const currentShortage = ALL_SCHOOLS.filter(s => s.riskIndicators.teacherShortage).reduce((sum, s) => sum + (Math.round(s.students.total / 20) - s.teachers.total), 0);
+  const totalStudents = schools.reduce((sum, s) => sum + s.students.total, 0);
+  const totalTeachers = schools.reduce((sum, s) => sum + s.teachers.total, 0);
+  const currentShortage = schools.filter(s => s.riskIndicators.teacherShortage).reduce((sum, s) => sum + (Math.round(s.students.total / 20) - s.teachers.total), 0);
 
   // Growth formulas
   const projectedStudentGrowthRate = 0.024; // 2.4% compound annual student growth in subdistrict
@@ -59,7 +60,7 @@ app.post('/api/predict', (req, res) => {
   
   // Teachers retiring over the period
   // SDN and secondary teacher retirements
-  const retiringTeachersCount = Math.round(ALL_SCHOOLS.reduce((sum, s) => sum + s.teachers.retiringSoon, 0) * (numYears / 3));
+  const retiringTeachersCount = Math.round(schools.reduce((sum, s) => sum + s.teachers.retiringSoon, 0) * (numYears / 3));
   
   // Classrooms needed
   const averageClassSize = 32;
@@ -89,7 +90,7 @@ app.post('/api/predict', (req, res) => {
     infrastructure: {
       classroomsNeeded: projectedClassroomsNeeded,
       classroomsToBuild: classroomsToBuild,
-      criticalRehabRecommended: ALL_SCHOOLS.filter(s => s.facilities.classroomCondition.heavyDamage > 0).length
+      criticalRehabRecommended: schools.filter(s => s.facilities.classroomCondition.heavyDamage > 0).length
     },
     summaryText: `Within ${numYears} year(s), Kecamatan Lemahabang is projected to experience a student count increase to ${projectedStudents.toLocaleString()} (+${(projectedStudentGrowthRate * 100 * numYears).toFixed(1)}%). With ${retiringTeachersCount} teachers retiring, the teacher shortage will swell to an estimated ${projectedShortage} personnel across all levels.`
   });
@@ -98,14 +99,15 @@ app.post('/api/predict', (req, res) => {
 // 2. Policy Simulation Engine
 app.post('/api/simulate', async (req, res) => {
   const scenario: SimulationScenario = req.body;
-  const totalStudents = ALL_SCHOOLS.reduce((sum, s) => sum + s.students.total, 0);
-  const totalTeachers = ALL_SCHOOLS.reduce((sum, s) => sum + s.teachers.total, 0);
+  const schools = await getAllSchools();
+  const totalStudents = schools.reduce((sum, s) => sum + s.students.total, 0);
+  const totalTeachers = schools.reduce((sum, s) => sum + s.teachers.total, 0);
 
   // Calculate "before" state
-  const schoolsCount = ALL_SCHOOLS.length;
-  const beforeShortage = ALL_SCHOOLS.filter(s => s.riskIndicators.teacherShortage).length;
-  const beforeSurplus = ALL_SCHOOLS.filter(s => !s.riskIndicators.teacherShortage && s.teachers.total > (s.students.total / 15)).length;
-  const beforeClassroomDeficit = ALL_SCHOOLS.reduce((sum, s) => sum + s.facilities.classroomCondition.heavyDamage, 0);
+  const schoolsCount = schools.length;
+  const beforeShortage = schools.filter(s => s.riskIndicators.teacherShortage).length;
+  const beforeSurplus = schools.filter(s => !s.riskIndicators.teacherShortage && s.teachers.total > (s.students.total / 15)).length;
+  const beforeClassroomDeficit = schools.reduce((sum, s) => sum + s.facilities.classroomCondition.heavyDamage, 0);
   const beforeBudget = 24.5; // Miliar Rupiah regional educational operational budget
 
   // Calculate "after" state based on simulated variables
@@ -205,12 +207,13 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ error: 'Message is required' });
   }
 
-  const totalSchools = ALL_SCHOOLS.length;
-  const criticalSchools = ALL_SCHOOLS.filter(s => s.healthScore < 40);
-  const warningSchools = ALL_SCHOOLS.filter(s => s.healthScore >= 40 && s.healthScore < 60);
-  const totalStudents = ALL_SCHOOLS.reduce((sum, s) => sum + s.students.total, 0);
-  const totalTeachers = ALL_SCHOOLS.reduce((sum, s) => sum + s.teachers.total, 0);
-  const averageHealth = Math.round(ALL_SCHOOLS.reduce((sum, s) => sum + s.healthScore, 0) / totalSchools);
+  const schools = await getAllSchools();
+  const totalSchools = schools.length;
+  const criticalSchools = schools.filter(s => s.healthScore < 40);
+  const warningSchools = schools.filter(s => s.healthScore >= 40 && s.healthScore < 60);
+  const totalStudents = schools.reduce((sum, s) => sum + s.students.total, 0);
+  const totalTeachers = schools.reduce((sum, s) => sum + s.teachers.total, 0);
+  const averageHealth = Math.round(schools.reduce((sum, s) => sum + s.healthScore, 0) / totalSchools);
 
   // Generate dynamic contextual prompt
   const systemInstruction = `You are the TIMKER BIDIK 360 AI Assistant (Intelligent Education Command Console) for Kecamatan Lemahabang.
@@ -322,26 +325,27 @@ Silakan ajukan pertanyaan atau pilih menu modul di samping untuk mulai memantau!
 });
 
 // 4. Document OCR / Semantic Search Engine
-app.get('/api/document-search', (req, res) => {
+app.get('/api/document-search', async (req, res) => {
   const { q = '' } = req.query;
   const query = q.toString().toLowerCase();
 
   if (!query) {
-    return res.json(MOCK_DOCUMENTS);
+    return res.json(await getDocuments());
   }
 
-  const filtered = MOCK_DOCUMENTS.filter(doc => {
-    return doc.title.toLowerCase().includes(query) ||
-           doc.category.toLowerCase().includes(query) ||
-           (doc.schoolName && doc.schoolName.toLowerCase().includes(query)) ||
-           doc.ocrContentSample.toLowerCase().includes(query);
-  });
-
-  res.json(filtered);
+  res.json(await searchDocuments(query));
 });
 
 // Serve static assets in production, otherwise mount Vite in development
 async function startServer() {
+  try {
+    await initSchema();
+    await seedData();
+    console.log('Turso database initialized successfully.');
+  } catch (err) {
+    console.warn('Turso database unavailable, falling back to in-memory mock data:', (err as Error).message);
+  }
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
