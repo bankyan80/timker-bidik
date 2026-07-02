@@ -24,6 +24,7 @@
     { "src": "/favicon.png", "dest": "/dist/favicon.png" },
     { "src": "/tutwuri.png", "dest": "/dist/tutwuri.png" },
     { "src": "/api/(.*)", "dest": "/dist/app.cjs" },
+    { "src": "/", "dest": "/dist/app.cjs" },
     { "src": "/(.*)", "dest": "/dist/app.cjs" }
   ]
 }
