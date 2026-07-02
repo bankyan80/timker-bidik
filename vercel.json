@@ -1,14 +1,17 @@
 {
   "version": 2,
+  "framework": null,
   "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "builds": [
     {
       "src": "dist/app.cjs",
       "use": "@vercel/node",
-      "config": { "includeFiles": ["dist/assets/**", "dist/index.html", "dist/tutwuri.png"] }
+      "config": { "includeFiles": ["dist/**"] }
     }
   ],
   "routes": [
+    { "src": "/api/(.*)", "dest": "dist/app.cjs" },
     { "src": "/(.*)", "dest": "dist/app.cjs" }
   ]
 }
