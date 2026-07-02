@@ -390,31 +390,35 @@ export default function AcademicCalendar() {
             <button onClick={() => { if (month === 11) { setMonth(0); setYear(y => y+1); } else setMonth(m => m+1); }} className="p-1.5 hover:bg-slate-800 rounded text-slate-400"><ChevronRight className="h-4 w-4" /></button>
           </div>
           <div className="grid grid-cols-7 text-[10px] font-mono text-slate-500 uppercase">
-            {DAYS_SHORT.map(d => <div key={d} className="text-center py-2 border-b border-slate-800">{d}</div>)}
+            {DAYS_SHORT.map((dayName, idx) => <div key={dayName} className={`text-center py-2 border-b border-slate-800 ${idx === 0 ? 'text-red-400' : ''}`}>{dayName}</div>)}
           </div>
           <div className="grid grid-cols-7">
-            {Array.from({length: firstDay}).map((_, i) => <div key={`e${i}`} className="min-h-[90px] border-r border-b border-slate-800 bg-slate-900/20" />)}
+            {Array.from({length: firstDay}).map((_, i) => <div key={`e${i}`} className="min-h-[110px] border-r border-b border-slate-800 bg-slate-900/20" />)}
             {Array.from({length: daysInMonth}).map((_, i) => {
               const d = i + 1;
               const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+              const dayOfWeek = new Date(year, month, d).getDay();
               const dayEvts = eventDateMap[dateStr] || [];
               const isToday = dateStr === todayStr;
+              const isSunday = dayOfWeek === 0;
+              const isHoliday = dayEvts.some(ev => ev.category === 'holiday');
               const unique = dayEvts.filter((ev, idx, self) => self.findIndex(e => e.id === ev.id) === idx);
+              const isRed = isSunday || isHoliday;
               return (
-                <div key={d} className={`min-h-[90px] border-r border-b border-slate-800 p-1 cursor-pointer hover:bg-slate-800/20 transition-colors ${isToday ? 'bg-cyan-950/20 ring-1 ring-inset ring-cyan-800' : ''}`}
+                <div key={d} className={`min-h-[110px] border-r border-b border-slate-800 p-2 cursor-pointer hover:bg-slate-800/20 transition-colors ${isToday ? 'ring-2 ring-inset ring-cyan-600' : ''} ${isRed ? 'bg-red-950/15' : ''}`}
                   onClick={() => unique.length > 0 && setSelectedEvent(unique[0])}>
-                  <span className={`text-[11px] font-mono ${isToday ? 'text-cyan-400 font-bold' : 'text-slate-500'}`}>{d}</span>
-                  <div className="space-y-0.5 mt-0.5">
+                  <span className={`text-base font-bold font-mono ${isToday ? 'text-cyan-400' : isRed ? 'text-red-400' : 'text-white'}`}>{d}</span>
+                  <div className="space-y-0.5 mt-1">
                     {unique.slice(0, 3).map(ev => {
                       const s = CATEGORY_STYLE[ev.category] || CATEGORY_STYLE.academic;
                       return (
-                        <div key={ev.id} className={`text-[7px] px-1 py-0.5 rounded ${s.bg} ${s.text} truncate flex items-center gap-0.5`} title={ev.title}>
+                        <div key={ev.id} className={`text-[8px] px-1 py-0.5 rounded ${s.bg} ${s.text} truncate flex items-center gap-0.5 leading-tight`} title={ev.title}>
                           <span className={`h-1.5 w-1.5 rounded-full ${s.dot} shrink-0`} />
                           {ev.title}
                         </div>
                       );
                     })}
-                    {unique.length > 3 && <span className="text-[7px] text-slate-500 px-1">+{unique.length - 3} lagi</span>}
+                    {unique.length > 3 && <span className="text-[8px] text-slate-500 px-1">+{unique.length - 3} lagi</span>}
                   </div>
                 </div>
               );
