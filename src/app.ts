@@ -298,6 +298,27 @@ app.get('/api/document-search', async (req, res) => {
   res.json(await searchDocuments(query));
 });
 
+// Initialize DB and serve static files (for production/Vercel deployment)
+
+const getDistPath = () => {
+  if (typeof __dirname !== 'undefined') return __dirname;
+  return path.join(process.cwd(), 'dist');
+};
+const distPath = getDistPath();
+app.use(express.static(distPath));
+app.use(express.static(path.join(process.cwd(), 'public')));
+
+// SPA fallback: return index.html for any non-API routes
+app.get('*', (req, res) => {
+  // Skip API routes - they should have been handled already
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API endpoint not found' });
+  }
+  res.sendFile(path.join(distPath, 'index.html'), (err) => {
+    if (err) res.status(404).json({ error: 'Not found' });
+  });
+});
+
 // Initialize DB
 (async () => {
   try {
