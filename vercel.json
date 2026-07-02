@@ -5,9 +5,24 @@
       "src": "dist/app.cjs",
       "use": "@vercel/node",
       "config": { "includeFiles": ["dist/**"] }
+    },
+    {
+      "src": "dist/assets/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "dist/favicon.png",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "dist/tutwuri.png",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
+    { "src": "/assets/(.*)", "dest": "/dist/assets/$1" },
+    { "src": "/favicon.png", "dest": "/dist/favicon.png" },
+    { "src": "/tutwuri.png", "dest": "/dist/tutwuri.png" },
     { "src": "/api/(.*)", "dest": "/dist/app.cjs" },
     { "src": "/(.*)", "dest": "/dist/app.cjs" }
   ]
