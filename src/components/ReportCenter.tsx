@@ -4,10 +4,8 @@ import {
   FileSpreadsheet,
   Download,
   CheckCircle,
-  Clock,
   Sparkles,
   RefreshCw,
-  Search,
   BookOpen
 } from 'lucide-react';
 

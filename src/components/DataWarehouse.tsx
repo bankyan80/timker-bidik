@@ -7,16 +7,13 @@ import {
   GraduationCap,
   Users,
   Building2,
-  Award,
   ChevronLeft,
   ChevronRight,
   TrendingUp,
   Map,
   Compass,
   FileCheck2,
-  ShieldCheck,
-  Zap,
-  Globe2
+  Zap
 } from 'lucide-react';
 
 interface DataWarehouseProps {

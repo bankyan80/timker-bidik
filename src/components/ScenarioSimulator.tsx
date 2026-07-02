@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SimulationScenario, SimulationResult } from '../types';
+import { SimulationResult } from '../types';
 import {
   Cpu,
   RefreshCw,

@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
 import { School, AlertMessage, Recommendation } from '../types';
-import { ALL_SCHOOLS, MOCK_ALERTS, MOCK_RECOMMENDATIONS } from '../data/mockData';
+import { ALL_SCHOOLS, MOCK_ALERTS } from '../data/mockData';
 import {
   Activity,
   AlertTriangle,
   Play,
   CheckCircle,
-  Clock,
-  Briefcase,
   Wrench,
   BadgeAlert,
   Sliders,
-  Sparkles,
-  ChevronRight
+  Sparkles
 } from 'lucide-react';
 
 interface LiveMonitorProps {

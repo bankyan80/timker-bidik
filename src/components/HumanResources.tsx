@@ -13,8 +13,6 @@ import {
   FileSpreadsheet,
   Download,
   Filter,
-  CheckCircle,
-  AlertTriangle,
   Layers
 } from 'lucide-react';
 

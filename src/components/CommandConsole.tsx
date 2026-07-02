@@ -3,8 +3,6 @@ import {
   Terminal,
   Send,
   Sparkles,
-  HelpCircle,
-  Clock,
   ShieldCheck,
   RefreshCw
 } from 'lucide-react';

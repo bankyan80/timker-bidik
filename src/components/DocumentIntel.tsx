@@ -26,7 +26,6 @@ import {
   Plus,
   Check,
   Loader2,
-  HelpCircle,
   Printer,
   ZoomIn,
   ZoomOut
@@ -132,8 +131,7 @@ export default function DocumentIntel() {
   const handleFilterChange = (setter: Function, val: any) => {
     setter(val);
     setLoading(true);
-    const t = setTimeout(() => setLoading(false), 200);
-    return () => clearTimeout(t);
+    setTimeout(() => setLoading(false), 200);
   };
 
   // Sorting helper

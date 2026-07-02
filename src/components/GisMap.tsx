@@ -1,10 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { School } from '../types';
-import { ALL_SCHOOLS, VILLAGES, getSchoolDMS } from '../data/mockData';
+import { ALL_SCHOOLS, getSchoolDMS } from '../data/mockData';
 import {
   Layers,
-  Map,
-  Grid,
   TrendingUp,
   Compass,
   AlertTriangle,

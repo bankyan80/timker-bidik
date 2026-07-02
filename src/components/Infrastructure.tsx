@@ -6,10 +6,7 @@ import {
   Wifi,
   Library,
   Flame,
-  Globe,
-  Gauge,
-  Sparkles,
-  AlertOctagon
+  Globe
 } from 'lucide-react';
 
 export default function Infrastructure() {

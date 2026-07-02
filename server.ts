@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import express from 'express';
 dotenv.config();
 
@@ -18,7 +19,7 @@ console.log('Vite middleware mounted successfully for full-stack integration.');
 // Serve static files from dist (for production) or public
 const getDistPath = () => {
   if (typeof __dirname !== 'undefined') return __dirname;
-  return path.join(process.cwd(), 'dist');
+  return path.join(path.dirname(fileURLToPath(import.meta.url)), 'dist');
 };
 const distPath = getDistPath();
 app.use(express.static(distPath));
