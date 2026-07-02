@@ -405,9 +405,9 @@ export default function AcademicCalendar() {
               const unique = dayEvts.filter((ev, idx, self) => self.findIndex(e => e.id === ev.id) === idx);
               const isRed = isSunday || isHoliday;
               return (
-                <div key={d} className={`min-h-[110px] border-r border-b border-slate-800 p-2 cursor-pointer hover:bg-slate-800/20 transition-colors ${isToday ? 'ring-2 ring-inset ring-cyan-600' : ''} ${isRed ? 'bg-red-950/15' : ''}`}
+                <div key={d} className={`min-h-[110px] border-r border-b border-slate-800 p-2 cursor-pointer hover:bg-slate-800/20 transition-colors ${isToday ? 'ring-2 ring-inset ring-cyan-600' : ''} ${isRed ? 'bg-red-950/30' : ''}`}
                   onClick={() => unique.length > 0 && setSelectedEvent(unique[0])}>
-                  <span className={`text-base font-bold font-mono ${isToday ? 'text-cyan-400' : isRed ? 'text-red-400' : 'text-white'}`}>{d}</span>
+                  <span className={`text-base font-bold font-mono ${isToday ? 'text-cyan-400' : isRed ? 'text-white' : 'text-white'}`}>{d}</span>
                   <div className="space-y-0.5 mt-1">
                     {unique.slice(0, 3).map(ev => {
                       const s = CATEGORY_STYLE[ev.category] || CATEGORY_STYLE.academic;
