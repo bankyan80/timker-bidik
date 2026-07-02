@@ -77,7 +77,7 @@ export async function seedData() {
   if (!client) return;
 
   const existing = await client.execute('SELECT COUNT(*) as count FROM schools');
-  if (existing.rows[0].count > 0) return;
+  if (Number(existing.rows[0].count) > 0) return;
 
   for (const school of ALL_SCHOOLS) {
     await client.execute({

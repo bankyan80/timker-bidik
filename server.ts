@@ -337,7 +337,7 @@ app.get('/api/document-search', async (req, res) => {
 });
 
 // Serve static assets in production, otherwise mount Vite in development
-async function startServer() {
+async function initApp() {
   try {
     await initSchema();
     await seedData();
@@ -345,15 +345,7 @@ async function startServer() {
   } catch (err) {
     console.warn('Turso database unavailable, falling back to in-memory mock data:', (err as Error).message);
   }
-
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-    console.log('Vite middleware mounted successfully for full-stack integration.');
-  } else {
+  if (process.env.NODE_ENV === 'production') {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
@@ -361,10 +353,23 @@ async function startServer() {
     });
     console.log('Serving compiled static distribution from /dist.');
   }
+}
 
+// Auto-start only when run directly (not when imported by Vercel)
+const isDirectRun = process.argv[1]?.includes('server');
+if (isDirectRun) {
+  if (process.env.NODE_ENV !== 'production') {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+    console.log('Vite middleware mounted successfully for full-stack integration.');
+  }
+  await initApp();
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`TIMKER BIDIK 360 Platform listening on http://localhost:${PORT}`);
   });
 }
 
-startServer();
+export default app;

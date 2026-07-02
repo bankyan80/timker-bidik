@@ -9,3 +9,5 @@ coverage/
 auth
 auth-wal
 data
+
+.vercel
