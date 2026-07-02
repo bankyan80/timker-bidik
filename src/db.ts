@@ -231,22 +231,70 @@ export async function seedData() {
   if (!client) return;
 
   const existing = await client.execute('SELECT COUNT(*) as count FROM schools');
-  if (Number(existing.rows[0].count) > 0) return;
 
-  for (const school of ALL_SCHOOLS) {
-    await client.execute({
-      sql: `INSERT INTO schools (npsn, name, level, status, village, accreditation, lat, lng, students, teachers, facilities, health_score, risk_indicators)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        school.npsn, school.name, school.level, school.status, school.village,
-        school.accreditation, school.coordinates.lat, school.coordinates.lng,
-        JSON.stringify(school.students), JSON.stringify(school.teachers),
-        JSON.stringify(school.facilities), school.healthScore,
-        JSON.stringify(school.riskIndicators)
-      ]
-    });
+  if (Number(existing.rows[0].count) === 0) {
+    for (const school of ALL_SCHOOLS) {
+      await client.execute({
+        sql: `INSERT INTO schools (npsn, name, level, status, village, accreditation, lat, lng, students, teachers, facilities, health_score, risk_indicators)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          school.npsn, school.name, school.level, school.status, school.village,
+          school.accreditation, school.coordinates.lat, school.coordinates.lng,
+          JSON.stringify(school.students), JSON.stringify(school.teachers),
+          JSON.stringify(school.facilities), school.healthScore,
+          JSON.stringify(school.riskIndicators)
+        ]
+      });
+    }
   }
 
+  // Seed recommendations (run regardless of schools seeding)
+  const existingRecs = await client.execute('SELECT COUNT(*) as count FROM recommendations');
+  if (Number(existingRecs.rows[0].count) === 0) {
+    const recs = [
+      { title: 'Distribusi Ulang Guru PPPK', description: 'Meratakan 8 guru PPPK ke 5 sekolah dengan defisit tenaga pendidik tertinggi di Wangkelang, Picungpugur, dan Sindanglaut', urgency: 'Critical', impactScore: 92, cost: 0.8, timeline: 3, category: 'Staffing' },
+      { title: 'Rehabilitasi Ruang Kelas Rusak Berat', description: 'Rehab total 12 ruang kelas rusak berat di 4 sekolah', urgency: 'Critical', impactScore: 88, cost: 4.2, timeline: 8, category: 'Infrastructure' },
+      { title: 'Percepatan Sertifikasi Guru', description: 'Mendaftarkan 18 guru honorer ke program PPG dalam tahun berjalan', urgency: 'High', impactScore: 85, cost: 0.3, timeline: 12, category: 'Certification' },
+      { title: 'Pengajuan Formasi PPPK 2026', description: 'Mengusulkan 25 formasi PPPK baru untuk mengisi kekosongan akibat pensiun', urgency: 'High', impactScore: 90, cost: 2.1, timeline: 6, category: 'Staffing' },
+      { title: 'Digitalisasi Arsip Kepegawaian', description: 'Digitalisasi 841 dokumen kepegawaian lengkap dengan OCR dan verifikasi', urgency: 'Medium', impactScore: 75, cost: 0.5, timeline: 4, category: 'Governance' },
+      { title: 'Program Bimbingan Teknis Kurikulum', description: 'Bimtek implementasi kurikulum merdeka untuk 120 guru SD', urgency: 'Medium', impactScore: 70, cost: 0.2, timeline: 2, category: 'Certification' },
+      { title: 'Pemasangan Jaringan Internet', description: 'Memasang WiFi/Starlink di 5 sekolah yang belum memiliki akses internet memadai', urgency: 'High', impactScore: 78, cost: 1.5, timeline: 5, category: 'Infrastructure' },
+      { title: 'Normalisasi Toilet Sekolah', description: 'Perbaikan 8 toilet rusak di 3 sekolah untuk memenuhi standar WASH', urgency: 'Medium', impactScore: 65, cost: 0.6, timeline: 3, category: 'Infrastructure' },
+    ];
+    for (const rec of recs) {
+      await client.execute({
+        sql: `INSERT OR IGNORE INTO recommendations (id, title, description, urgency, impact_score, estimated_cost_miliar, timeline_months, category)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [`REC-${rec.title.replace(/[^a-zA-Z]/g, '').slice(0, 8).toUpperCase()}-${Date.now()}`, rec.title, rec.description, rec.urgency, rec.impactScore, rec.cost, rec.timeline, rec.category]
+      });
+    }
+  }
+
+  // Seed alerts
+  const existingAlerts = await client.execute('SELECT COUNT(*) as count FROM alerts');
+  if (Number(existingAlerts.rows[0].count) === 0) {
+    const now = new Date();
+    const critical = ALL_SCHOOLS.filter(s => s.healthScore < 40);
+    for (let i = 0; i < Math.min(critical.length, 5); i++) {
+      const s = critical[i];
+      const t = new Date(now.getTime() - i * 3600000).toISOString();
+      await client.execute({
+        sql: `INSERT OR IGNORE INTO alerts (id, timestamp, school_name, severity, message, category)
+              VALUES (?, ?, ?, 'CRITICAL', ?, ?)`,
+        args: [`alert-crit-${s.npsn}-${Date.now()}`, t, s.name, `Health Score ${s.healthScore}/100 — butuh intervensi segera`, 'Infrastructure']
+      });
+    }
+    const warning = ALL_SCHOOLS.filter(s => s.healthScore >= 40 && s.healthScore < 60);
+    for (let i = 0; i < Math.min(warning.length, 4); i++) {
+      const s = warning[i];
+      const t = new Date(now.getTime() - (i + critical.length) * 7200000).toISOString();
+      await client.execute({
+        sql: `INSERT OR IGNORE INTO alerts (id, timestamp, school_name, severity, message, category)
+              VALUES (?, ?, ?, 'WARNING', ?, ?)`,
+        args: [`alert-warn-${s.npsn}-${Date.now()}`, t, s.name, `Rasio siswa-guru ${(s.students.total / (s.teachers.total || 1)).toFixed(1)}:1 — perlu penambahan tenaga`, 'Staffing']
+      });
+    }
+  }
 
 }
 
@@ -393,14 +441,14 @@ export async function getStudentAggregates(): Promise<Record<string, SchoolStude
   }
   // per-grade breakdown
   const byGrade = await client.execute(`
-    SELECT school_npsn, jenjang, COUNT(*) as cnt
+    SELECT school_npsn, kelas_kelompok, COUNT(*) as cnt
     FROM students WHERE LOWER(status_siswa) = 'aktif'
-    GROUP BY school_npsn, jenjang
+    GROUP BY school_npsn, kelas_kelompok
   `);
   for (const row of byGrade.rows) {
     const npsn = row.school_npsn as string;
     if (agg[npsn]) {
-      agg[npsn].byGrade[row.jenjang as string] = Number(row.cnt);
+      agg[npsn].byGrade[row.kelas_kelompok as string] = Number(row.cnt);
     }
   }
   return agg;
@@ -413,9 +461,9 @@ export async function getTeacherAggregates(): Promise<Record<string, SchoolTeach
     SELECT sekolah_id,
       COUNT(*) as total,
       SUM(CASE WHEN sertifikasi IS NOT NULL AND sertifikasi != '' THEN 1 ELSE 0 END) as certified,
-      SUM(CASE WHEN status_pegawai = 'PNS' THEN 1 ELSE 0 END) as pns,
-      SUM(CASE WHEN status_pegawai = 'PPPK' THEN 1 ELSE 0 END) as pppk,
-      SUM(CASE WHEN status_pegawai = 'Honorer' THEN 1 ELSE 0 END) as honorer
+      SUM(CASE WHEN LOWER(status_pegawai) = 'pns' THEN 1 ELSE 0 END) as pns,
+      SUM(CASE WHEN LOWER(status_pegawai) LIKE '%pppk%' THEN 1 ELSE 0 END) as pppk,
+      SUM(CASE WHEN LOWER(status_pegawai) NOT IN ('pns','pppk','pppk_paruh_waktu') THEN 1 ELSE 0 END) as honorer
     FROM employees WHERE is_active = 1
     GROUP BY sekolah_id
   `);
@@ -431,6 +479,139 @@ export async function getTeacherAggregates(): Promise<Record<string, SchoolTeach
     };
   }
   return agg;
+}
+
+// ── Employee CRUD ──
+
+export async function insertEmployee(data: {
+  sekolah_id: string; nama: string; nik: string; nip?: string | null;
+  email?: string | null; no_hp?: string | null; tempat_lahir?: string | null;
+  tanggal_lahir?: string | null; jenis_kelamin?: string | null;
+  jabatan?: string | null; status_pegawai?: string | null;
+  pangkat_golongan?: string | null; pendidikan_terakhir?: string | null;
+  sertifikasi?: string | null;
+}): Promise<EmployeeRow | null> {
+  const client = getDb();
+  if (!client) return null;
+  const now = Date.now();
+  const id = `EMP-${now}-${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    await client.execute({
+      sql: `INSERT INTO employees (id, sekolah_id, nama, nik, nip, email, no_hp, tempat_lahir, tanggal_lahir, jenis_kelamin, jabatan, status_pegawai, pangkat_golongan, pendidikan_terakhir, sertifikasi, is_active, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+      args: [id, data.sekolah_id, data.nama, data.nik, data.nip ?? null,
+             data.email ?? null, data.no_hp ?? null, data.tempat_lahir ?? null,
+             data.tanggal_lahir ?? null, data.jenis_kelamin ?? null,
+             data.jabatan ?? null, data.status_pegawai ?? null,
+             data.pangkat_golongan ?? null, data.pendidikan_terakhir ?? null,
+             data.sertifikasi ?? null, now, now]
+    });
+    const result = await client.execute({ sql: 'SELECT * FROM employees WHERE id = ?', args: [id] });
+    return result.rows[0] as unknown as EmployeeRow;
+  } catch {
+    return null;
+  }
+}
+
+export async function updateEmployee(id: string, data: Partial<{
+  nama: string; nik: string; nip: string | null; email: string | null;
+  no_hp: string | null; jabatan: string | null; status_pegawai: string | null;
+  pangkat_golongan: string | null; pendidikan_terakhir: string | null;
+  sertifikasi: string | null; is_active: number;
+}>): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  const sets: string[] = [];
+  const args: any[] = [];
+  for (const [key, val] of Object.entries(data)) {
+    if (val !== undefined) {
+      sets.push(`${key} = ?`);
+      args.push(val);
+    }
+  }
+  if (sets.length === 0) return false;
+  sets.push('updated_at = ?');
+  args.push(Date.now());
+  args.push(id);
+  try {
+    await client.execute({
+      sql: `UPDATE employees SET ${sets.join(', ')} WHERE id = ?`,
+      args
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function deleteEmployee(id: string): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  try {
+    await client.execute({
+      sql: 'UPDATE employees SET is_active = 0, updated_at = ? WHERE id = ?',
+      args: [Date.now(), id]
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ── Document CRUD ──
+
+export async function upsertEmployeeDocument(data: {
+  id?: string; employee_id: string; school_id: string; kategori: string;
+  jenis_dokumen: string; nama_file: string; mime_type: string;
+  file_size: number; drive_file_id: string; drive_url: string;
+  status_verifikasi?: string; catatan_revisi?: string | null;
+}): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  const now = Date.now();
+  const id = data.id || `DOC-${now}-${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    await client.execute({
+      sql: `INSERT INTO employee_documents (id, employee_id, school_id, kategori, jenis_dokumen, nama_file, mime_type, file_size, drive_file_id, drive_url, status_upload, status_verifikasi, status_kelengkapan, catatan_revisi, uploaded_at, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'sudah_diupload', COALESCE(?, 'belum_diverifikasi'), 'belum_lengkap', ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              kategori = COALESCE(?, kategori),
+              jenis_dokumen = COALESCE(?, jenis_dokumen),
+              nama_file = COALESCE(?, nama_file),
+              mime_type = COALESCE(?, mime_type),
+              file_size = COALESCE(?, file_size),
+              drive_file_id = COALESCE(?, drive_file_id),
+              drive_url = COALESCE(?, drive_url),
+              catatan_revisi = COALESCE(?, catatan_revisi),
+              updated_at = COALESCE(?, updated_at)`,
+      args: [id, data.employee_id, data.school_id, data.kategori, data.jenis_dokumen,
+             data.nama_file, data.mime_type, data.file_size, data.drive_file_id,
+             data.drive_url, data.status_verifikasi ?? null, data.catatan_revisi ?? null,
+             now, now,
+             data.kategori, data.jenis_dokumen, data.nama_file, data.mime_type,
+             data.file_size, data.drive_file_id, data.drive_url, data.catatan_revisi ?? null, now]
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function verifyEmployeeDocument(id: string, status: 'verified' | 'rejected', catatan?: string): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  const now = Date.now();
+  const statusVerifikasi = status === 'verified' ? 'sudah_diverifikasi' : 'ditolak';
+  const statusKelengkapan = status === 'verified' ? 'lengkap' : 'belum_lengkap';
+  try {
+    await client.execute({
+      sql: `UPDATE employee_documents SET status_verifikasi = ?, status_kelengkapan = ?, catatan_revisi = ?, verified_at = ?, updated_at = ? WHERE id = ?`,
+      args: [statusVerifikasi, statusKelengkapan, catatan ?? null, now, now, id]
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function upsertSchool(npsn: string, data: Partial<School> & { name: string; level: string; status: string; village: string }) {

@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { GoogleGenAI } from '@google/genai';
 import { SimulationScenario, SimulationResult } from './types';
-import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount } from './db';
+import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument } from './db';
 
 const app = express();
 app.use(express.json());
@@ -414,6 +414,39 @@ app.get('/api/employees/:id/documents', async (req, res) => {
   res.json(docs);
 });
 
+// Employee CRUD
+app.post('/api/employees', async (req, res) => {
+  const emp = await insertEmployee(req.body);
+  if (!emp) return res.status(400).json({ error: 'Failed to create employee' });
+  res.status(201).json(emp);
+});
+
+app.put('/api/employees/:id', async (req, res) => {
+  const ok = await updateEmployee(req.params.id, req.body);
+  if (!ok) return res.status(400).json({ error: 'Failed to update employee' });
+  res.json({ success: true });
+});
+
+app.delete('/api/employees/:id', async (req, res) => {
+  const ok = await deleteEmployee(req.params.id);
+  if (!ok) return res.status(400).json({ error: 'Failed to delete employee' });
+  res.json({ success: true });
+});
+
+// Document CRUD
+app.post('/api/documents', async (req, res) => {
+  const ok = await upsertEmployeeDocument(req.body);
+  if (!ok) return res.status(400).json({ error: 'Failed to save document' });
+  res.status(201).json({ success: true });
+});
+
+app.post('/api/documents/:id/verify', async (req, res) => {
+  const { status, catatan } = req.body;
+  const ok = await verifyEmployeeDocument(req.params.id, status, catatan);
+  if (!ok) return res.status(400).json({ error: 'Failed to verify document' });
+  res.json({ success: true });
+});
+
 // 5. Student & Teacher Aggregate Endpoints
 app.get('/api/students/aggregate', async (req, res) => {
   const aggregates = await getStudentAggregates();
@@ -486,6 +519,87 @@ app.get('/api/document-search', async (req, res) => {
   }
 
   res.json(docs);
+});
+
+// 7. Alerts & Recommendations API
+app.get('/api/alerts', async (req, res) => {
+  const alerts = await getAlerts();
+  res.json(alerts);
+});
+
+app.get('/api/recommendations', async (req, res) => {
+  const recs = await getRecommendations();
+  res.json(recs);
+});
+
+app.post('/api/recommendations/:id/apply', async (req, res) => {
+  const { getDb } = await import('./db');
+  const db = getDb();
+  if (!db) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    await db.execute({
+      sql: 'UPDATE recommendations SET applied = 1 WHERE id = ?',
+      args: [req.params.id]
+    });
+    res.json({ success: true });
+  } catch {
+    res.status(400).json({ error: 'Failed to apply recommendation' });
+  }
+});
+
+// Seed missing data (alerts, recommendations)
+app.post('/api/debug/seed', async (req, res) => {
+  const { getDb } = await import('./db');
+  const db = getDb();
+  if (!db) return res.json({ db: 'unavailable' });
+  try {
+    const existingRecs = await db.execute('SELECT COUNT(*) as c FROM recommendations');
+    if (Number(existingRecs.rows[0].c) === 0) {
+      const recs = [
+        { title: 'Distribusi Ulang Guru PPPK', description: 'Meratakan 8 guru PPPK ke 5 sekolah dengan defisit tenaga pendidik tertinggi di Wangkelang, Picungpugur, dan Sindanglaut', urgency: 'Critical', impactScore: 92, cost: 0.8, timeline: 3, category: 'Staffing' },
+        { title: 'Rehabilitasi Ruang Kelas Rusak Berat', description: 'Rehab total 12 ruang kelas rusak berat di 4 sekolah', urgency: 'Critical', impactScore: 88, cost: 4.2, timeline: 8, category: 'Infrastructure' },
+        { title: 'Percepatan Sertifikasi Guru', description: 'Mendaftarkan 18 guru honorer ke program PPG dalam tahun berjalan', urgency: 'High', impactScore: 85, cost: 0.3, timeline: 12, category: 'Certification' },
+        { title: 'Pengajuan Formasi PPPK 2026', description: 'Mengusulkan 25 formasi PPPK baru untuk mengisi kekosongan akibat pensiun', urgency: 'High', impactScore: 90, cost: 2.1, timeline: 6, category: 'Staffing' },
+        { title: 'Digitalisasi Arsip Kepegawaian', description: 'Digitalisasi 841 dokumen kepegawaian lengkap dengan OCR dan verifikasi', urgency: 'Medium', impactScore: 75, cost: 0.5, timeline: 4, category: 'Governance' },
+        { title: 'Pemasangan Jaringan Internet', description: 'Memasang WiFi/Starlink di 5 sekolah yang belum memiliki akses internet memadai', urgency: 'High', impactScore: 78, cost: 1.5, timeline: 5, category: 'Infrastructure' },
+        { title: 'Normalisasi Toilet Sekolah', description: 'Perbaikan 8 toilet rusak di 3 sekolah untuk memenuhi standar WASH', urgency: 'Medium', impactScore: 65, cost: 0.6, timeline: 3, category: 'Infrastructure' },
+      ];
+      for (const rec of recs) {
+        await db.execute({
+          sql: `INSERT OR IGNORE INTO recommendations (id, title, description, urgency, impact_score, estimated_cost_miliar, timeline_months, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          args: [`REC-${rec.title.replace(/[^a-zA-Z]/g, '').slice(0, 8).toUpperCase()}-${Date.now()}`, rec.title, rec.description, rec.urgency, rec.impactScore, rec.cost, rec.timeline, rec.category]
+        });
+      }
+    }
+    const existingAlerts = await db.execute('SELECT COUNT(*) as c FROM alerts');
+    if (Number(existingAlerts.rows[0].c) === 0) {
+      const schools = await db.execute('SELECT * FROM schools');
+      const now = new Date();
+      const critical = schools.rows.filter((s: any) => s.health_score < 40);
+      for (let i = 0; i < Math.min(critical.length, 5); i++) {
+        const s = critical[i];
+        const t = new Date(now.getTime() - i * 3600000).toISOString();
+        await db.execute({
+          sql: `INSERT OR IGNORE INTO alerts (id, timestamp, school_name, severity, message, category) VALUES (?, ?, ?, 'CRITICAL', ?, ?)`,
+          args: [`alert-crit-${s.npsn}-${Date.now()}`, t, s.name as string, `Health Score ${s.health_score}/100 — butuh intervensi segera`, 'Infrastructure']
+        });
+      }
+      const warning = schools.rows.filter((s: any) => s.health_score >= 40 && s.health_score < 60);
+      for (let i = 0; i < Math.min(warning.length, 4); i++) {
+        const s = warning[i];
+        const t = new Date(now.getTime() - (i + critical.length) * 7200000).toISOString();
+        await db.execute({
+          sql: `INSERT OR IGNORE INTO alerts (id, timestamp, school_name, severity, message, category) VALUES (?, ?, ?, 'WARNING', ?)`,
+          args: [`alert-warn-${s.npsn}-${Date.now()}`, t, s.name as string, `Rasio siswa-guru perlu perhatian`, 'Staffing']
+        });
+      }
+    }
+    const r = (await db.execute('SELECT COUNT(*) as c FROM recommendations')).rows[0].c;
+    const a = (await db.execute('SELECT COUNT(*) as c FROM alerts')).rows[0].c;
+    res.json({ recommendations: Number(r), alerts: Number(a) });
+  } catch (e: any) {
+    res.json({ error: e.message });
+  }
 });
 
 // Initialize DB and serve static files (for production/Vercel deployment)

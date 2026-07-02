@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   School as SchoolIcon,
   Users,
@@ -13,7 +13,8 @@ import {
   Sparkles,
   Search
 } from 'lucide-react';
-import { School } from '../types';
+import { School, VillageStats } from '../types';
+import { loadSchools } from '../data/dataService';
 import { ALL_SCHOOLS, GET_VILLAGE_STATS } from '../data/mockData';
 
 interface DashboardProps {
@@ -22,15 +23,24 @@ interface DashboardProps {
 }
 
 export default function ExecutiveDashboard({ onSelectSchool, setCurrentModule }: DashboardProps) {
-  // Dynamically calculated values from ALL_SCHOOLS
-  const totalSchools = ALL_SCHOOLS.length;
-  const totalStudents = ALL_SCHOOLS.reduce((sum, s) => sum + s.students.total, 0);
-  const totalTeachers = ALL_SCHOOLS.reduce((sum, s) => sum + s.teachers.total, 0);
-  const shortageSchools = ALL_SCHOOLS.filter(s => s.riskIndicators.teacherShortage).length;
-  const surplusSchools = ALL_SCHOOLS.filter(s => s.teachers.total > 10).length; // schools with sufficient staffing
-  const certPending = ALL_SCHOOLS.reduce((sum, s) => sum + s.teachers.pendingCertification, 0);
-  const retiringSoon = ALL_SCHOOLS.reduce((sum, s) => sum + s.teachers.retiringSoon, 0);
-  const criticalInfra = ALL_SCHOOLS.filter(s => s.riskIndicators.infrastructureCritical).length;
+  const [schools, setSchools] = useState<School[]>(ALL_SCHOOLS);
+  const [villageData, setVillageData] = useState<VillageStats[]>([]);
+  useEffect(() => {
+    loadSchools().then(s => { if (s.length) setSchools(s); });
+    import('../data/dataService').then(({ loadVillageStats }) =>
+      loadVillageStats().then(v => setVillageData(v))
+    );
+  }, []);
+
+  // Dynamically calculated values from real data
+  const totalSchools = schools.length;
+  const totalStudents = schools.reduce((sum, s) => sum + s.students.total, 0);
+  const totalTeachers = schools.reduce((sum, s) => sum + s.teachers.total, 0);
+  const shortageSchools = schools.filter(s => s.riskIndicators.teacherShortage).length;
+  const surplusSchools = schools.filter(s => s.teachers.total > 10).length;
+  const certPending = schools.reduce((sum, s) => sum + s.teachers.pendingCertification, 0);
+  const retiringSoon = schools.reduce((sum, s) => sum + s.teachers.retiringSoon, 0);
+  const criticalInfra = schools.filter(s => s.riskIndicators.infrastructureCritical).length;
 
   const kpiData = [
     {
@@ -124,8 +134,8 @@ export default function ExecutiveDashboard({ onSelectSchool, setCurrentModule }:
   ];
 
   // Critical list
-  const criticalList = ALL_SCHOOLS.filter(s => s.healthScore < 40).slice(0, 4);
-  const villageData = GET_VILLAGE_STATS();
+  const criticalList = schools.filter(s => s.healthScore < 40).slice(0, 4);
+  const displayVillageData = villageData.length > 0 ? villageData : GET_VILLAGE_STATS();
 
   return (
     <div className="space-y-6" id="dashboard-module">
@@ -322,7 +332,7 @@ export default function ExecutiveDashboard({ onSelectSchool, setCurrentModule }:
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1f2937]/50 font-mono">
-                {villageData.map((village, idx) => (
+                {displayVillageData.map((village, idx) => (
                   <tr key={idx} className="hover:bg-cyan-950/10 text-[#d1d5db] transition-colors">
                     <td className="py-2.5 px-3 font-semibold text-white">{village.name}</td>
                     <td className="py-2.5 px-3 text-center text-slate-300">{village.totalSchools} SDN</td>

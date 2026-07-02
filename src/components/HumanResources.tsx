@@ -1,5 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { ALL_SCHOOLS, VILLAGES } from '../data/mockData';
+import React, { useState, useMemo, useEffect } from 'react';
+import { School } from '../types';
+import { loadSchools } from '../data/dataService';
+import { VILLAGES } from '../data/mockData';
 import {
   Users,
   GraduationCap,
@@ -59,6 +61,7 @@ interface StaffMapping {
 }
 
 export default function HumanResources() {
+  const [schools, setSchools] = useState<School[]>([]);
   const [activeTab, setActiveTab] = useState<'analytics' | 'mapping'>('mapping');
   const [forecastYears, setForecastYears] = useState<'1' | '3' | '5'>('3');
   
@@ -67,12 +70,16 @@ export default function HumanResources() {
   const [levelFilter, setLevelFilter] = useState<string>('SD');
   const [villageFilter, setVillageFilter] = useState<string>('ALL');
 
+  useEffect(() => {
+    loadSchools().then(s => { if (s.length) setSchools(s); });
+  }, []);
+
   // Compute base overview stats
-  const totalTeachers = ALL_SCHOOLS.reduce((sum, s) => sum + s.teachers.total, 0);
-  const totalPns = ALL_SCHOOLS.reduce((sum, s) => sum + s.teachers.pns, 0);
-  const totalPppk = ALL_SCHOOLS.reduce((sum, s) => sum + s.teachers.pppk, 0);
-  const totalHonorer = ALL_SCHOOLS.reduce((sum, s) => sum + s.teachers.honorer, 0);
-  const certifiedCount = ALL_SCHOOLS.reduce((sum, s) => sum + s.teachers.certified, 0);
+  const totalTeachers = schools.reduce((sum, s) => sum + s.teachers.total, 0);
+  const totalPns = schools.reduce((sum, s) => sum + s.teachers.pns, 0);
+  const totalPppk = schools.reduce((sum, s) => sum + s.teachers.pppk, 0);
+  const totalHonorer = schools.reduce((sum, s) => sum + s.teachers.honorer, 0);
+  const certifiedCount = schools.reduce((sum, s) => sum + s.teachers.certified, 0);
 
   // Subject distribution summary (procedural calculation)
   const subjectDistribution = {
@@ -128,7 +135,7 @@ export default function HumanResources() {
 
   // Generate detailed staff mapping matrix for ALL 124 schools procedurally matching Indonesian standards
   const staffMappings = useMemo<StaffMapping[]>(() => {
-    return ALL_SCHOOLS.map((school) => {
+    return schools.map((school) => {
       // Study groups: SD typically larger or capped at 28, SMP at 32, SMA at 36
       let rombel = 1;
       if (school.level === 'SD') {
@@ -432,7 +439,7 @@ export default function HumanResources() {
             <div className="p-3 bg-[#11141a]/60 border border-[#1f2937] rounded-lg font-mono">
               <span className="text-[9px] text-slate-500 block uppercase">SEKOLAH TERFILTER</span>
               <p className="text-xl font-bold text-white mt-1">{filteredMappings.length}</p>
-              <p className="text-[8px] text-slate-500 mt-0.5">Dari total {ALL_SCHOOLS.length} SDN</p>
+              <p className="text-[8px] text-slate-500 mt-0.5">Dari total {schools.length} SDN</p>
             </div>
             <div className="p-3 bg-[#11141a]/60 border border-[#1f2937] rounded-lg font-mono">
               <span className="text-[9px] text-slate-500 block uppercase">KEKURANGAN GURU KELAS</span>
@@ -693,7 +700,7 @@ export default function HumanResources() {
           {/* Upper overview summary cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[
-              { label: 'Total Guru', value: totalTeachers, desc: `Di seluruh ${ALL_SCHOOLS.length} SDN`, icon: Users, color: 'text-indigo-400 border-indigo-950 bg-indigo-950/10' },
+              { label: 'Total Guru', value: totalTeachers, desc: `Di seluruh ${schools.length} SDN`, icon: Users, color: 'text-indigo-400 border-indigo-950 bg-indigo-950/10' },
               { label: 'Staf PNS & PPPK', value: `${totalPns} / ${totalPppk}`, desc: 'Pendidik ASN', icon: GraduationCap, color: 'text-emerald-400 border-emerald-950 bg-emerald-950/10' },
               { label: 'Personel Honorer', value: totalHonorer, desc: 'Sumber Anggaran Sekolah', icon: RefreshCw, color: 'text-amber-400 border-amber-950 bg-amber-950/10' },
               { label: 'Guru Tersertifikasi', value: `${certifiedCount} (${Math.round((certifiedCount/totalTeachers)*100)}%)`, desc: 'Sertifikasi PPG Aktif', icon: FileCheck2, color: 'text-cyan-400 border-cyan-950 bg-cyan-950/10' }

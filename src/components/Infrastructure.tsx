@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { School } from '../types';
+import { loadSchools } from '../data/dataService';
 import { ALL_SCHOOLS } from '../data/mockData';
 import {
   Building2,
@@ -10,11 +12,11 @@ import {
 } from 'lucide-react';
 
 export default function Infrastructure() {
-  // Aggregate stats
-  const totalSchools = ALL_SCHOOLS.length;
-  
-  // Classroom conditions
-  const classroomConditions = ALL_SCHOOLS.reduce((acc, curr) => {
+  const [schools, setSchools] = useState<School[]>(ALL_SCHOOLS);
+  useEffect(() => { loadSchools().then(s => { if (s.length) setSchools(s); }); }, []);
+
+  const totalSchools = schools.length;
+  const classroomConditions = schools.reduce((acc, curr) => {
     acc.good += curr.facilities.classroomCondition.good;
     acc.lightDamage += curr.facilities.classroomCondition.lightDamage;
     acc.heavyDamage += curr.facilities.classroomCondition.heavyDamage;
@@ -22,23 +24,17 @@ export default function Infrastructure() {
   }, { good: 0, lightDamage: 0, heavyDamage: 0 });
 
   const totalClassrooms = classroomConditions.good + classroomConditions.lightDamage + classroomConditions.heavyDamage;
-
-  // Facilities
-  const libraryCount = ALL_SCHOOLS.filter(s => s.facilities.hasLibrary).length;
-  const labCount = ALL_SCHOOLS.filter(s => s.facilities.hasLab).length;
-
-  // Toilets stats
-  const totalToiletsGood = ALL_SCHOOLS.reduce((sum, s) => sum + s.facilities.toiletsGood, 0);
-  const totalToiletsDamaged = ALL_SCHOOLS.reduce((sum, s) => sum + s.facilities.toiletsDamaged, 0);
-
-  // Internet connectivity metrics
-  const slowInternetSchools = ALL_SCHOOLS.filter(s => s.facilities.internetSpeedMbps < 15);
-
-  // Critical buildings queue
-  const criticalBuildings = ALL_SCHOOLS
+  const libraryCount = schools.filter(s => s.facilities.hasLibrary).length;
+  const labCount = schools.filter(s => s.facilities.hasLab).length;
+  const totalToiletsGood = schools.reduce((sum, s) => sum + s.facilities.toiletsGood, 0);
+  const totalToiletsDamaged = schools.reduce((sum, s) => sum + s.facilities.toiletsDamaged, 0);
+  const slowInternetSchools = schools.filter(s => s.facilities.internetSpeedMbps < 15);
+  const criticalBuildings = schools
     .filter(s => s.facilities.classroomCondition.heavyDamage > 0)
     .sort((a, b) => b.facilities.classroomCondition.heavyDamage - a.facilities.classroomCondition.heavyDamage)
     .slice(0, 4);
+  const avgBandwidth = schools.length > 0 ? (schools.reduce((sum, s) => sum + s.facilities.internetSpeedMbps, 0) / schools.length).toFixed(1) : '0';
+  const fiberCoverage = schools.length > 0 ? Math.round(schools.filter(s => s.facilities.internetSpeedMbps >= 15).length / schools.length * 100) : 0;
 
   return (
     <div className="space-y-6" id="infrastructure-module">
@@ -150,11 +146,11 @@ export default function Infrastructure() {
             <div className="grid grid-cols-2 gap-2 text-center font-mono">
               <div className="p-3 bg-[#0c0e12] rounded border border-[#1f2937]">
                 <span className="text-[9px] text-slate-500 block uppercase">AVERAGE BANDWIDTH</span>
-                <p className="text-lg font-bold text-sky-400 mt-1">45.2 Mbps</p>
+                <p className="text-lg font-bold text-sky-400 mt-1">{avgBandwidth} Mbps</p>
               </div>
               <div className="p-3 bg-[#0c0e12] rounded border border-[#1f2937]">
                 <span className="text-[9px] text-slate-500 block uppercase">FIBER-TO-THE-SCHOOL</span>
-                <p className="text-lg font-bold text-emerald-400 mt-1">72% Coverage</p>
+                <p className="text-lg font-bold text-emerald-400 mt-1">{fiberCoverage}% Coverage</p>
               </div>
             </div>
           </div>

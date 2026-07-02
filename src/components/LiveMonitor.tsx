@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { School, AlertMessage, Recommendation } from '../types';
-import { ALL_SCHOOLS } from '../data/mockData';
+import { loadSchools, loadAlerts, loadRecommendations } from '../data/dataService';
 import {
   Activity,
   AlertTriangle,
@@ -21,23 +21,30 @@ interface LiveMonitorProps {
 export default function LiveMonitor({ onSelectSchool, recs, setRecs }: LiveMonitorProps) {
   const [filterSeverity, setFilterSeverity] = useState<'ALL' | 'CRITICAL' | 'WARNING'>('ALL');
   const [tickerAlerts, setTickerAlerts] = useState<AlertMessage[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
 
-  // Sorting critical schools queue based on the requested severity formula:
-  // teacher shortage + student overload + infrastructure damage + retirement risk
-  const criticalQueue = ALL_SCHOOLS
+  useEffect(() => {
+    loadSchools().then(s => setSchools(s));
+    loadAlerts().then(a => {
+      setTickerAlerts(a.map(al => ({
+        ...al,
+        timestamp: new Date(al.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+      })));
+    });
+    loadRecommendations().then(r => {
+      if (r.length > 0) setRecs(r);
+    });
+  }, []);
+
+  const criticalQueue = schools
     .filter(s => s.healthScore < 50)
     .sort((a, b) => a.healthScore - b.healthScore);
 
-  // Apply action flow
-  const handleApplyAction = (recId: string) => {
-    setRecs(prev => prev.map(r => {
-      if (r.id === recId) {
-        return { ...r, applied: true };
-      }
-      return r;
-    }));
-
-    // Generate a successful simulation alert
+  const handleApplyAction = async (recId: string) => {
+    try {
+      await fetch(`/api/recommendations/${recId}/apply`, { method: 'POST' });
+    } catch {}
+    setRecs(prev => prev.map(r => r.id === recId ? { ...r, applied: true } : r));
     const targetRec = recs.find(r => r.id === recId);
     if (targetRec) {
       const now = new Date();

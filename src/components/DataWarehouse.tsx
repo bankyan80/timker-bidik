@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { School } from '../types';
-import { ALL_SCHOOLS, VILLAGES, getSchoolDMS } from '../data/mockData';
+import { loadSchools } from '../data/dataService';
+import { VILLAGES, getSchoolDMS } from '../data/mockData';
 import {
   Search,
   Filter,
@@ -22,6 +23,7 @@ interface DataWarehouseProps {
 }
 
 export default function DataWarehouse({ selectedSchool, onSelectSchool }: DataWarehouseProps) {
+  const [schools, setSchools] = useState<School[]>([]);
   const [activeTab, setActiveTab] = useState<'schools' | 'teachers' | 'students' | 'facilities'>('schools');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterVillage, setFilterVillage] = useState('All');
@@ -29,9 +31,13 @@ export default function DataWarehouse({ selectedSchool, onSelectSchool }: DataWa
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
+  useEffect(() => {
+    loadSchools().then(s => { if (s.length) setSchools(s); });
+  }, []);
+
   // Filter Warehouse listing
   const filteredSchools = useMemo(() => {
-    return ALL_SCHOOLS.filter(s => {
+    return schools.filter(s => {
       const matchSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.npsn.includes(searchTerm);
       const matchVillage = filterVillage === 'All' || s.village === filterVillage;
       const matchLevel = filterLevel === 'All' || s.level === filterLevel;
