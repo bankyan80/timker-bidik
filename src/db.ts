@@ -1,5 +1,5 @@
 import { createClient } from '@libsql/client';
-import { School, VillageStats, Recommendation, AlertMessage, DocumentMeta } from './types';
+import { School, VillageStats, Recommendation, AlertMessage, DocumentMeta, CalendarEvent, CalendarNotification } from './types';
 import { VILLAGES, ALL_SCHOOLS, GET_VILLAGE_STATS } from './data/mockData';
 
 export type StudentRow = {
@@ -208,6 +208,33 @@ export async function initSchema() {
   `);
 
   await client.execute(`
+    CREATE TABLE IF NOT EXISTS academic_calendar (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      category TEXT NOT NULL,
+      semester INTEGER NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      education_level TEXT NOT NULL DEFAULT 'ALL',
+      created_by TEXT,
+      completed INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  `);
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS calendar_notifications (
+      id TEXT PRIMARY KEY,
+      calendar_id TEXT NOT NULL,
+      target_role TEXT NOT NULL,
+      sent_at INTEGER,
+      status TEXT NOT NULL DEFAULT 'pending'
+    )
+  `);
+
+  await client.execute(`
     CREATE TABLE IF NOT EXISTS students (
       id TEXT PRIMARY KEY,
       school_npsn TEXT NOT NULL,
@@ -295,6 +322,9 @@ export async function seedData() {
       });
     }
   }
+
+  // Seed academic calendar
+  await seedCalendarEvents();
 
 }
 
@@ -555,6 +585,138 @@ export async function deleteEmployee(id: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+// ── Calendar CRUD ──
+
+export async function getCalendarEvents(): Promise<CalendarEvent[]> {
+  const client = getDb();
+  if (!client) return [];
+  const result = await client.execute('SELECT * FROM academic_calendar ORDER BY start_date ASC');
+  return result.rows.map(r => ({
+    id: r.id as string,
+    title: r.title as string,
+    category: r.category as CalendarEvent['category'],
+    semester: Number(r.semester) as 1 | 2,
+    start_date: r.start_date as string,
+    end_date: r.end_date as string,
+    description: r.description as string,
+    education_level: r.education_level as string,
+    created_by: r.created_by as string | null,
+    created_at: Number(r.created_at),
+    updated_at: Number(r.updated_at),
+    completed: Number(r.completed) || 0,
+  }));
+}
+
+export async function getCalendarEventById(id: string): Promise<CalendarEvent | null> {
+  const client = getDb();
+  if (!client) return null;
+  const result = await client.execute({ sql: 'SELECT * FROM academic_calendar WHERE id = ?', args: [id] });
+  if (result.rows.length === 0) return null;
+  const r = result.rows[0];
+  return {
+    id: r.id as string,
+    title: r.title as string,
+    category: r.category as CalendarEvent['category'],
+    semester: Number(r.semester) as 1 | 2,
+    start_date: r.start_date as string,
+    end_date: r.end_date as string,
+    description: r.description as string,
+    education_level: r.education_level as string,
+    created_by: r.created_by as string | null,
+    created_at: Number(r.created_at),
+    updated_at: Number(r.updated_at),
+    completed: Number(r.completed) || 0,
+  };
+}
+
+export async function insertCalendarEvent(data: {
+  title: string; category: string; semester: number;
+  start_date: string; end_date: string; description?: string;
+  education_level?: string; created_by?: string | null;
+}): Promise<CalendarEvent | null> {
+  const client = getDb();
+  if (!client) return null;
+  const now = Date.now();
+  const id = `CAL-${now}-${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    await client.execute({
+      sql: `INSERT INTO academic_calendar (id, title, category, semester, start_date, end_date, description, education_level, created_by, completed, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+      args: [id, data.title, data.category, data.semester, data.start_date, data.end_date,
+             data.description || '', data.education_level || 'ALL', data.created_by ?? null, now, now]
+    });
+    return getCalendarEventById(id);
+  } catch { return null; }
+}
+
+export async function updateCalendarEvent(id: string, data: Partial<{
+  title: string; category: string; semester: number;
+  start_date: string; end_date: string; description: string;
+  education_level: string; completed: number;
+}>): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  const sets: string[] = [];
+  const args: any[] = [];
+  for (const [key, val] of Object.entries(data)) {
+    if (val !== undefined) { sets.push(`${key} = ?`); args.push(val); }
+  }
+  if (sets.length === 0) return false;
+  sets.push('updated_at = ?');
+  args.push(Date.now());
+  args.push(id);
+  try {
+    await client.execute({ sql: `UPDATE academic_calendar SET ${sets.join(', ')} WHERE id = ?`, args });
+    return true;
+  } catch { return false; }
+}
+
+export async function deleteCalendarEvent(id: string): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  try {
+    await client.execute({ sql: 'DELETE FROM academic_calendar WHERE id = ?', args: [id] });
+    return true;
+  } catch { return false; }
+}
+
+export async function seedCalendarEvents() {
+  const client = getDb();
+  if (!client) return;
+  const existing = await client.execute('SELECT COUNT(*) as count FROM academic_calendar');
+  if (Number(existing.rows[0].count) > 0) return;
+
+  const seedData: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at' | 'completed'>[] = [
+    // Semester 1
+    { title: 'Penyelarasan Kurikulum SMK', category: 'teacher_event', semester: 1, start_date: '2026-07-14', end_date: '2026-07-14', description: 'Penyelarasan kurikulum untuk satuan pendidikan SMK', education_level: 'SMK' },
+    { title: 'Hari Pertama Masuk Sekolah', category: 'academic', semester: 1, start_date: '2026-07-15', end_date: '2026-07-15', description: 'Hari pertama masuk sekolah Tahun Pelajaran 2026/2027', education_level: 'ALL' },
+    { title: 'MPLS SD/MI', category: 'student_event', semester: 1, start_date: '2026-07-15', end_date: '2026-07-21', description: 'Masa Pengenalan Lingkungan Sekolah untuk kelas 1 (15-17 & 20-21 Juli 2026)', education_level: 'SD' },
+    { title: 'Sulingjar', category: 'assessment', semester: 1, start_date: '2026-08-03', end_date: '2026-08-31', description: 'Survei Lingkungan Belajar — pengisian instrumen lingkungan belajar oleh satuan pendidikan', education_level: 'ALL' },
+    { title: 'TKA SMA/SMK', category: 'assessment', semester: 1, start_date: '2026-10-26', end_date: '2026-11-08', description: 'Tes Kemampuan Akademik untuk jenjang SMA dan SMK', education_level: 'SMA,SMK' },
+    { title: 'Penetapan Rapor Semester 1', category: 'reports', semester: 1, start_date: '2026-12-23', end_date: '2026-12-23', description: 'Penetapan hasil penilaian rapor semester ganjil', education_level: 'ALL' },
+    { title: 'Pembagian Rapor Semester 1', category: 'reports', semester: 1, start_date: '2026-12-23', end_date: '2026-12-23', description: 'Pembagian rapor kepada siswa semester ganjil', education_level: 'ALL' },
+    { title: 'Libur Semester 1', category: 'holiday', semester: 1, start_date: '2026-12-28', end_date: '2027-01-08', description: 'Libur akhir semester ganjil', education_level: 'ALL' },
+
+    // Semester 2
+    { title: 'Hari Pertama Semester 2', category: 'academic', semester: 2, start_date: '2027-01-11', end_date: '2027-01-11', description: 'Hari pertama masuk sekolah semester genap', education_level: 'ALL' },
+    { title: 'Libur Awal Ramadan', category: 'holiday', semester: 2, start_date: '2027-02-08', end_date: '2027-02-12', description: 'Libur awal bulan Ramadan', education_level: 'ALL' },
+    { title: 'Libur Idul Fitri', category: 'holiday', semester: 2, start_date: '2027-03-08', end_date: '2027-03-19', description: 'Libur Hari Raya Idul Fitri 1448 H', education_level: 'ALL' },
+    { title: 'Penetapan Rapor Semester 2', category: 'reports', semester: 2, start_date: '2027-06-25', end_date: '2027-06-25', description: 'Penetapan hasil penilaian rapor semester genap', education_level: 'ALL' },
+    { title: 'Pembagian Rapor Semester 2', category: 'reports', semester: 2, start_date: '2027-06-25', end_date: '2027-06-25', description: 'Pembagian rapor dan kenaikan kelas', education_level: 'ALL' },
+    { title: 'Libur Akhir Tahun Ajaran', category: 'holiday', semester: 2, start_date: '2027-06-28', end_date: '2027-07-09', description: 'Libur akhir tahun pelajaran 2026/2027', education_level: 'ALL' },
+  ];
+
+  const now = Date.now();
+  for (const ev of seedData) {
+    const id = `CAL-SEED-${now}-${Math.random().toString(36).slice(2, 6)}`;
+    await client.execute({
+      sql: `INSERT INTO academic_calendar (id, title, category, semester, start_date, end_date, description, education_level, completed, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+      args: [id, ev.title, ev.category, ev.semester, ev.start_date, ev.end_date, ev.description, ev.education_level, now, now]
+    });
   }
 }
 

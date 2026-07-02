@@ -15,7 +15,12 @@ import {
   MonitorCheck,
   Leaf,
   GraduationCap,
-  School
+  School,
+  GitCompare,
+  List,
+  Briefcase,
+  Calendar,
+  Target
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -47,15 +52,25 @@ export default function Sidebar({ currentModule, setCurrentModule, theme, setThe
       title: 'GUDANG DATA',
       items: [
         { id: 'warehouse', label: 'Eksplorasi Data', icon: Database },
-        { id: 'students', label: 'Manajemen Siswa', icon: GraduationCap }
+        { id: 'students', label: 'Manajemen Siswa', icon: GraduationCap },
+        { id: 'rombels', label: 'Manajemen Rombel', icon: List }
       ]
     },
     {
       title: 'ANALISIS DATA',
       items: [
         { id: 'hr', label: 'Sumber Daya Manusia', icon: Users },
+        { id: 'advanced-hr', label: 'Kepegawaian Lanjutan', icon: Briefcase },
         { id: 'infrastructure', label: 'Audit Infrastruktur', icon: Building2 },
-        { id: 'school-profile', label: 'Profil Sekolah', icon: School }
+        { id: 'school-profile', label: 'Profil Sekolah', icon: School },
+        { id: 'school-comparison', label: 'Perbandingan Sekolah', icon: GitCompare }
+      ]
+    },
+    {
+      title: 'PERENCANAAN',
+      items: [
+        { id: 'academic-calendar', label: 'Kalender Akademik', icon: Calendar },
+        { id: 'kpi', label: 'Target & KPI', icon: Target }
       ]
     },
     {

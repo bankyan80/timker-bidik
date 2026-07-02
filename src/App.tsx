@@ -12,6 +12,11 @@ import CommandConsole from './components/CommandConsole';
 import ReportCenter from './components/ReportCenter';
 import StudentManagement from './components/StudentManagement';
 import SchoolProfile from './components/SchoolProfile';
+import SchoolComparison from './components/SchoolComparison';
+import RombelManagement from './components/RombelManagement';
+import AdvancedHR from './components/AdvancedHR';
+import AcademicCalendar from './components/AcademicCalendar';
+import TargetKPI from './components/TargetKPI';
 
 import { School, Recommendation } from './types';
 import { Menu, PanelLeftClose, PanelLeft } from 'lucide-react';
@@ -93,6 +98,16 @@ export default function App() {
         return <StudentManagement />;
       case 'school-profile':
         return <SchoolProfile selectedNpsn={undefined} onBack={() => setCurrentModule('dashboard')} />;
+      case 'school-comparison':
+        return <SchoolComparison />;
+      case 'rombels':
+        return <RombelManagement />;
+      case 'advanced-hr':
+        return <AdvancedHR />;
+      case 'academic-calendar':
+        return <AcademicCalendar />;
+      case 'kpi':
+        return <TargetKPI />;
       case 'reports':
         return <ReportCenter />;
       default:

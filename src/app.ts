@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { GoogleGenAI } from '@google/genai';
 import { SimulationScenario, SimulationResult } from './types';
-import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent } from './db';
+import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from './db';
 
 const app = express();
 app.use(express.json());
@@ -579,7 +579,41 @@ app.delete('/api/students/:id', async (req, res) => {
   res.json({ success: true });
 });
 
-// 8. School Profile API
+// 8. Calendar API
+app.get('/api/calendar', async (req, res) => {
+  const { semester, category, level } = req.query;
+  let events = await getCalendarEvents();
+  if (semester) events = events.filter(e => e.semester === Number(semester));
+  if (category) events = events.filter(e => e.category === category);
+  if (level && level !== 'ALL') events = events.filter(e => e.education_level === 'ALL' || e.education_level.includes(level as string));
+  res.json(events);
+});
+
+app.get('/api/calendar/:id', async (req, res) => {
+  const ev = await getCalendarEventById(req.params.id);
+  if (!ev) return res.status(404).json({ error: 'Event tidak ditemukan' });
+  res.json(ev);
+});
+
+app.post('/api/calendar', async (req, res) => {
+  const ev = await insertCalendarEvent(req.body);
+  if (!ev) return res.status(400).json({ error: 'Gagal menambah event' });
+  res.status(201).json(ev);
+});
+
+app.put('/api/calendar/:id', async (req, res) => {
+  const ok = await updateCalendarEvent(req.params.id, req.body);
+  if (!ok) return res.status(400).json({ error: 'Gagal mengupdate event' });
+  res.json({ success: true });
+});
+
+app.delete('/api/calendar/:id', async (req, res) => {
+  const ok = await deleteCalendarEvent(req.params.id);
+  if (!ok) return res.status(400).json({ error: 'Gagal menghapus event' });
+  res.json({ success: true });
+});
+
+// 9. School Profile API
 app.get('/api/schools/:npsn', async (req, res) => {
   const schools = await getAllSchools();
   const school = schools.find(s => s.npsn === req.params.npsn);

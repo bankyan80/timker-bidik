@@ -99,6 +99,29 @@ export interface AlertMessage {
   category: 'Staffing' | 'Infrastructure' | 'Certification' | 'Document';
 }
 
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  category: 'academic' | 'holiday' | 'assessment' | 'student_event' | 'teacher_event' | 'national_event' | 'reports';
+  semester: 1 | 2;
+  start_date: string;
+  end_date: string;
+  description: string;
+  education_level: string; // TK,SD,SMP,SMA,SMK,SLB or ALL
+  created_by: string | null;
+  created_at: number;
+  updated_at: number;
+  completed?: number;
+}
+
+export interface CalendarNotification {
+  id: string;
+  calendar_id: string;
+  target_role: string; // admin | staff | operator
+  sent_at: number | null;
+  status: string;
+}
+
 export interface DocumentMeta {
   id: string;
   title: string;
