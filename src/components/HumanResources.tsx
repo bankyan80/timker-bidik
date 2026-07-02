@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { School } from '../types';
 import { loadSchools } from '../data/dataService';
-import { VILLAGES } from '../data/mockData';
+import { ALL_SCHOOLS, VILLAGES } from '../data/mockData';
 import {
   Users,
   GraduationCap,
@@ -61,7 +61,7 @@ interface StaffMapping {
 }
 
 export default function HumanResources() {
-  const [schools, setSchools] = useState<School[]>([]);
+  const [schools, setSchools] = useState<School[]>(ALL_SCHOOLS);
   const [activeTab, setActiveTab] = useState<'analytics' | 'mapping'>('mapping');
   const [forecastYears, setForecastYears] = useState<'1' | '3' | '5'>('3');
   

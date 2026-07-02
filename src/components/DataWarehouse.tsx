@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { School } from '../types';
 import { loadSchools } from '../data/dataService';
-import { VILLAGES, getSchoolDMS } from '../data/mockData';
+import { ALL_SCHOOLS, VILLAGES, getSchoolDMS } from '../data/mockData';
 import {
   Search,
   Filter,
@@ -23,7 +23,7 @@ interface DataWarehouseProps {
 }
 
 export default function DataWarehouse({ selectedSchool, onSelectSchool }: DataWarehouseProps) {
-  const [schools, setSchools] = useState<School[]>([]);
+  const [schools, setSchools] = useState<School[]>(ALL_SCHOOLS);
   const [activeTab, setActiveTab] = useState<'schools' | 'teachers' | 'students' | 'facilities'>('schools');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterVillage, setFilterVillage] = useState('All');
