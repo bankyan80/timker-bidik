@@ -1,0 +1,355 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer utilities {
+  /* Dynamic marquee loop for live alerts stream ticker */
+  @keyframes marquee {
+    0% {
+      transform: translateX(100%);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
+  }
+
+  .animate-marquee {
+    animation: marquee 25s linear infinite;
+  }
+}
+
+/* ==========================================================
+   THEME HUB VISUAL LAYOUT OVERRIDES (LIGHT / COMMAND / EMERALD)
+   ========================================================== */
+
+/* ----------------------------------------------------------
+   nordic light theme style
+   ---------------------------------------------------------- */
+.theme-light {
+  background-color: #f8fafc !important; /* slate-50 */
+  color: #0f172a !important; /* slate-900 */
+}
+
+.theme-light .bg-\[\#08090b\] {
+  background-color: #f1f5f9 !important; /* slate-100 */
+}
+
+.theme-light .bg-\[\#0c0e12\] {
+  background-color: #ffffff !important;
+}
+
+.theme-light .bg-\[\#0c0e12\]\/60,
+.theme-light .bg-\[\#0c0e12\]\/40,
+.theme-light .bg-\[\#0c0e12\]\/80,
+.theme-light .bg-\[\#0c0e12\]\/90 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.theme-light .bg-\[\#11141a\] {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05) !important;
+}
+
+.theme-light .bg-\[\#11141a\]\/60 {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05) !important;
+}
+
+.theme-light .bg-\[\#0d0f14\],
+.theme-light .bg-\[\#0d0f14\]\/60 {
+  background-color: #f1f5f9 !important; /* slate-100 */
+}
+
+.theme-light .bg-slate-900,
+.theme-light .bg-slate-900\/60,
+.theme-light .bg-slate-900\/40,
+.theme-light .bg-[#0c0e12] {
+  background-color: #f8fafc !important; /* slate-50 */
+}
+
+.theme-light .border-\[\#1f2937\],
+.theme-light .border-\[\#1f2937\]\/50,
+.theme-light .border-\[\#1f2937\]\/80,
+.theme-light .border-\[\#1f2937\]\/10,
+.theme-light .border-\[\#1f2937\]\/20,
+.theme-light .border-slate-800 {
+  border-color: #e2e8f0 !important; /* slate-200 */
+}
+
+/* Text Overrides for Light Mode */
+.theme-light .text-slate-100,
+.theme-light .text-white,
+.theme-light h1,
+.theme-light h2,
+.theme-light h3,
+.theme-light h4,
+.theme-light h5 {
+  color: #0f172a !important; /* slate-900 */
+}
+
+.theme-light .text-slate-200,
+.theme-light .text-\[\#d1d5db\] {
+  color: #1e293b !important; /* slate-800 */
+}
+
+.theme-light .text-slate-300 {
+  color: #334155 !important; /* slate-700 */
+}
+
+.theme-light .text-slate-400 {
+  color: #475569 !important; /* slate-600 */
+}
+
+.theme-light .text-slate-500 {
+  color: #64748b !important; /* slate-500 */
+}
+
+/* Accent overrides to indigo / blue for light mode */
+.theme-light .text-cyan-400,
+.theme-light .text-cyan-300,
+.theme-light .text-indigo-400,
+.theme-light .text-sky-400 {
+  color: #4f46e5 !important; /* indigo-600 */
+}
+
+.theme-light .bg-cyan-650\/20,
+.theme-light .bg-cyan-950\/40,
+.theme-light .bg-cyan-950\/15,
+.theme-light .bg-cyan-950\/5,
+.theme-light .bg-cyan-600\/20 {
+  background-color: rgba(79, 70, 229, 0.08) !important;
+}
+
+.theme-light .border-cyan-500,
+.theme-light .border-cyan-500\/20,
+.theme-light .border-cyan-800 {
+  border-color: rgba(79, 70, 229, 0.25) !important;
+}
+
+.theme-light .hover\:bg-cyan-600\/20:hover,
+.theme-light .hover\:bg-cyan-600:hover {
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+}
+
+
+/* ----------------------------------------------------------
+   retro command amber terminal theme style
+   ---------------------------------------------------------- */
+.theme-command {
+  background-color: #000000 !important;
+  color: #fbbf24 !important; /* amber-400 */
+  font-family: "JetBrains Mono", ui-monospace, monospace !important;
+}
+
+.theme-command .bg-\[\#08090b\] {
+  background-color: #000000 !important;
+}
+
+.theme-command .bg-\[\#0c0e12\] {
+  background-color: #020202 !important;
+}
+
+.theme-command .bg-\[\#0c0e12\]\/60,
+.theme-command .bg-\[\#0c0e12\]\/40,
+.theme-command .bg-\[\#0c0e12\]\/80,
+.theme-command .bg-\[\#0c0e12\]\/90 {
+  background-color: rgba(5, 5, 5, 0.9) !important;
+}
+
+.theme-command .bg-\[\#11141a\] {
+  background-color: #050505 !important;
+}
+
+.theme-command .bg-\[\#11141a\]\/60 {
+  background-color: rgba(10, 10, 10, 0.85) !important;
+}
+
+.theme-command .bg-\[\#0d0f14\],
+.theme-command .bg-\[\#0d0f14\]\/60 {
+  background-color: #0c0a05 !important;
+}
+
+.theme-command .bg-slate-900,
+.theme-command .bg-slate-900\/60,
+.theme-command .bg-[#0c0e12] {
+  background-color: #050505 !important;
+}
+
+.theme-command .border-\[\#1f2937\],
+.theme-command .border-\[\#1f2937\]\/50,
+.theme-command .border-\[\#1f2937\]\/80,
+.theme-command .border-\[\#1f2937\]\/10,
+.theme-command .border-\[\#1f2937\]\/20,
+.theme-command .border-slate-800 {
+  border-color: #78350f !important; /* amber-900 */
+}
+
+/* Text Overrides for Command Mode */
+.theme-command .text-slate-100,
+.theme-command .text-white,
+.theme-command h1,
+.theme-command h2,
+.theme-command h3,
+.theme-command h4,
+.theme-command h5 {
+  color: #fbbf24 !important; /* amber-400 */
+}
+
+.theme-command .text-slate-200,
+.theme-command .text-\[\#d1d5db\] {
+  color: #f59e0b !important; /* amber-500 */
+}
+
+.theme-command .text-slate-300 {
+  color: #d97706 !important; /* amber-600 */
+}
+
+.theme-command .text-slate-400 {
+  color: #b45309 !important; /* amber-700 */
+}
+
+.theme-command .text-slate-500 {
+  color: #78350f !important; /* amber-900 */
+}
+
+/* Accent overrides to amber */
+.theme-command .text-cyan-400,
+.theme-command .text-cyan-300,
+.theme-command .text-indigo-400,
+.theme-command .text-sky-400 {
+  color: #f59e0b !important; /* amber-500 */
+}
+
+.theme-command .bg-cyan-650\/20,
+.theme-command .bg-cyan-950\/40,
+.theme-command .bg-cyan-950\/15,
+.theme-command .bg-cyan-950\/5,
+.theme-command .bg-cyan-600\/20 {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+}
+
+.theme-command .border-cyan-500,
+.theme-command .border-cyan-500\/20,
+.theme-command .border-cyan-800 {
+  border-color: #fbbf24 !important;
+}
+
+.theme-command .hover\:bg-cyan-600\/20:hover,
+.theme-command .hover\:bg-cyan-600:hover {
+  background-color: #d97706 !important;
+  color: #000000 !important;
+}
+
+
+/* ----------------------------------------------------------
+   deep forest emerald theme style
+   ---------------------------------------------------------- */
+.theme-emerald {
+  background-color: #050807 !important;
+  color: #e6f4ea !important;
+}
+
+.theme-emerald .bg-\[\#08090b\] {
+  background-color: #030504 !important;
+}
+
+.theme-emerald .bg-\[\#0c0e12\] {
+  background-color: #050807 !important;
+}
+
+.theme-emerald .bg-\[\#0c0e12\]\/60,
+.theme-emerald .bg-\[\#0c0e12\]\/40,
+.theme-emerald .bg-\[\#0c0e12\]\/80,
+.theme-emerald .bg-\[\#0c0e12\]\/90 {
+  background-color: rgba(8, 12, 10, 0.9) !important;
+}
+
+.theme-emerald .bg-\[\#11141a\] {
+  background-color: #080c0a !important;
+}
+
+.theme-emerald .bg-\[\#11141a\]\/60 {
+  background-color: rgba(15, 23, 18, 0.85) !important;
+}
+
+.theme-emerald .bg-\[\#0d0f14\],
+.theme-emerald .bg-\[\#0d0f14\]\/60 {
+  background-color: #050a08 !important;
+}
+
+.theme-emerald .bg-slate-900,
+.theme-emerald .bg-slate-900\/60,
+.theme-emerald .bg-[#0c0e12] {
+  background-color: #080c0a !important;
+}
+
+.theme-emerald .border-\[\#1f2937\],
+.theme-emerald .border-\[\#1f2937\]\/50,
+.theme-emerald .border-\[\#1f2937\]\/80,
+.theme-emerald .border-\[\#1f2937\]\/10,
+.theme-emerald .border-\[\#1f2937\]\/20,
+.theme-emerald .border-slate-800 {
+  border-color: #14532d !important; /* green-900 */
+}
+
+/* Text Overrides for Emerald Mode */
+.theme-emerald .text-slate-100,
+.theme-emerald .text-white,
+.theme-emerald h1,
+.theme-emerald h2,
+.theme-emerald h3,
+.theme-emerald h4,
+.theme-emerald h5 {
+  color: #e6f4ea !important;
+}
+
+.theme-emerald .text-slate-200,
+.theme-emerald .text-\[\#d1d5db\] {
+  color: #a7f3d0 !important; /* emerald-200 */
+}
+
+.theme-emerald .text-slate-300 {
+  color: #6ee7b7 !important; /* emerald-300 */
+}
+
+.theme-emerald .text-slate-400 {
+  color: #34d399 !important; /* emerald-400 */
+}
+
+.theme-emerald .text-slate-500 {
+  color: #059669 !important; /* emerald-600 */
+}
+
+/* Accent overrides to emerald */
+.theme-emerald .text-cyan-400,
+.theme-emerald .text-cyan-300,
+.theme-emerald .text-indigo-400,
+.theme-emerald .text-sky-400 {
+  color: #10b981 !important; /* emerald-500 */
+}
+
+.theme-emerald .bg-cyan-650\/20,
+.theme-emerald .bg-cyan-950\/40,
+.theme-emerald .bg-cyan-950\/15,
+.theme-emerald .bg-cyan-950\/5,
+.theme-emerald .bg-cyan-600\/20 {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+}
+
+.theme-emerald .border-cyan-500,
+.theme-emerald .border-cyan-500\/20,
+.theme-emerald .border-cyan-800 {
+  border-color: rgba(16, 185, 129, 0.4) !important;
+}
+
+.theme-emerald .hover\:bg-cyan-600\/20:hover,
+.theme-emerald .hover\:bg-cyan-600:hover {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+}
