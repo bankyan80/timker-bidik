@@ -134,16 +134,17 @@ app.post('/api/simulate', async (req, res) => {
 
   if (aiClient) {
     try {
-      const prompt = `You are the lead policy simulated analyzer for TIMKER BIDIK 360.
-Analyze this education policy simulation for Kecamatan Lemahabang:
-- Scenario: ${retiringEffect} teachers retiring, ${growthEffect}% student population growth, ${pppkEffect} new PPPK teachers assigned, ${schoolMergeCount} schools merged.
-- Calculated Impact: Student-teacher ratio reaches ${(teacherRatioImpact).toFixed(1)}:1. Number of understaffed schools changes from ${beforeShortage} to ${afterShortage}. Classroom shortage becomes ${afterClassroomDeficit}. Regional budget variance is ${budgetDelta >= 0 ? '+' : ''}${budgetDelta} Miliar IDR.
+      const prompt = `Kamu adalah analis kebijakan pendidikan untuk TIMKER BIDIK 360 Kecamatan Lemahabang.
+Bahasa yang dipakai santai, kayak ngobrol sama kepala dinas yang pengen tau kondisi riil — bukan laporan kaku.
+Analisis simulasi kebijakan berikut:
+- Guru pensiun: ${retiringEffect} orang, pertumbuhan siswa: ${growthEffect}%, PPPK baru: ${pppkEffect}, merger sekolah: ${schoolMergeCount}.
+- Dampak: Rasio siswa-guru ${(teacherRatioImpact).toFixed(1)}:1. Sekolah kekurangan guru dari ${beforeShortage} jadi ${afterShortage}. Defisit kelas: ${afterClassroomDeficit}. Anggaran: ${budgetDelta >= 0 ? '+' : ''}${budgetDelta} Miliar IDR.
 
-Generate 3 concise bullet points in Indonesian for the executive dashboard:
-1. One critical warning on the staffing pressure.
-2. One spatial/geographical implication.
-3. One operational budget optimization directive.
-Keep each bullet point highly realistic, concise, and focused on regional educational standards (SPM).`;
+Beri 3 poin singkat dalam bahasa Indonesia yang enak dibaca:
+1. Satu peringatan soal tekanan staffing.
+2. Satu implikasi geografis/spasial.
+3. Satu arahan efisiensi anggaran.
+Bikin realistis, padat, dan jangan kaku.`;
 
       const aiResponse = await aiClient.models.generateContent({
         model: 'gemini-2.0-flash',
@@ -195,10 +196,10 @@ You have access to the education data warehouse of Kecamatan Lemahabang:
 - Major Villages: Lemahabang, Cipeujeuh Wetan, Cipeujeuh Kulon, Belawa, Tuk Karangsuwung, Picungpugur, Sindanglaut, Wangkelang.
 
 Rules:
-1. Always respond in Indonesian unless asked otherwise. Keep the tone highly professional, precise, scannable, and data-dense (like an enterprise business intelligence officer).
+1. Always respond in Indonesian unless asked otherwise. Gunakan bahasa yang natural, santai, dan mudah dipahami — seperti ngobrol dengan rekan kerja yang paham data, bukan robot kaku.
 2. Ground your answers strictly on the actual schools data mentioned.
-3. If asked to "Show critical schools", "Predict shortage", "Compare villages", or similar commands, provide direct scannable tables, bold statistics, and clear action items.
-4. Keep the code fragments or markdown pristine.`;
+3. Jika diminta data spesifik, sajikan dengan rapi (tabel/poin) tapi tetap pakai gaya ngobrol yang manusiawi.
+4. Jangan lebay atau terlalu dramatis. Cukup jelas, to the point, dan hangat.`;
 
   if (aiClient) {
     try {
