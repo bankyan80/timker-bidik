@@ -411,7 +411,10 @@ app.get('/api/employees-with-docs', async (req, res) => {
   if (!db) return res.json([]);
 
   const emps = await db.execute(`
-    SELECT e.*, sk.name AS school_name, sk.level AS school_level, sk.status AS school_status
+    SELECT e.*,
+      sk.name AS school_name,
+      sk.level AS school_level,
+      CASE WHEN sk.status = 'NEGERI' THEN 'Negeri' WHEN sk.status = 'SWASTA' THEN 'Swasta' ELSE sk.status END AS school_status
     FROM employees e
     LEFT JOIN schools sk ON sk.npsn = e.sekolah_id
     WHERE e.is_active = 1

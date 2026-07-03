@@ -139,7 +139,7 @@ export default function ManajemenPegawai() {
       ) : groupedBySchool.size === 0 ? (
         <div className="text-center py-20 text-slate-600">
           <Building2 className="h-10 w-10 mx-auto mb-3 opacity-40" />
-          <p className="text-xs font-mono">Tidak ada pegawai untuk {statusTab} / {levelTab}</p>
+          <p className="text-xs font-mono">{search ? 'Pencarian tidak ditemukan' : `Tidak ada pegawai untuk ${statusTab} / ${levelTab}`}</p>
         </div>
       ) : (
         <div className="space-y-3">
