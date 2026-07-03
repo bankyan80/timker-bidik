@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ALL_SCHOOLS } from '../data/mockData';
 
 interface Student {
@@ -27,6 +27,8 @@ export default function StudentManagement() {
   const [filterKelas, setFilterKelas] = useState('ALL');
   const [levelTab, setLevelTab] = useState<string>('SD');
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [formOpen, setFormOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -43,6 +45,7 @@ export default function StudentManagement() {
     if (filterSchool !== 'ALL') f = f.filter(s => s.school_npsn === filterSchool);
     if (filterKelas !== 'ALL') f = f.filter(s => s.kelas_kelompok === filterKelas);
     setFiltered(f);
+    setCurrentPage(1);
   }, [search, filterSchool, filterKelas, levelTab, students]);
 
   async function load() {
@@ -100,6 +103,8 @@ export default function StudentManagement() {
   const laki = filteredByLevel.filter(s => s.jenis_kelamin?.toLowerCase().includes('laki')).length;
   const perempuan = filteredByLevel.filter(s => s.jenis_kelamin?.toLowerCase().includes('perempuan')).length;
   const schools = new Set(filteredByLevel.map(s => s.school_npsn));
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="space-y-6">
@@ -183,7 +188,7 @@ export default function StudentManagement() {
                 <tr><td colSpan={8} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={8} className="text-center py-12 text-slate-500">Tidak ada data siswa untuk jenjang {levelTab}</td></tr>
-              ) : filtered.map(s => (
+              ) : paginated.map(s => (
                 <tr key={s.id} className="hover:bg-slate-800/30 transition-colors">
                   <td className="px-4 py-3 text-white font-medium">{s.nama}</td>
                   <td className="px-4 py-3 text-slate-400 font-mono text-[11px]">{s.nisn || '-'}</td>
@@ -209,9 +214,27 @@ export default function StudentManagement() {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-2 border-t border-slate-800 text-[10px] text-slate-500 font-mono flex justify-between">
+        {/* Pagination */}
+        <div className="px-4 py-2 border-t border-slate-800 text-[10px] text-slate-500 font-mono flex items-center justify-between">
           <span>Total: {filtered.length} siswa {levelTab} {filterSchool !== 'ALL' || filterKelas !== 'ALL' ? '(difilter)' : ''}</span>
-          <span>{students.length} total seluruh jenjang</span>
+          <div className="flex items-center gap-2">
+            <span className="text-slate-600">Hal {currentPage}/{totalPages || 1}</span>
+            <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="bg-slate-800 border border-slate-700 rounded text-[10px] text-slate-400 px-1 py-0.5 outline-none">
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={999999}>Semua</option>
+            </select>
+            <button disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}
+              className="p-1 rounded bg-slate-800 border border-slate-700 disabled:opacity-30 hover:bg-slate-700 transition-all cursor-pointer">
+              <ChevronLeft className="h-3 w-3" />
+            </button>
+            <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}
+              className="p-1 rounded bg-slate-800 border border-slate-700 disabled:opacity-30 hover:bg-slate-700 transition-all cursor-pointer">
+              <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
         </div>
       </div>
 
