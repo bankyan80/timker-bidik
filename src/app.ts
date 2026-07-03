@@ -585,7 +585,7 @@ app.get('/api/schools/stats', async (req, res) => {
     npsn: s.npsn,
     name: s.name,
     level: s.level,
-    status: s.status,
+    status: s.status === 'NEGERI' ? 'Negeri' : s.status === 'SWASTA' ? 'Swasta' : s.status,
     village: s.village,
     accreditation: s.accreditation,
     healthScore: s.healthScore,

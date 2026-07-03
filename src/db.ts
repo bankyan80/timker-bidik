@@ -505,7 +505,7 @@ export async function getTeacherAggregates(): Promise<Record<string, SchoolTeach
       SUM(CASE WHEN sertifikasi IS NOT NULL AND sertifikasi != '' THEN 1 ELSE 0 END) as certified,
       SUM(CASE WHEN LOWER(status_pegawai) = 'pns' THEN 1 ELSE 0 END) as pns,
       SUM(CASE WHEN LOWER(status_pegawai) LIKE '%pppk%' THEN 1 ELSE 0 END) as pppk,
-      SUM(CASE WHEN LOWER(status_pegawai) NOT IN ('pns','pppk','pppk_paruh_waktu') THEN 1 ELSE 0 END) as honorer
+      SUM(CASE WHEN LOWER(status_pegawai) NOT IN ('pns') AND LOWER(status_pegawai) NOT LIKE '%pppk%' THEN 1 ELSE 0 END) as honorer
     FROM employees WHERE is_active = 1
     GROUP BY sekolah_id
   `);
