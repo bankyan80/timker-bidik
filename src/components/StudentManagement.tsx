@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight, Trash } from 'lucide-react';
 import { ALL_SCHOOLS } from '../data/mockData';
 
 interface Student {
@@ -29,6 +29,7 @@ export default function StudentManagement() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [formOpen, setFormOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -78,6 +79,33 @@ export default function StudentManagement() {
   async function remove(id: string) {
     if (!confirm('Hapus siswa ini?')) return;
     await fetch(`/api/students/${id}`, { method: 'DELETE' });
+    load();
+  }
+
+  function toggleCheck(id: string) {
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllPage() {
+    const pageIds = paginated.filter(s => s.status_siswa === 'aktif').map(s => s.id);
+    if (pageIds.every(id => checkedIds.has(id))) {
+      setCheckedIds(prev => { const next = new Set(prev); pageIds.forEach(id => next.delete(id)); return next; });
+    } else {
+      setCheckedIds(prev => { const next = new Set(prev); pageIds.forEach(id => next.add(id)); return next; });
+    }
+  }
+
+  async function bulkDelete() {
+    if (checkedIds.size === 0) return;
+    if (!confirm(`Hapus ${checkedIds.size} siswa yang dipilih?`)) return;
+    for (const id of checkedIds) {
+      await fetch(`/api/students/${id}`, { method: 'DELETE' });
+    }
+    setCheckedIds(new Set());
     load();
   }
 
@@ -182,12 +210,27 @@ export default function StudentManagement() {
         )}
       </div>
 
+      {/* Bulk Delete */}
+      {checkedIds.size > 0 && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-red-950/30 border border-red-900/50 rounded-lg">
+          <span className="text-xs font-mono text-red-300">{checkedIds.size} siswa dipilih</span>
+          <button onClick={bulkDelete} className="flex items-center gap-1.5 ml-auto px-3 py-1.5 bg-red-700 hover:bg-red-600 text-white text-xs font-mono rounded transition-colors cursor-pointer">
+            <Trash className="h-3 w-3" /> Hapus Semua
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="border border-slate-800 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-900/60 text-slate-400 text-[10px] font-mono uppercase tracking-wider">
+                <th className="w-10 px-2 py-3 text-center">
+                  <input type="checkbox" checked={paginated.length > 0 && paginated.filter(s => s.status_siswa === 'aktif').every(id => checkedIds.has(id))}
+                    onChange={toggleAllPage}
+                    className="accent-cyan-600 cursor-pointer" />
+                </th>
                 <th className="text-left px-4 py-3">Nama</th>
                 <th className="text-left px-4 py-3">NISN</th>
                 <th className="text-left px-4 py-3">JK</th>
@@ -200,11 +243,16 @@ export default function StudentManagement() {
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
-                <tr><td colSpan={8} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
+                <tr><td colSpan={9} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-12 text-slate-500">Tidak ada data siswa untuk jenjang {levelTab}</td></tr>
+                <tr><td colSpan={9} className="text-center py-12 text-slate-500">Tidak ada data siswa untuk jenjang {levelTab}</td></tr>
               ) : paginated.map(s => (
-                <tr key={s.id} className="hover:bg-slate-800/30 transition-colors">
+                <tr key={s.id} className={`hover:bg-slate-800/30 transition-colors ${checkedIds.has(s.id) ? 'bg-cyan-950/20' : ''}`}>
+                  <td className="w-10 px-2 py-3 text-center">
+                    {s.status_siswa === 'aktif' ? (
+                      <input type="checkbox" checked={checkedIds.has(s.id)} onChange={() => toggleCheck(s.id)} className="accent-cyan-600 cursor-pointer" />
+                    ) : null}
+                  </td>
                   <td className="px-4 py-3 text-white font-medium">{s.nama}</td>
                   <td className="px-4 py-3 text-slate-400 font-mono text-[11px]">{s.nisn || '-'}</td>
                   <td className="px-4 py-3">
