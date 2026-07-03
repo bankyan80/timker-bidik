@@ -1,18 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Users, School, BookOpen, Search, ChevronDown } from 'lucide-react';
+import { School, Users, BookOpen, Search } from 'lucide-react';
 import { ALL_SCHOOLS } from '../data/mockData';
 
-const npsnToSchool = new Map(ALL_SCHOOLS.map(s => [s.npsn, s.name]));
 const THEME = 'dark';
 
-interface RombelGroup {
-  npsn: string; rombel: string; count: number; students: any[];
-}
-
 export default function RombelManagement() {
-  const [groups, setGroups] = useState<RombelGroup[]>([]);
-  const [filterSchool, setFilterSchool] = useState('ALL');
-  const [expanded, setExpanded] = useState<string[]>([]);
+  const [levelTab, setLevelTab] = useState<string>('SD');
+  const [stats, setStats] = useState<Record<string, { rombels: number; siswa: number }>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,94 +16,94 @@ export default function RombelManagement() {
           fetch('/api/students/rombels').then(r => r.ok ? r.json() : []),
           fetch('/api/students').then(r => r.ok ? r.json() : []),
         ]);
-        const siswaByNpsnRombel: Record<string, any[]> = {};
-        for (const s of rSiswa) {
-          if (!s.rombel) continue;
-          const key = `${s.school_npsn}:${s.rombel}`;
-          if (!siswaByNpsnRombel[key]) siswaByNpsnRombel[key] = [];
-          siswaByNpsnRombel[key].push(s);
+        const perSekolah: Record<string, { rombels: Set<string>; siswa: number }> = {};
+        for (const r of rRombel) {
+          if (!perSekolah[r.npsn]) perSekolah[r.npsn] = { rombels: new Set(), siswa: 0 };
+          perSekolah[r.npsn].rombels.add(r.rombel);
+          perSekolah[r.npsn].siswa += r.count;
         }
-        const g = rRombel.map((r: any) => ({
-          ...r,
-          students: siswaByNpsnRombel[`${r.npsn}:${r.rombel}`] || [],
-        }));
-        setGroups(g);
+        const result: Record<string, { rombels: number; siswa: number }> = {};
+        for (const [npsn, v] of Object.entries(perSekolah)) {
+          result[npsn] = { rombels: v.rombels.size, siswa: v.siswa };
+        }
+        setStats(result);
       } catch {}
       setLoading(false);
     })();
   }, []);
 
-  const filtered = filterSchool === 'ALL' ? groups : groups.filter(g => g.npsn === filterSchool);
-  const grouped: Record<string, RombelGroup[]> = {};
-  for (const g of filtered) {
-    const key = g.npsn;
-    if (!grouped[key]) grouped[key] = [];
-    grouped[key].push(g);
-  }
+  const levels = ['SD', 'TK', 'KB'];
+  const schools = ALL_SCHOOLS.filter(s => s.level === levelTab).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Manajemen Rombel</h1>
-          <p className="text-sm text-slate-400 mt-1">Kelompok belajar (rombongan belajar) per sekolah</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            <BookOpen className="h-6 w-6 text-cyan-400" /> Manajemen Rombel
+          </h1>
+          <p className="text-sm text-slate-400 mt-1">Rombongan belajar per sekolah — {levelTab}</p>
         </div>
-        <select value={filterSchool} onChange={e => setFilterSchool(e.target.value)}
-          className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
-          <option value="ALL">Semua Sekolah</option>
-          {ALL_SCHOOLS.map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
-        </select>
+      </div>
+
+      {/* Level Tabs */}
+      <div className="flex gap-1 bg-slate-900/60 border border-slate-700/50 rounded-lg p-1 w-fit">
+        {levels.map(lv => (
+          <button key={lv} onClick={() => setLevelTab(lv)}
+            className={`px-4 py-1.5 rounded text-xs font-mono font-bold transition-all cursor-pointer ${
+              levelTab === lv ? 'bg-cyan-900/40 text-cyan-300 border border-cyan-800' : 'text-slate-400 hover:text-slate-200'
+            }`}>
+            {lv} ({ALL_SCHOOLS.filter(s => s.level === lv).length} sekolah)
+          </button>
+        ))}
       </div>
 
       {loading ? (
         <div className="text-center py-12 text-slate-500">Memuat data...</div>
-      ) : Object.keys(grouped).length === 0 ? (
+      ) : schools.length === 0 ? (
         <div className="text-center py-12 text-slate-500">
-          <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p>Belum ada data rombel</p>
+          <School className="h-12 w-12 mx-auto mb-3 opacity-30" />
+          <p>Tidak ada sekolah jenjang {levelTab}</p>
         </div>
-      ) : Object.entries(grouped).map(([npsn, rombels]) => (
-        <div key={npsn} className="border border-slate-800 rounded-xl overflow-hidden">
-          <div className="bg-slate-900/60 px-4 py-3 border-b border-slate-800">
-            <h3 className="text-sm font-semibold text-white">{npsnToSchool.get(npsn) || npsn}</h3>
-            <p className="text-[10px] text-slate-500 font-mono">{rombels.length} rombel • {rombels.reduce((s, r) => s + r.count, 0)} siswa</p>
-          </div>
-          <div className="divide-y divide-slate-800">
-            {rombels.map(r => {
-              const isExp = expanded.includes(r.rombel);
-              return (
-                <div key={r.rombel}>
-                  <button onClick={() => setExpanded(prev => isExp ? prev.filter(p => p !== r.rombel) : [...prev, r.rombel])}
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-800/30 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <BookOpen className="h-4 w-4 text-cyan-400" />
-                      <span className="text-sm text-white font-medium">{r.rombel}</span>
-                      <span className="text-[10px] text-slate-500 font-mono">{r.count} siswa</span>
-                    </div>
-                    <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${isExp ? 'rotate-180' : ''}`} />
-                  </button>
-                  {isExp && (
-                    <div className="px-4 pb-3">
-                      {r.students.length === 0 ? (
-                        <p className="text-xs text-slate-500 py-2">Tidak ada data siswa</p>
-                      ) : (
-                        <div className="grid grid-cols-4 gap-1.5">
-                          {r.students.map((s: any) => (
-                            <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 bg-slate-900/60 rounded text-xs">
-                              <span className={`w-1.5 h-1.5 rounded-full ${s.jenis_kelamin?.toLowerCase().includes('laki') ? 'bg-blue-400' : 'bg-pink-400'}`} />
-                              <span className="text-slate-300">{s.nama}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+      ) : (
+        <div className="border border-slate-800 rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-900/60 text-slate-400 text-[10px] font-mono uppercase tracking-wider">
+                <th className="text-left px-4 py-3">NPSN</th>
+                <th className="text-left px-4 py-3">Nama Sekolah</th>
+                <th className="text-left px-4 py-3">Status</th>
+                <th className="text-left px-4 py-3">Desa</th>
+                <th className="text-center px-4 py-3">Rombel</th>
+                <th className="text-center px-4 py-3">Siswa</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800">
+              {schools.map(s => {
+                const st = stats[s.npsn] || { rombels: 0, siswa: 0 };
+                return (
+                  <tr key={s.npsn} className="hover:bg-slate-800/30 transition-colors">
+                    <td className="px-4 py-3 text-slate-400 font-mono text-[11px]">{s.npsn}</td>
+                    <td className="px-4 py-3 text-white font-medium">{s.name}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                        s.status === 'Negeri' ? 'text-emerald-400 bg-emerald-950/40' : 'text-amber-400 bg-amber-950/40'
+                      }`}>{s.status}</span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-400 text-[11px]">{s.village}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="text-cyan-300 font-mono font-bold">{st.rombels}</span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="text-white font-mono font-bold">{st.siswa}</span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-      ))}
+      )}
     </div>
   );
 }
