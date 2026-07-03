@@ -739,56 +739,6 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     }
   },
   // ── SD SWASTA ──
-  {
-    npsn: '69986420',
-    name: 'SD IT AL-FURQAN',
-    level: 'SD',
-    status: 'Swasta',
-    village: 'Lemahabang',
-    accreditation: 'A',
-    coordinates: { lat: -6.833, lng: 108.622 },
-    students: {
-      total: 168, male: 88, female: 80,
-      byGrade: { 'Kelas 1': 28, 'Kelas 2': 27, 'Kelas 3': 29, 'Kelas 4': 28, 'Kelas 5': 29, 'Kelas 6': 27 },
-      growthTrend: [140, 148, 155, 162, 168]
-    },
-    teachers: {
-      total: 10, certified: 4, pns: 0, pppk: 0, honorer: 10,
-      subjects: { 'Guru Kelas': 6, 'Agama Islam': 1, 'PJOK': 1, 'Bahasa Inggris': 1, 'TIK': 1 },
-      pendingCertification: 4, retiringSoon: 0
-    },
-    facilities: {
-      classroomCondition: { good: 6, lightDamage: 0, heavyDamage: 0 },
-      hasLibrary: true, hasLab: false,
-      toiletsGood: 4, toiletsDamaged: 0,
-      internetSpeedMbps: 20, internetProvider: 'Telkom'
-    }
-  },
-  {
-    npsn: '69986421',
-    name: 'SD ISLAM TERPADU NURUL HIKMAH',
-    level: 'SD',
-    status: 'Swasta',
-    village: 'Tuk Karangsuwung',
-    accreditation: 'B',
-    coordinates: { lat: -6.820, lng: 108.627 },
-    students: {
-      total: 132, male: 68, female: 64,
-      byGrade: { 'Kelas 1': 22, 'Kelas 2': 21, 'Kelas 3': 23, 'Kelas 4': 22, 'Kelas 5': 22, 'Kelas 6': 22 },
-      growthTrend: [110, 116, 120, 126, 132]
-    },
-    teachers: {
-      total: 9, certified: 3, pns: 0, pppk: 0, honorer: 9,
-      subjects: { 'Guru Kelas': 6, 'Agama Islam': 1, 'PJOK': 1, 'Bahasa Inggris': 1 },
-      pendingCertification: 5, retiringSoon: 0
-    },
-    facilities: {
-      classroomCondition: { good: 6, lightDamage: 1, heavyDamage: 0 },
-      hasLibrary: true, hasLab: false,
-      toiletsGood: 3, toiletsDamaged: 1,
-      internetSpeedMbps: 10, internetProvider: 'IndiHome'
-    }
-  },
   // ── SD IT AL IRSYAD AL ISLAMIYYAH (Swasta) ──
   {
     npsn: '20215221',
