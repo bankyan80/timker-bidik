@@ -590,7 +590,7 @@ app.get('/api/schools/stats', async (req, res) => {
     accreditation: s.accreditation,
     healthScore: s.healthScore,
     students: studentAgg[s.npsn] || { npsn: s.npsn, total: 0, male: 0, female: 0, byGrade: {} },
-    teachers: teacherAgg[s.npsn] || { npsn: s.npsn, total: 0, certified: 0, pns: 0, pppk: 0, honorer: 0 },
+    teachers: teacherAgg[s.npsn] || { npsn: s.npsn, total: s.teachers?.total || 0, certified: s.teachers?.certified || 0, pns: s.teachers?.pns || 0, pppk: s.teachers?.pppk || 0, honorer: s.teachers?.honorer || 0 },
     riskIndicators: s.riskIndicators,
   }));
   res.json(result);
@@ -718,7 +718,7 @@ app.get('/api/schools/:npsn', async (req, res) => {
   const stats = {
     ...school,
     studentStats: studentAgg[req.params.npsn] || null,
-    teacherStats: teacherAgg[req.params.npsn] || null,
+    teacherStats: teacherAgg[req.params.npsn] || (school.teachers ? { npsn: school.npsn, total: school.teachers.total || 0, certified: school.teachers.certified || 0, pns: school.teachers.pns || 0, pppk: school.teachers.pppk || 0, honorer: school.teachers.honorer || 0 } : null),
   };
   res.json(stats);
 });

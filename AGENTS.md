@@ -28,7 +28,7 @@
 - 257 employees with 0 docs (down from 427 before arsip merge — need recalc)
 - Delete document web UI not integrated with backend API
 - Roman‑numeral rombels (Kelas II etc.) co‑exist with proper Kelas 2 form — 882 entries
-- SD IT AL IRSYAD (20215221): 32 employees but 0 students after cleanup
+- SD IT AL IRSYAD (20215221): 32 employees with 549 students (previously reported as 0 after cleanup, now restored via reimport)
 - New tables (student_parents/addresses/health) have no API endpoints or UI yet
 
 ## Key Scripts
