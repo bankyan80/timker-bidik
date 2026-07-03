@@ -350,30 +350,6 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     }
   },
   {
-    npsn: '20215221',
-    name: 'SD NEGERI 3 LEMAHABANG',
-    level: 'SD',
-    status: 'Negeri',
-    village: 'Lemahabang',
-    accreditation: 'A',
-    coordinates: { lat: -6.826944, lng: 108.628333 },
-    students: {
-      total: 420, male: 220, female: 200,
-      byGrade: { 'Kelas 1': 70, 'Kelas 2': 70, 'Kelas 3': 70, 'Kelas 4': 70, 'Kelas 5': 70, 'Kelas 6': 70 },
-      growthTrend: [350, 370, 390, 410, 420]
-    },
-    teachers: {
-      total: 18, certified: 12, pns: 10, pppk: 5, honorer: 3,
-      subjects: { 'Guru Kelas': 12, 'Agama Islam': 3, 'PJOK': 2, 'Bahasa Inggris': 1 },
-      pendingCertification: 4, retiringSoon: 1
-    },
-    facilities: {
-      classroomCondition: { good: 12, lightDamage: 0, heavyDamage: 0 },
-      hasLibrary: true, hasLab: true, toiletsGood: 8, toiletsDamaged: 0,
-      internetSpeedMbps: 100, internetProvider: 'Biznet'
-    }
-  },
-  {
     npsn: '20215381',
     name: 'SD NEGERI 2 CIPEUJEUH KULON',
     level: 'SD',

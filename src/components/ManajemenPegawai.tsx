@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search, Users, Building2, School, ChevronDown, ChevronUp,
   Filter, Loader2, AlertCircle, CheckCircle, X, FileText
 } from 'lucide-react';
-import { ALL_SCHOOLS } from '../data/mockData';
-import { School as SchoolType } from '../types';
 
 interface Pegawai {
   id: string;
@@ -27,30 +25,24 @@ export default function ManajemenPegawai() {
   const [levelTab, setLevelTab] = useState<string>('SD');
   const [expandedSchools, setExpandedSchools] = useState<Set<string>>(new Set());
 
-  const schoolMap = new Map<string, SchoolType>();
-  ALL_SCHOOLS.forEach(s => schoolMap.set(s.npsn, s));
-
   useEffect(() => {
     (async () => {
       try {
         const res = await fetch('/api/employees-with-docs');
         if (!res.ok) throw new Error('API unavailable');
         const rows: any[] = await res.json();
-        const mapped: Pegawai[] = rows.map(r => {
-          const s = schoolMap.get(r.sekolah_id);
-          return {
-            id: r.id,
-            nama: r.nama,
-            nipNik: r.nip || r.nik || '-',
-            status_pegawai: r.status_pegawai || '-',
-            jabatan: r.jabatan || '-',
-            sekolah_id: r.sekolah_id,
-            sekolah_nama: s?.name || r.sekolah_id,
-            sekolah_level: s?.level || 'SD',
-            sekolah_status: s?.status || 'Negeri',
-            doc_count: (r.documents || []).length,
-          };
-        });
+        const mapped: Pegawai[] = rows.map(r => ({
+          id: r.id,
+          nama: r.nama,
+          nipNik: r.nip || r.nik || '-',
+          status_pegawai: r.status_pegawai || '-',
+          jabatan: r.jabatan || '-',
+          sekolah_id: r.sekolah_id,
+          sekolah_nama: r.school_name || r.sekolah_id,
+          sekolah_level: r.school_level || 'SD',
+          sekolah_status: r.school_status || 'Negeri',
+          doc_count: (r.documents || []).length,
+        }));
         setPegawai(mapped);
       } catch { /* fallback mock */ }
       setLoading(false);
@@ -58,20 +50,27 @@ export default function ManajemenPegawai() {
   }, []);
 
   const levels = ['SD', 'TK', 'KB'];
-  const filtered = pegawai.filter(p =>
-    p.sekolah_status === statusTab &&
-    p.sekolah_level === levelTab &&
-    (p.nama.toLowerCase().includes(search.toLowerCase()) ||
-     p.nipNik.includes(search) ||
-     p.sekolah_nama.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filtered = useMemo(() =>
+    pegawai.filter(p =>
+      p.sekolah_status === statusTab &&
+      p.sekolah_level === levelTab &&
+      (p.nama.toLowerCase().includes(search.toLowerCase()) ||
+       p.nipNik.includes(search) ||
+       p.sekolah_nama.toLowerCase().includes(search.toLowerCase()))
+    ), [pegawai, statusTab, levelTab, search]);
 
-  const groupedBySchool = new Map<string, Pegawai[]>();
-  filtered.forEach(p => {
-    const key = p.sekolah_nama;
-    if (!groupedBySchool.has(key)) groupedBySchool.set(key, []);
-    groupedBySchool.get(key)!.push(p);
-  });
+  const groupedBySchool = useMemo(() => {
+    const map = new Map<string, Pegawai[]>();
+    filtered.forEach(p => {
+      const key = p.sekolah_nama;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(p);
+    });
+    map.forEach((emps, name) => {
+      map.set(name, emps.sort((a, b) => a.nama.localeCompare(b.nama)));
+    });
+    return map;
+  }, [filtered]);
 
   const toggleSchool = (name: string) => {
     setExpandedSchools(prev => {
@@ -177,6 +176,7 @@ export default function ManajemenPegawai() {
                             <span className={`px-1.5 py-0.5 rounded text-[10px] ${
                               emp.status_pegawai?.toLowerCase().includes('pns') ? 'bg-blue-950 text-blue-300 border border-blue-900' :
                               emp.status_pegawai?.toLowerCase().includes('pppk') ? 'bg-purple-950 text-purple-300 border border-purple-900' :
+                              emp.status_pegawai?.toLowerCase() === 'lainnya' || emp.status_pegawai === '-' ? 'bg-slate-800 text-slate-400 border border-slate-700' :
                               'bg-amber-950 text-amber-300 border border-amber-900'
                             }`}>
                               {emp.status_pegawai || '-'}

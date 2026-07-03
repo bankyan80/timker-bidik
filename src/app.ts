@@ -410,10 +410,15 @@ app.get('/api/employees-with-docs', async (req, res) => {
   const db = getDb();
   if (!db) return res.json([]);
 
-  const emps = await db.execute('SELECT * FROM employees WHERE is_active = 1 ORDER BY nama ASC');
+  const emps = await db.execute(`
+    SELECT e.*, sk.name AS school_name, sk.level AS school_level, sk.status AS school_status
+    FROM employees e
+    LEFT JOIN schools sk ON sk.npsn = e.sekolah_id
+    WHERE e.is_active = 1
+    ORDER BY e.nama ASC
+  `);
   const edocs = await db.execute('SELECT * FROM employee_documents ORDER BY employee_id, kategori ASC');
 
-  // Group docs by employee_id
   const docsByEmp = new Map<string, any[]>();
   for (const d of edocs.rows) {
     const eid = (d as any).employee_id as string;
