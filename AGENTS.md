@@ -1,11 +1,18 @@
 # Summary — TimKer Bidik Lemahabang
 
 ## Current State
-- **1,553 documents** uploaded to Google Drive (from 831 → 1,490 → 1,553)
-- **1,008 files scanned** on disk — **983 matched & uploaded** (25 generic/unidentifiable skipped)
-- **112 employees still with 0 documents** (69 PNS, 34 honorer, 8 PPPK, 1 PPPK PW)
+- **1,465 documents** in DB with drive links (1,453 + 12 baru dari TK/KB)
+- **394 employees** (was 282 — +112 from TK/KB)
+- **6,501 students** total (5,339 SD + 605 TK + 557 KB)
+- **44 schools**: 21 SD Negeri, 8 TK (1 Negeri + 7 Swasta), 15 KB Swasta
 
 ## What's Been Done
+### Data Migration (TK/KB dari laporan-pendidikan)
+- Script `scripts/migrate-tk-kb.mjs` — migrasi 17 sekolah baru + 89 pegawai + 769 siswa + 12 dokumen dari source DB `laporan-pendidikan` ke `timker-bidik`
+- Skipped 6 sekolah (5 KB + 1 TK yang sudah ada dari seed mock data)
+- Mapping: UUID `school_id` → `npsn` (target uses NPSN as PK for employees.sekolah_id & students.school_npsn)
+- Gender values normalized (L/P → Laki-laki/Perempuan)
+
 ### Google Sheets (5 sheets) - 647 records synced
 - Sheet 1 (PPPK PW, 52 rows): 567 dokumen (IJAZAH, SK PPPK, KTP, KK, NPWP, BPJS, etc.)
 - Sheet 2 (PPPK Foto, 54 rows): 80 PASS FOTO inserted
@@ -37,6 +44,7 @@
 - "atikotun"/"ATI KOTUN" — exists in DB but PASS FOTO needs matching
 
 ## Key Scripts
+- `scripts/migrate-tk-kb.mjs` — Migrate TK/KB data from laporan-pendidikan to timker-bidik DB
 - `scripts/sync-from-sheets.mjs` — Process 5 Google Sheets CSVs → sync Drive links to DB
 - `scripts/scan-pns-folders.mjs` — Verify PNS folder links via Drive API
 - `scripts/upload-final.mjs` — Final comprehensive match + upload
