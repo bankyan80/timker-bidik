@@ -163,12 +163,12 @@ export default function HumanResources() {
       const tPppk = Math.min(school.teachers.pppk, Math.max(0, Math.floor(tTotal * 0.2)));
       const tPppkParuh = Math.max(0, Math.floor(tTotal * 0.1));
       const tHonorer = Math.max(0, tTotal - tPns - tPppk - tPppkParuh);
-      const tRequired = school.level === 'SD' ? 2 : (school.level === 'SMP' ? 4 : 6);
+      const tRequired = school.level === 'SD' ? (rombel > 12 ? 4 : 2) : (school.level === 'SMP' ? 4 : 6);
       const tDelta = tTotal - tRequired;
 
       // Generate Guru PAI (Religion)
       const totalGuru = Math.max(0, school.teachers.total - tTotal);
-      const pRequired = school.level === 'SD' ? (rombel <= 6 ? 1 : 2) : (school.level === 'SMP' ? 2 : 3);
+      const pRequired = school.level === 'SD' ? (rombel > 12 ? 2 : 1) : (school.level === 'SMP' ? 2 : 3);
       const pTotal = Math.min(pRequired, Math.max(0, Math.floor(totalGuru * 0.08)));
       const pPns = Math.min(school.teachers.pns, Math.min(pTotal, Math.max(0, Math.floor(pTotal * 0.3))));
       const pPppk = Math.min(school.teachers.pppk, Math.min(pTotal - pPns, Math.max(0, Math.floor(pTotal * 0.4))));
@@ -177,7 +177,7 @@ export default function HumanResources() {
       const pDelta = pTotal - pRequired;
 
       // Generate Guru Penjaskes (PJOK)
-      const jRequired = school.level === 'SD' ? (rombel <= 6 ? 1 : 2) : 2;
+      const jRequired = school.level === 'SD' ? (rombel > 12 ? 2 : 1) : 2;
       const jTotal = Math.min(jRequired, Math.max(0, Math.floor(totalGuru * 0.07)));
       const jPns = Math.min(school.teachers.pns, Math.min(jTotal, Math.max(0, Math.floor(jTotal * 0.2))));
       const jPppk = Math.min(school.teachers.pppk, Math.min(jTotal - jPns, Math.max(0, Math.floor(jTotal * 0.3))));
