@@ -788,6 +788,32 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
       toiletsGood: 3, toiletsDamaged: 1,
       internetSpeedMbps: 10, internetProvider: 'IndiHome'
     }
+  },
+  // ── SD IT AL IRSYAD AL ISLAMIYYAH (Swasta) ──
+  {
+    npsn: '20215221',
+    name: 'SD IT AL IRSYAD AL ISLAMIYYAH',
+    level: 'SD',
+    status: 'Swasta',
+    village: 'Lemahabang Kulon',
+    accreditation: 'B',
+    coordinates: { lat: -6.826944444444444, lng: 108.62833333333332 },
+    students: {
+      total: 150, male: 80, female: 70,
+      byGrade: { 'Kelas 1': 25, 'Kelas 2': 25, 'Kelas 3': 25, 'Kelas 4': 25, 'Kelas 5': 25, 'Kelas 6': 25 },
+      growthTrend: [130, 138, 142, 146, 150]
+    },
+    teachers: {
+      total: 8, certified: 3, pns: 0, pppk: 0, honorer: 8,
+      subjects: { 'Guru Kelas': 6, 'Agama Islam': 1, 'PJOK': 1 },
+      pendingCertification: 4, retiringSoon: 0
+    },
+    facilities: {
+      classroomCondition: { good: 4, lightDamage: 1, heavyDamage: 0 },
+      hasLibrary: true, hasLab: false,
+      toiletsGood: 2, toiletsDamaged: 0,
+      internetSpeedMbps: 10, internetProvider: 'Telkom'
+    }
   }
 ];
 
