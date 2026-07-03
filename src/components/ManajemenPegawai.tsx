@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search, Users, Building2, School, ChevronDown, ChevronUp,
-  Filter, Loader2, AlertCircle, CheckCircle, X, FileText
+  Filter, Loader2, AlertCircle, CheckCircle, X, FileText, Calendar, Plus, Trash2
 } from 'lucide-react';
 
 interface Pegawai {
@@ -17,6 +17,16 @@ interface Pegawai {
   doc_count: number;
 }
 
+interface EmployeePeriod {
+  id: string;
+  employee_id: string;
+  tanggal_mulai: string;
+  tanggal_selesai: string;
+  status: string;
+  created_at: number;
+  updated_at: number;
+}
+
 export default function ManajemenPegawai() {
   const [pegawai, setPegawai] = useState<Pegawai[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +34,8 @@ export default function ManajemenPegawai() {
   const [statusTab, setStatusTab] = useState<'Negeri' | 'Swasta'>('Negeri');
   const [levelTab, setLevelTab] = useState<string>('SD');
   const [expandedSchools, setExpandedSchools] = useState<Set<string>>(new Set());
+  const [periodModal, setPeriodModal] = useState<{ emp: Pegawai; periods: EmployeePeriod[]; loading: boolean } | null>(null);
+  const [addingPeriod, setAddingPeriod] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -48,6 +60,80 @@ export default function ManajemenPegawai() {
       setLoading(false);
     })();
   }, []);
+
+  const openPeriodModal = async (emp: Pegawai) => {
+    setPeriodModal({ emp, periods: [], loading: true });
+    try {
+      const res = await fetch(`/api/employees/${emp.id}/periods`);
+      const periods = res.ok ? await res.json() : [];
+      setPeriodModal({ emp, periods, loading: false });
+    } catch {
+      setPeriodModal({ emp, periods: [], loading: false });
+    }
+  };
+
+  const addPeriod = async () => {
+    if (!periodModal) return;
+    const { emp, periods } = periodModal;
+    const isPppkPw = emp.status_pegawai === 'PPPK PW' || emp.status_pegawai?.toLowerCase().includes('paruh');
+    const tahun = isPppkPw ? 1 : 5;
+    const today = new Date().toISOString().slice(0, 10);
+    const end = new Date();
+    end.setFullYear(end.getFullYear() + tahun);
+    const endDate = end.toISOString().slice(0, 10);
+    setAddingPeriod(true);
+    try {
+      const res = await fetch(`/api/employees/${emp.id}/periods`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tanggal_mulai: today, tanggal_selesai: endDate }),
+      });
+      if (!res.ok) return;
+      const result = await res.json();
+      setPeriodModal({
+        emp,
+        periods: [...periods, {
+          id: result.id,
+          employee_id: emp.id,
+          tanggal_mulai: today,
+          tanggal_selesai: endDate,
+          status: 'aktif',
+          created_at: Date.now(),
+          updated_at: Date.now(),
+        }],
+        loading: false,
+      });
+    } catch {}
+    setAddingPeriod(false);
+  };
+
+  const endPeriod = async (period: EmployeePeriod) => {
+    if (!periodModal) return;
+    try {
+      const res = await fetch(`/api/employees/${periodModal.emp.id}/periods/${period.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'selesai' }),
+      });
+      if (!res.ok) return;
+      setPeriodModal({
+        ...periodModal,
+        periods: periodModal.periods.map(p => p.id === period.id ? { ...p, status: 'selesai' } : p),
+      });
+    } catch {}
+  };
+
+  const deletePeriod = async (period: EmployeePeriod) => {
+    if (!periodModal) return;
+    try {
+      const res = await fetch(`/api/employees/${periodModal.emp.id}/periods/${period.id}`, { method: 'DELETE' });
+      if (!res.ok) return;
+      setPeriodModal({
+        ...periodModal,
+        periods: periodModal.periods.filter(p => p.id !== period.id),
+      });
+    } catch {}
+  };
 
   const levels = ['SD', 'TK', 'KB'];
   const filtered = useMemo(() =>
@@ -164,7 +250,8 @@ export default function ManajemenPegawai() {
                         <th className="text-left p-2 font-semibold">NIP/NIK</th>
                         <th className="text-left p-2 font-semibold">Status</th>
                         <th className="text-left p-2 font-semibold">Jabatan</th>
-                        <th className="text-center p-2 pr-4 font-semibold">Dokumen</th>
+                        <th className="text-center p-2 font-semibold">Dokumen</th>
+                        <th className="text-center p-2 pr-4 font-semibold">Periode</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -183,8 +270,18 @@ export default function ManajemenPegawai() {
                             </span>
                           </td>
                           <td className="p-2 text-slate-400">{emp.jabatan}</td>
-                          <td className="p-2 pr-4 text-center">
+                          <td className="p-2 text-center">
                             <span className="text-slate-400">{emp.doc_count}</span>
+                          </td>
+                          <td className="p-2 pr-4 text-center">
+                            {emp.status_pegawai?.toLowerCase().includes('pppk') ? (
+                              <button onClick={() => openPeriodModal(emp)}
+                                className="text-[10px] px-2 py-1 rounded bg-indigo-950/40 text-indigo-300 border border-indigo-800 hover:bg-indigo-900/40 transition-all cursor-pointer">
+                                <Calendar className="h-3 w-3 inline mr-1" />Periode
+                              </button>
+                            ) : (
+                              <span className="text-[10px] text-slate-600">—</span>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -194,6 +291,72 @@ export default function ManajemenPegawai() {
               )}
             </div>
           ))}
+        </div>
+      )}
+      {/* Period Modal */}
+      {periodModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setPeriodModal(null)}>
+          <div className="bg-[#151922] border border-[#1f2937] rounded-xl w-full max-w-lg mx-4 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1f2937]">
+              <div>
+                <h2 className="text-sm font-bold text-slate-200 font-mono">Periode PPPK</h2>
+                <p className="text-[10px] text-slate-500 font-mono mt-0.5">{periodModal.emp.nama} — {periodModal.emp.nipNik}</p>
+              </div>
+              <button onClick={() => setPeriodModal(null)} className="text-slate-500 hover:text-slate-300 cursor-pointer"><X className="h-4 w-4" /></button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              {periodModal.loading ? (
+                <div className="flex items-center justify-center py-8 text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span className="text-xs font-mono">Memuat...</span>
+                </div>
+              ) : periodModal.periods.length === 0 ? (
+                <div className="text-center py-8 text-slate-600">
+                  <Calendar className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-xs font-mono">Belum ada periode</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {periodModal.periods.map(p => (
+                    <div key={p.id} className="flex items-center justify-between bg-[#0c0e12] rounded-lg px-4 py-3 border border-[#1f2937]">
+                      <div className="flex items-center gap-3">
+                        <span className={`h-2 w-2 rounded-full ${p.status === 'aktif' ? 'bg-emerald-500' : 'bg-slate-600'}`} />
+                        <div>
+                          <span className="text-xs font-mono text-slate-200">
+                            {p.tanggal_mulai} — {p.tanggal_selesai}
+                          </span>
+                          <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                            p.status === 'aktif' ? 'text-emerald-400 bg-emerald-950/40' : 'text-slate-500 bg-slate-800'
+                          }`}>
+                            {p.status === 'aktif' ? 'Aktif' : 'Selesai'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {p.status === 'aktif' && (
+                          <button onClick={() => endPeriod(p)}
+                            className="text-[10px] px-2 py-1 rounded bg-amber-950/40 text-amber-300 border border-amber-800 hover:bg-amber-900/40 transition-all cursor-pointer">
+                            Akhiri
+                          </button>
+                        )}
+                        <button onClick={() => deletePeriod(p)}
+                          className="p-1 text-red-500 hover:text-red-400 hover:bg-red-950/30 rounded transition-all cursor-pointer">
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <button onClick={addPeriod} disabled={addingPeriod}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-mono font-bold bg-indigo-950/40 text-indigo-300 border border-dashed border-indigo-800 hover:bg-indigo-900/40 disabled:opacity-40 transition-all cursor-pointer">
+                {addingPeriod ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                {periodModal.emp.status_pegawai === 'PPPK PW' || periodModal.emp.status_pegawai?.toLowerCase().includes('paruh') ? 'Tambah Periode (1 tahun)' : 'Tambah Periode (5 tahun)'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

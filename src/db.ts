@@ -251,6 +251,18 @@ export async function initSchema() {
       tahun_pelajaran TEXT NOT NULL
     )
   `);
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS employee_periods (
+      id TEXT PRIMARY KEY,
+      employee_id TEXT NOT NULL,
+      tanggal_mulai TEXT NOT NULL,
+      tanggal_selesai TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'aktif',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  `);
 }
 
 export async function seedData() {
@@ -586,6 +598,81 @@ export async function deleteEmployee(id: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+// ── Employee Periods CRUD ──
+
+export async function getEmployeePeriods(employeeId: string): Promise<{
+  id: string; employee_id: string; tanggal_mulai: string; tanggal_selesai: string;
+  status: string; created_at: number; updated_at: number;
+}[]> {
+  const client = getDb();
+  if (!client) return [];
+  const result = await client.execute({
+    sql: 'SELECT * FROM employee_periods WHERE employee_id = ? ORDER BY tanggal_mulai DESC',
+    args: [employeeId]
+  });
+  return result.rows.map(r => ({
+    id: r.id as string,
+    employee_id: r.employee_id as string,
+    tanggal_mulai: r.tanggal_mulai as string,
+    tanggal_selesai: r.tanggal_selesai as string,
+    status: r.status as string,
+    created_at: Number(r.created_at),
+    updated_at: Number(r.updated_at),
+  }));
+}
+
+export async function insertEmployeePeriod(data: {
+  employee_id: string; tanggal_mulai: string; tanggal_selesai: string; status?: string;
+}): Promise<{ id: string } | null> {
+  const client = getDb();
+  if (!client) return null;
+  const now = Date.now();
+  const id = `PRD-${now}-${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    await client.execute({
+      sql: `INSERT INTO employee_periods (id, employee_id, tanggal_mulai, tanggal_selesai, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [id, data.employee_id, data.tanggal_mulai, data.tanggal_selesai, data.status || 'aktif', now, now]
+    });
+    return { id };
+  } catch { return null; }
+}
+
+export async function updateEmployeePeriod(periodId: string, data: Partial<{
+  tanggal_mulai: string; tanggal_selesai: string; status: string;
+}>): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  const sets: string[] = [];
+  const args: any[] = [];
+  for (const [key, val] of Object.entries(data)) {
+    if (val !== undefined) {
+      sets.push(`${key} = ?`);
+      args.push(val);
+    }
+  }
+  if (sets.length === 0) return false;
+  sets.push('updated_at = ?');
+  args.push(Date.now());
+  args.push(periodId);
+  try {
+    await client.execute({
+      sql: `UPDATE employee_periods SET ${sets.join(', ')} WHERE id = ?`,
+      args
+    });
+    return true;
+  } catch { return false; }
+}
+
+export async function deleteEmployeePeriod(periodId: string): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  try {
+    await client.execute({ sql: 'DELETE FROM employee_periods WHERE id = ?', args: [periodId] });
+    return true;
+  } catch { return false; }
 }
 
 // ── Calendar CRUD ──

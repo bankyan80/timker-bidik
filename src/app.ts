@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { GoogleGenAI } from '@google/genai';
 import { SimulationScenario, SimulationResult } from './types';
-import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from './db';
+import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod } from './db';
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -463,6 +463,39 @@ app.put('/api/employees/:id', async (req, res) => {
 app.delete('/api/employees/:id', async (req, res) => {
   const ok = await deleteEmployee(req.params.id);
   if (!ok) return res.status(400).json({ error: 'Failed to delete employee' });
+  res.json({ success: true });
+});
+
+// Employee Period API
+app.get('/api/employees/:id/periods', async (req, res) => {
+  const periods = await getEmployeePeriods(req.params.id);
+  res.json(periods);
+});
+
+app.post('/api/employees/:id/periods', async (req, res) => {
+  const { tanggal_mulai, tanggal_selesai, status } = req.body;
+  if (!tanggal_mulai || !tanggal_selesai) {
+    return res.status(400).json({ error: 'tanggal_mulai and tanggal_selesai required' });
+  }
+  const result = await insertEmployeePeriod({
+    employee_id: req.params.id,
+    tanggal_mulai,
+    tanggal_selesai,
+    status,
+  });
+  if (!result) return res.status(500).json({ error: 'Failed to create period' });
+  res.status(201).json(result);
+});
+
+app.put('/api/employees/:id/periods/:periodId', async (req, res) => {
+  const ok = await updateEmployeePeriod(req.params.periodId, req.body);
+  if (!ok) return res.status(400).json({ error: 'Failed to update period' });
+  res.json({ success: true });
+});
+
+app.delete('/api/employees/:id/periods/:periodId', async (req, res) => {
+  const ok = await deleteEmployeePeriod(req.params.periodId);
+  if (!ok) return res.status(400).json({ error: 'Failed to delete period' });
   res.json({ success: true });
 });
 
