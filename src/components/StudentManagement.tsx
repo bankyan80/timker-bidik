@@ -43,7 +43,7 @@ export default function StudentManagement() {
     let f = students.filter(s => s.jenjang === levelTab);
     if (search) { const q = search.toLowerCase(); f = f.filter(s => s.nama.toLowerCase().includes(q) || (s.nisn && s.nisn.includes(q))); }
     if (filterSchool !== 'ALL') f = f.filter(s => s.school_npsn === filterSchool);
-    if (filterKelas !== 'ALL') f = f.filter(s => s.kelas_kelompok === filterKelas);
+    if (filterKelas !== 'ALL') f = f.filter(s => (s.rombel || s.kelas_kelompok) === filterKelas);
     setFiltered(f);
     setCurrentPage(1);
   }, [search, filterSchool, filterKelas, levelTab, students]);
@@ -99,7 +99,7 @@ export default function StudentManagement() {
   function handleSchoolChange(npsn: string) {
     const lv = schoolLevel.get(npsn) || 'SD';
     const groups = kelasByLevel[lv] || ['Kelas 1'];
-    setForm({ ...form, school_npsn: npsn, kelas_kelompok: groups[0] });
+    setForm({ ...form, school_npsn: npsn, kelas_kelompok: lv === 'SD' ? groups[0] : 'Kelompok A', rombel: '' });
   }
 
   const levels = ['SD', 'TK', 'KB'];
@@ -110,6 +110,7 @@ export default function StudentManagement() {
   const laki = filteredByLevel.filter(s => (s.jenis_kelamin || '').toLowerCase().includes('laki') || s.jenis_kelamin === 'L').length;
   const perempuan = filteredByLevel.filter(s => (s.jenis_kelamin || '').toLowerCase().includes('perempuan') || s.jenis_kelamin === 'P').length;
   const schools = new Set(filteredByLevel.map(s => s.school_npsn));
+  const formLevel = form.school_npsn ? (schoolLevel.get(form.school_npsn) || 'SD') : levelTab;
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
@@ -168,10 +169,17 @@ export default function StudentManagement() {
           <option value="ALL">Semua Sekolah</option>
           {ALL_SCHOOLS.filter(s => s.level === levelTab).map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
         </select>
-        <select value={filterKelas} onChange={e => setFilterKelas(e.target.value)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
-          <option value="ALL">Semua Kelas</option>
-          {currentKelasList.map(k => <option key={k} value={k}>{k}</option>)}
-        </select>
+        {levelTab === 'SD' ? (
+          <select value={filterKelas} onChange={e => setFilterKelas(e.target.value)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
+            <option value="ALL">Semua Kelas</option>
+            {currentKelasList.map(k => <option key={k} value={k}>{k}</option>)}
+          </select>
+        ) : (
+          <select value={filterKelas} onChange={e => setFilterKelas(e.target.value)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
+            <option value="ALL">Semua Rombel</option>
+            {[...new Set(filteredByLevel.map(s => s.rombel || s.kelas_kelompok).filter(Boolean))].map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+        )}
       </div>
 
       {/* Table */}
@@ -183,8 +191,8 @@ export default function StudentManagement() {
                 <th className="text-left px-4 py-3">Nama</th>
                 <th className="text-left px-4 py-3">NISN</th>
                 <th className="text-left px-4 py-3">JK</th>
-                <th className="text-left px-4 py-3">Kelas/Kelompok</th>
-                <th className="text-left px-4 py-3">Rombel</th>
+                <th className="text-left px-4 py-3">{levelTab === 'SD' ? 'Kelas' : 'Kelompok'}</th>
+                {levelTab === 'SD' && <th className="text-left px-4 py-3">Rombel</th>}
                 <th className="text-left px-4 py-3">Sekolah</th>
                 <th className="text-left px-4 py-3">Status</th>
                 <th className="text-right px-4 py-3">Aksi</th>
@@ -204,8 +212,14 @@ export default function StudentManagement() {
                       {(s.jenis_kelamin || '').toLowerCase().includes('laki') || s.jenis_kelamin === 'L' ? 'L' : 'P'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-300">{s.kelas_kelompok}</td>
-                  <td className="px-4 py-3 text-slate-400 text-[11px]">{s.rombel || '-'}</td>
+                  {levelTab === 'SD' ? (
+                    <>
+                      <td className="px-4 py-3 text-slate-300">{s.kelas_kelompok}</td>
+                      <td className="px-4 py-3 text-slate-400 text-[11px]">{s.rombel || '-'}</td>
+                    </>
+                  ) : (
+                    <td className="px-4 py-3 text-slate-300">{s.rombel || s.kelas_kelompok}</td>
+                  )}
                   <td className="px-4 py-3 text-slate-300 text-[11px]">{npsnToSchool.get(s.school_npsn) || s.school_npsn}</td>
                   <td className="px-4 py-3">
                     <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono uppercase ${s.status_siswa === 'aktif' ? 'text-emerald-400 bg-emerald-950/40' : 'text-red-400 bg-red-950/40'}`}>{s.status_siswa}</span>
@@ -286,16 +300,25 @@ export default function StudentManagement() {
                 <label className="text-[10px] font-mono text-slate-400 uppercase">Tgl Lahir</label>
                 <input type="date" value={form.tanggal_lahir} onChange={e => setForm({...form, tanggal_lahir: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
               </div>
-              <div>
-                <label className="text-[10px] font-mono text-slate-400 uppercase">Kelas/Kelompok</label>
-                <select value={form.kelas_kelompok} onChange={e => setForm({...form, kelas_kelompok: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
-                  {kelasByLevel[form.school_npsn ? (schoolLevel.get(form.school_npsn) || 'SD') : levelTab]?.map(k => <option key={k} value={k}>{k}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] font-mono text-slate-400 uppercase">Rombel</label>
-                <input value={form.rombel} onChange={e => setForm({...form, rombel: e.target.value})} placeholder="cth: A, B, C" className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
-              </div>
+              {formLevel === 'SD' ? (
+                <>
+                  <div>
+                    <label className="text-[10px] font-mono text-slate-400 uppercase">Kelas</label>
+                    <select value={form.kelas_kelompok} onChange={e => setForm({...form, kelas_kelompok: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
+                      {kelasByLevel['SD']?.map(k => <option key={k} value={k}>{k}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-mono text-slate-400 uppercase">Rombel</label>
+                    <input value={form.rombel} onChange={e => setForm({...form, rombel: e.target.value})} placeholder="cth: A, B, C" className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
+                  </div>
+                </>
+              ) : (
+                <div className="col-span-2">
+                  <label className="text-[10px] font-mono text-slate-400 uppercase">Kelompok / Rombel</label>
+                  <input value={form.rombel || form.kelas_kelompok} onChange={e => setForm({...form, rombel: e.target.value, kelas_kelompok: e.target.value || form.kelas_kelompok})} placeholder="cth: A, B, Bermain" className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
+                </div>
+              )}
               <div className="col-span-2">
                 <label className="text-[10px] font-mono text-slate-400 uppercase">Tahun Pelajaran</label>
                 <input value={form.tahun_pelajaran} onChange={e => setForm({...form, tahun_pelajaran: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
