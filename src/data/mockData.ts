@@ -38,7 +38,8 @@ export const REAL_COORDINATES_DMS: Record<string, { latDms: string; lngDms: stri
   '20246445': { latDms: '6°50\'6"S', lngDms: '108°37\'48"E' },
   '20215162': { latDms: '6°49\'55"S', lngDms: '108°37\'46"E' },
   '20215584': { latDms: '6°50\'2"S', lngDms: '108°34\'29"E' },
-  '20244513': { latDms: '6.8272064S', lngDms: '108.647168E' }
+  '20244513': { latDms: '6.8272064S', lngDms: '108.647168E' },
+  '20270605': { latDms: '6°49\'47"S', lngDms: '108°37\'10"E' }
 };
 
 export function getSchoolDMS(school: School | { npsn: string; coordinates: { lat: number; lng: number } }): { latDms: string; lngDms: string } {
@@ -83,13 +84,13 @@ const getVillageCenter = (village: string): { lat: number; lng: number } => {
 const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
   // ── TK NEGERI ──
   {
-    npsn: '20244513',
-    name: 'TK NEGERI PEMBINA LEMAHABANG',
+    npsn: '20270605',
+    name: 'TK NEGERI LEMAHABANG',
     level: 'TK',
     status: 'Negeri',
     village: 'Lemahabang',
     accreditation: 'B',
-    coordinates: { lat: -6.8273, lng: 108.6472 },
+    coordinates: { lat: -6.8297, lng: 108.6194 },
     students: {
       total: 90, male: 45, female: 45,
       byGrade: { 'Kelompok A': 45, 'Kelompok B': 45 },

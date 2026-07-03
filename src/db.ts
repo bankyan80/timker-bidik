@@ -691,11 +691,11 @@ export async function seedCalendarEvents() {
 
   const seedData: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at' | 'completed'>[] = [
     // Semester 1
-    { title: 'Penyelarasan Kurikulum SMK', category: 'teacher_event', semester: 1, start_date: '2026-07-14', end_date: '2026-07-14', description: 'Penyelarasan kurikulum untuk satuan pendidikan SMK', education_level: 'SMK' },
+    { title: 'Penyelarasan Kurikulum SD', category: 'teacher_event', semester: 1, start_date: '2026-07-14', end_date: '2026-07-14', description: 'Penyelarasan kurikulum untuk satuan pendidikan SD', education_level: 'SD' },
     { title: 'Hari Pertama Masuk Sekolah', category: 'academic', semester: 1, start_date: '2026-07-15', end_date: '2026-07-15', description: 'Hari pertama masuk sekolah Tahun Pelajaran 2026/2027', education_level: 'ALL' },
     { title: 'MPLS SD/MI', category: 'student_event', semester: 1, start_date: '2026-07-15', end_date: '2026-07-21', description: 'Masa Pengenalan Lingkungan Sekolah untuk kelas 1 (15-17 & 20-21 Juli 2026)', education_level: 'SD' },
     { title: 'Sulingjar', category: 'assessment', semester: 1, start_date: '2026-08-03', end_date: '2026-08-31', description: 'Survei Lingkungan Belajar — pengisian instrumen lingkungan belajar oleh satuan pendidikan', education_level: 'ALL' },
-    { title: 'TKA SMA/SMK', category: 'assessment', semester: 1, start_date: '2026-10-26', end_date: '2026-11-08', description: 'Tes Kemampuan Akademik untuk jenjang SMA dan SMK', education_level: 'SMA,SMK' },
+    { title: 'Asesmen Sumatif Tengah Semester', category: 'assessment', semester: 1, start_date: '2026-10-26', end_date: '2026-11-08', description: 'Pelaksanaan asesmen sumatif tengah semester untuk SD/MI, TK, dan KB', education_level: 'ALL' },
     { title: 'Penetapan Rapor Semester 1', category: 'reports', semester: 1, start_date: '2026-12-23', end_date: '2026-12-23', description: 'Penetapan hasil penilaian rapor semester ganjil', education_level: 'ALL' },
     { title: 'Pembagian Rapor Semester 1', category: 'reports', semester: 1, start_date: '2026-12-23', end_date: '2026-12-23', description: 'Pembagian rapor kepada siswa semester ganjil', education_level: 'ALL' },
     { title: 'Libur Semester 1', category: 'holiday', semester: 1, start_date: '2026-12-28', end_date: '2027-01-08', description: 'Libur akhir semester ganjil', education_level: 'ALL' },
