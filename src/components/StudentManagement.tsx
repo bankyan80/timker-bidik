@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight, Trash } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight, Trash, ArrowUp } from 'lucide-react';
 import { ALL_SCHOOLS } from '../data/mockData';
 
 interface Student {
@@ -109,6 +109,31 @@ export default function StudentManagement() {
     load();
   }
 
+  const GRADE_NEXT: Record<string, string> = {
+    'Kelas 1': 'Kelas 2', 'Kelas 2': 'Kelas 3', 'Kelas 3': 'Kelas 4',
+    'Kelas 4': 'Kelas 5', 'Kelas 5': 'Kelas 6',
+    'Kelompok A': 'Kelompok B',
+  };
+
+  async function naikKelas() {
+    if (checkedIds.size === 0) return;
+    if (!confirm(`Naikkan ${checkedIds.size} siswa yang dipilih ke kelas berikutnya?`)) return;
+    const selected = students.filter(s => checkedIds.has(s.id));
+    let promoted = 0;
+    for (const s of selected) {
+      const next = GRADE_NEXT[s.kelas_kelompok];
+      if (!next) continue;
+      await fetch(`/api/students/${s.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kelas_kelompok: next, rombel: null }),
+      });
+      promoted++;
+    }
+    setCheckedIds(new Set());
+    if (promoted > 0) load();
+  }
+
   function resetForm() { setForm({ school_npsn: '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki', tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: 'Kelas 1', rombel: '', tahun_pelajaran: '2025/2026' }); }
 
   function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempuan' {
@@ -214,7 +239,10 @@ export default function StudentManagement() {
       {checkedIds.size > 0 && (
         <div className="flex items-center gap-2 px-4 py-2 bg-red-950/30 border border-red-900/50 rounded-lg">
           <span className="text-xs font-mono text-red-300">{checkedIds.size} siswa dipilih</span>
-          <button onClick={bulkDelete} className="flex items-center gap-1.5 ml-auto px-3 py-1.5 bg-red-700 hover:bg-red-600 text-white text-xs font-mono rounded transition-colors cursor-pointer">
+          <button onClick={naikKelas} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-mono rounded transition-colors cursor-pointer">
+            <ArrowUp className="h-3 w-3" /> Naik Kelas
+          </button>
+          <button onClick={bulkDelete} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-700 hover:bg-red-600 text-white text-xs font-mono rounded transition-colors cursor-pointer">
             <Trash className="h-3 w-3" /> Hapus Semua
           </button>
         </div>
