@@ -14,6 +14,7 @@ import StudentManagement from './components/StudentManagement';
 import SchoolProfile from './components/SchoolProfile';
 import SchoolComparison from './components/SchoolComparison';
 import RombelManagement from './components/RombelManagement';
+import ManajemenPegawai from './components/ManajemenPegawai';
 import AdvancedHR from './components/AdvancedHR';
 import AcademicCalendar from './components/AcademicCalendar';
 import TargetKPI from './components/TargetKPI';
@@ -94,6 +95,8 @@ export default function App() {
         return <ScenarioSimulator />;
       case 'documents':
         return <DocumentIntel />;
+      case 'pegawai':
+        return <ManajemenPegawai />;
       case 'students':
         return <StudentManagement />;
       case 'school-profile':

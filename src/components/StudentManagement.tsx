@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap } from 'lucide-react';
 import { ALL_SCHOOLS } from '../data/mockData';
 
 interface Student {
@@ -11,7 +11,13 @@ interface Student {
 
 const THEME = 'dark';
 const npsnToSchool = new Map(ALL_SCHOOLS.map(s => [s.npsn, s.name]));
-const kelasList = ['Kelas 1', 'Kelas 2', 'Kelas 3', 'Kelas 4', 'Kelas 5', 'Kelas 6'];
+const schoolLevel = new Map(ALL_SCHOOLS.map(s => [s.npsn, s.level]));
+
+const kelasByLevel: Record<string, string[]> = {
+  SD: ['Kelas 1', 'Kelas 2', 'Kelas 3', 'Kelas 4', 'Kelas 5', 'Kelas 6'],
+  TK: ['Kelompok A', 'Kelompok B'],
+  KB: ['Kelompok Bermain'],
+};
 
 export default function StudentManagement() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -19,6 +25,7 @@ export default function StudentManagement() {
   const [search, setSearch] = useState('');
   const [filterSchool, setFilterSchool] = useState('ALL');
   const [filterKelas, setFilterKelas] = useState('ALL');
+  const [levelTab, setLevelTab] = useState<string>('SD');
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -31,12 +38,12 @@ export default function StudentManagement() {
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
-    let f = students;
+    let f = students.filter(s => s.jenjang === levelTab);
     if (search) { const q = search.toLowerCase(); f = f.filter(s => s.nama.toLowerCase().includes(q) || (s.nisn && s.nisn.includes(q))); }
     if (filterSchool !== 'ALL') f = f.filter(s => s.school_npsn === filterSchool);
     if (filterKelas !== 'ALL') f = f.filter(s => s.kelas_kelompok === filterKelas);
     setFiltered(f);
-  }, [search, filterSchool, filterKelas, students]);
+  }, [search, filterSchool, filterKelas, levelTab, students]);
 
   async function load() {
     setLoading(true);
@@ -48,6 +55,7 @@ export default function StudentManagement() {
   }
 
   async function save() {
+    const selectedLevel = form.school_npsn ? (schoolLevel.get(form.school_npsn) || 'SD') : levelTab;
     if (editId) {
       await fetch(`/api/students/${editId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         nama: form.nama, nisn: form.nisn || null, nik: form.nik || null,
@@ -58,7 +66,7 @@ export default function StudentManagement() {
     } else {
       await fetch('/api/students', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         ...form, nisn: form.nisn || null, nik: form.nik || null,
-        jenjang: 'SD', status_siswa: 'aktif'
+        jenjang: selectedLevel, status_siswa: 'aktif'
       })});
     }
     setFormOpen(false); setEditId(null); resetForm(); load();
@@ -78,29 +86,52 @@ export default function StudentManagement() {
     setFormOpen(true);
   }
 
+  function handleSchoolChange(npsn: string) {
+    const lv = schoolLevel.get(npsn) || 'SD';
+    const groups = kelasByLevel[lv] || ['Kelas 1'];
+    setForm({ ...form, school_npsn: npsn, kelas_kelompok: groups[0] });
+  }
+
+  const levels = ['SD', 'TK', 'KB'];
+  const levelCount = (lv: string) => students.filter(s => s.jenjang === lv).length;
+  const currentKelasList = kelasByLevel[levelTab] || ['Kelas 1'];
   const total = students.length;
-  const laki = students.filter(s => s.jenis_kelamin?.toLowerCase().includes('laki')).length;
-  const perempuan = students.filter(s => s.jenis_kelamin?.toLowerCase().includes('perempuan')).length;
-  const schools = new Set(students.map(s => s.school_npsn));
-  const rombels = [...new Set(students.filter(s => s.rombel).map(s => s.rombel))];
+  const filteredByLevel = students.filter(s => s.jenjang === levelTab);
+  const laki = filteredByLevel.filter(s => s.jenis_kelamin?.toLowerCase().includes('laki')).length;
+  const perempuan = filteredByLevel.filter(s => s.jenis_kelamin?.toLowerCase().includes('perempuan')).length;
+  const schools = new Set(filteredByLevel.map(s => s.school_npsn));
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Manajemen Siswa</h1>
-          <p className="text-sm text-slate-400 mt-1">Data siswa aktif SD Negeri se-Kecamatan Lemahabang</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            <GraduationCap className="h-6 w-6 text-cyan-400" /> Manajemen Siswa
+          </h1>
+          <p className="text-sm text-slate-400 mt-1">Data siswa se-Kecamatan Lemahabang — {total} total</p>
         </div>
         <button onClick={() => { setEditId(null); resetForm(); setFormOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors">
           <Plus className="h-4 w-4" /> Tambah Siswa
         </button>
       </div>
 
+      {/* Level Tabs */}
+      <div className="flex gap-1 bg-slate-900/60 border border-slate-700/50 rounded-lg p-1 w-fit">
+        {levels.map(lv => (
+          <button key={lv} onClick={() => { setLevelTab(lv); setFilterSchool('ALL'); setFilterKelas('ALL'); }}
+            className={`px-4 py-1.5 rounded text-xs font-mono font-bold transition-all cursor-pointer ${
+              levelTab === lv ? 'bg-cyan-900/40 text-cyan-300 border border-cyan-800' : 'text-slate-400 hover:text-slate-200'
+            }`}>
+            {lv} ({levelCount(lv)})
+          </button>
+        ))}
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: 'Total Siswa', value: total, icon: Users, color: 'text-cyan-400 bg-cyan-950/40 border-cyan-900' },
+          { label: 'Total Siswa', value: filteredByLevel.length, icon: Users, color: 'text-cyan-400 bg-cyan-950/40 border-cyan-900' },
           { label: 'Laki-laki', value: laki, icon: Users, color: 'text-blue-400 bg-blue-950/40 border-blue-900' },
           { label: 'Perempuan', value: perempuan, icon: Users, color: 'text-pink-400 bg-pink-950/40 border-pink-900' },
           { label: 'Sekolah', value: schools.size, icon: School, color: 'text-emerald-400 bg-emerald-950/40 border-emerald-900' },
@@ -123,11 +154,11 @@ export default function StudentManagement() {
         </div>
         <select value={filterSchool} onChange={e => setFilterSchool(e.target.value)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
           <option value="ALL">Semua Sekolah</option>
-          {ALL_SCHOOLS.map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
+          {ALL_SCHOOLS.filter(s => s.level === levelTab).map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
         </select>
         <select value={filterKelas} onChange={e => setFilterKelas(e.target.value)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
           <option value="ALL">Semua Kelas</option>
-          {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
+          {currentKelasList.map(k => <option key={k} value={k}>{k}</option>)}
         </select>
       </div>
 
@@ -140,7 +171,7 @@ export default function StudentManagement() {
                 <th className="text-left px-4 py-3">Nama</th>
                 <th className="text-left px-4 py-3">NISN</th>
                 <th className="text-left px-4 py-3">JK</th>
-                <th className="text-left px-4 py-3">Kelas</th>
+                <th className="text-left px-4 py-3">Kelas/Kelompok</th>
                 <th className="text-left px-4 py-3">Rombel</th>
                 <th className="text-left px-4 py-3">Sekolah</th>
                 <th className="text-left px-4 py-3">Status</th>
@@ -151,7 +182,7 @@ export default function StudentManagement() {
               {loading ? (
                 <tr><td colSpan={8} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-12 text-slate-500">Tidak ada data siswa</td></tr>
+                <tr><td colSpan={8} className="text-center py-12 text-slate-500">Tidak ada data siswa untuk jenjang {levelTab}</td></tr>
               ) : filtered.map(s => (
                 <tr key={s.id} className="hover:bg-slate-800/30 transition-colors">
                   <td className="px-4 py-3 text-white font-medium">{s.nama}</td>
@@ -179,8 +210,8 @@ export default function StudentManagement() {
           </table>
         </div>
         <div className="px-4 py-2 border-t border-slate-800 text-[10px] text-slate-500 font-mono flex justify-between">
-          <span>Total: {filtered.length} siswa {filterSchool !== 'ALL' || filterKelas !== 'ALL' ? '(difilter)' : ''}</span>
-          <span>{students.length} total seluruh sekolah</span>
+          <span>Total: {filtered.length} siswa {levelTab} {filterSchool !== 'ALL' || filterKelas !== 'ALL' ? '(difilter)' : ''}</span>
+          <span>{students.length} total seluruh jenjang</span>
         </div>
       </div>
 
@@ -197,9 +228,9 @@ export default function StudentManagement() {
               {!editId && (
                 <div className="col-span-2">
                   <label className="text-[10px] font-mono text-slate-400 uppercase">Sekolah</label>
-                  <select value={form.school_npsn} onChange={e => setForm({...form, school_npsn: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
+                  <select value={form.school_npsn} onChange={e => handleSchoolChange(e.target.value)} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
                     <option value="">Pilih Sekolah</option>
-                    {ALL_SCHOOLS.map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
+                    {ALL_SCHOOLS.map(s => <option key={s.npsn} value={s.npsn}>{s.name} ({s.level})</option>)}
                   </select>
                 </div>
               )}
@@ -226,16 +257,16 @@ export default function StudentManagement() {
                 <input type="date" value={form.tanggal_lahir} onChange={e => setForm({...form, tanggal_lahir: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
               </div>
               <div>
-                <label className="text-[10px] font-mono text-slate-400 uppercase">Kelas</label>
+                <label className="text-[10px] font-mono text-slate-400 uppercase">Kelas/Kelompok</label>
                 <select value={form.kelas_kelompok} onChange={e => setForm({...form, kelas_kelompok: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
-                  {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
+                  {kelasByLevel[form.school_npsn ? (schoolLevel.get(form.school_npsn) || 'SD') : levelTab]?.map(k => <option key={k} value={k}>{k}</option>)}
                 </select>
               </div>
               <div>
                 <label className="text-[10px] font-mono text-slate-400 uppercase">Rombel</label>
                 <input value={form.rombel} onChange={e => setForm({...form, rombel: e.target.value})} placeholder="cth: A, B, C" className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
               </div>
-              <div>
+              <div className="col-span-2">
                 <label className="text-[10px] font-mono text-slate-400 uppercase">Tahun Pelajaran</label>
                 <input value={form.tahun_pelajaran} onChange={e => setForm({...form, tahun_pelajaran: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
               </div>

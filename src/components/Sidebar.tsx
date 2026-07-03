@@ -52,6 +52,7 @@ export default function Sidebar({ currentModule, setCurrentModule, theme, setThe
       title: 'GUDANG DATA',
       items: [
         { id: 'warehouse', label: 'Eksplorasi Data', icon: Database },
+        { id: 'pegawai', label: 'Manajemen Pegawai', icon: Users },
         { id: 'students', label: 'Manajemen Siswa', icon: GraduationCap },
         { id: 'rombels', label: 'Manajemen Rombel', icon: List }
       ]
@@ -162,7 +163,7 @@ export default function Sidebar({ currentModule, setCurrentModule, theme, setThe
               theme === 'emerald' ? 'text-emerald-400' : 
               'text-cyan-400'
             }`}>
-              JENJANG SD NEGERI
+              SD • TK • KB NEGERI & SWASTA
             </p>
             <p className="text-[9px] font-mono opacity-60">
               KECAMATAN LEMAHABANG

@@ -1,7 +1,7 @@
 export interface School {
   npsn: string;
   name: string;
-  level: 'SD' | 'SMP' | 'SMA' | 'SMK';
+  level: 'SD' | 'SMP' | 'SMA' | 'SMK' | 'TK' | 'KB';
   status: 'Negeri' | 'Swasta';
   village: string;
   accreditation: 'A' | 'B' | 'C' | 'Belum Terakreditasi';

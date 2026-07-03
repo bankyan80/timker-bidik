@@ -6,7 +6,7 @@ import { SimulationScenario, SimulationResult } from './types';
 import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from './db';
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Initialize Gemini Client safely
 let aiClient: GoogleGenAI | null = null;
@@ -470,6 +470,48 @@ app.post('/api/documents/:id/verify', async (req, res) => {
   const ok = await verifyEmployeeDocument(req.params.id, status, catatan);
   if (!ok) return res.status(400).json({ error: 'Failed to verify document' });
   res.json({ success: true });
+});
+
+// Upload file to Google Drive
+app.post('/api/upload-file', async (req, res) => {
+  const { file, fileName, mimeType, employeeId, schoolName, jenisDokumen, kategori } = req.body;
+  if (!file || !fileName || !employeeId || !schoolName) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  try {
+    const { uploadToDrive } = await import('./drive');
+    const { getDb } = await import('./db');
+    const db = getDb();
+    if (!db) return res.status(500).json({ error: 'DB not available' });
+
+    // Look up employee to get sekolah_id
+    const emp = await db.execute('SELECT id, sekolah_id FROM employees WHERE id = ?', [employeeId]);
+    if (emp.rows.length === 0) return res.status(404).json({ error: 'Employee not found' });
+    const sekolahId = (emp.rows[0] as any).sekolah_id as string;
+
+    const buffer = Buffer.from(file, 'base64');
+    const { fileId, driveUrl } = await uploadToDrive(buffer, fileName, mimeType, schoolName, fileName.split(' - ')[0] || schoolName);
+
+    const { upsertEmployeeDocument } = await import('./db');
+    const ok = await upsertEmployeeDocument({
+      employee_id: employeeId,
+      school_id: sekolahId,
+      kategori: kategori || 'LAINNYA',
+      jenis_dokumen: jenisDokumen || fileName,
+      nama_file: fileName,
+      mime_type: mimeType,
+      file_size: buffer.length,
+      drive_file_id: fileId,
+      drive_url: driveUrl,
+      status_verifikasi: 'sudah_diverifikasi',
+    });
+
+    if (!ok) return res.status(500).json({ error: 'Failed to save document' });
+    res.json({ success: true, fileId, driveUrl });
+  } catch (err: any) {
+    console.error('Upload error:', err);
+    res.status(500).json({ error: err.message || 'Upload failed' });
+  }
 });
 
 // 5. Student & Teacher Aggregate Endpoints

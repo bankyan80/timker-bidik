@@ -45,6 +45,23 @@ function extractDriveFileId(url: string): string | null {
   return m ? m[1] : null;
 }
 
+function mapCategoryToDBKategori(category: string, docName: string): string {
+  const lower = docName.toLowerCase();
+  if (lower.includes('foto') || lower.includes('pass')) return 'PASS FOTO';
+  if (lower.includes('ijazah') || lower.includes('transkrip')) return 'IJAZAH';
+  if (lower.includes('ktp')) return 'IDENTITAS DIRI';
+  if (lower.includes('kk') || lower.includes('kartu keluarga')) return 'DATA KELUARGA';
+  if (lower.includes('npwp')) return 'IDENTITAS DIRI';
+  if (lower.includes('karis') || lower.includes('karsu') || lower.includes('karpeg')) return 'IDENTITAS DIRI';
+  if (lower.includes('sk ') || lower.includes('sk p3k') || lower.includes('sk pppk') || lower.includes('spmt')) return 'SK JABATAN';
+  if (lower.includes('sertifikat') || lower.includes('sertif')) return 'SERTIFIKAT';
+  if (lower.includes('bpjs')) return 'IDENTITAS DIRI';
+  if (category === 'Identitas') return 'IDENTITAS DIRI';
+  if (category === 'Pengangkatan' || category === 'Kepangkatan') return 'SK JABATAN';
+  if (category === 'Kinerja') return 'SKP-DP3';
+  return 'LAINNYA';
+}
+
 export default function DocumentIntel() {
   // Theme Detection State
   const [theme, setTheme] = useState<'light' | 'dark' | 'command' | 'emerald'>('dark');
@@ -312,7 +329,7 @@ export default function DocumentIntel() {
     if (file) handleProcessSelectedFile(file);
   };
 
-  const handleProcessSelectedFile = (file: File) => {
+  const handleProcessSelectedFile = async (file: File) => {
     // Validate Size (max 10MB)
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
@@ -327,7 +344,11 @@ export default function DocumentIntel() {
       return;
     }
 
-    // Move to stage 2: Compression simulation
+    const targetEmp = uploadState.employee;
+    const targetDoc = uploadState.docItem;
+    if (!targetEmp || !targetDoc) return;
+
+    // Move to stage 2: Compression
     setUploadState(prev => ({
       ...prev,
       fileName: file.name,
@@ -335,74 +356,105 @@ export default function DocumentIntel() {
       stage: 'compress'
     }));
 
-    // Step 2 timer (Compression)
-    setTimeout(() => {
-      // Move to stage 3: Chunk Uploading
-      setUploadState(prev => ({ ...prev, stage: 'chunk' }));
-      
-      let prog = 0;
-      const interval = setInterval(() => {
-        prog += 12;
-        const currentSpeed = (1.5 + Math.random() * 2).toFixed(1) + ' MB/s';
-        if (prog >= 100) {
-          clearInterval(interval);
-          setUploadState(prev => ({ ...prev, progress: 100, speed: currentSpeed, stage: 'ocr' }));
-          
-          // Stage 4: OCR & AI checks
-          setTimeout(() => {
-            // Apply document to state
-            const targetEmp = uploadState.employee;
-            const targetDoc = uploadState.docItem;
-            if (targetEmp && targetDoc) {
-              setEmployees(prev => prev.map(em => {
-                if (em.id !== targetEmp.id) return em;
-                return {
-                  ...em,
-                  documents: em.documents.map(d => {
-                    if (d.id !== targetDoc.id) return d;
-                    return {
-                      id: d.id,
-                      name: `${targetDoc.name}_${targetEmp.name.split(' ')[0].replace(/[^a-zA-Z]/g, '')}.${ext}`,
-                      category: d.category,
-                      status: 'available',
-                      uploadDate: new Date().toISOString().split('T')[0],
-                      fileSize: (file.size / (1024 * 1024) * 0.78).toFixed(1) + ' MB', // mock compressed size
-                      fileType: ext.toUpperCase() as any
-                    };
-                  })
-                };
-              }));
+    await new Promise(r => setTimeout(r, 1500));
 
-              // Sync drawer
-              setSelectedEmployee(prev => {
-                if (!prev || prev.id !== targetEmp.id) return prev;
-                return {
-                  ...prev,
-                  documents: prev.documents.map(d => {
-                    if (d.id !== targetDoc.id) return d;
-                    return {
-                      id: d.id,
-                      name: `${targetDoc.name}_${targetEmp.name.split(' ')[0].replace(/[^a-zA-Z]/g, '')}.${ext}`,
-                      category: d.category,
-                      status: 'available',
-                      uploadDate: new Date().toISOString().split('T')[0],
-                      fileSize: (file.size / (1024 * 1024) * 0.78).toFixed(1) + ' MB',
-                      fileType: ext.toUpperCase() as any
-                    };
-                  })
-                };
-              });
-            }
+    // Move to stage 3: Chunk Uploading
+    setUploadState(prev => ({ ...prev, stage: 'chunk', progress: 10 }));
 
-            setUploadState(prev => ({ ...prev, stage: 'success' }));
-          }, 1200);
+    // Read file and upload
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(',')[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
-        } else {
-          setUploadState(prev => ({ ...prev, progress: prog, speed: currentSpeed }));
-        }
-      }, 150);
+      // Progress animation during upload
+      const progressInterval = setInterval(() => {
+        setUploadState(prev => ({
+          ...prev,
+          progress: Math.min(prev.progress + 15, 90),
+          speed: (1.5 + Math.random() * 2).toFixed(1) + ' MB/s'
+        }));
+      }, 300);
 
-    }, 1500);
+      const res = await fetch('/api/upload-file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file: base64,
+          fileName: file.name,
+          mimeType: file.type || 'application/octet-stream',
+          employeeId: targetEmp.id,
+          schoolName: targetEmp.school,
+          jenisDokumen: targetDoc.name,
+          kategori: mapCategoryToDBKategori(targetDoc.category, targetDoc.name),
+        }),
+      });
+
+      clearInterval(progressInterval);
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert('Gagal upload: ' + (err.error || res.statusText));
+        setUploadState(prev => ({ ...prev, stage: 'select', progress: 0 }));
+        return;
+      }
+
+      const result = await res.json();
+
+      setUploadState(prev => ({ ...prev, progress: 100, speed: '0 MB/s', stage: 'ocr' }));
+
+      await new Promise(r => setTimeout(r, 800));
+
+      // Apply document to state with real data from server
+      setEmployees(prev => prev.map(em => {
+        if (em.id !== targetEmp.id) return em;
+        return {
+          ...em,
+          documents: em.documents.map(d => {
+            if (d.id !== targetDoc.id) return d;
+            return {
+              ...d,
+              name: file.name,
+              status: 'available',
+              uploadDate: new Date().toISOString().split('T')[0],
+              fileSize: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
+              fileType: ext.toUpperCase() as any,
+              driveUrl: result.driveUrl,
+            };
+          })
+        };
+      }));
+
+      setSelectedEmployee(prev => {
+        if (!prev || prev.id !== targetEmp.id) return prev;
+        return {
+          ...prev,
+          documents: prev.documents.map(d => {
+            if (d.id !== targetDoc.id) return d;
+            return {
+              ...d,
+              name: file.name,
+              status: 'available',
+              uploadDate: new Date().toISOString().split('T')[0],
+              fileSize: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
+              fileType: ext.toUpperCase() as any,
+              driveUrl: result.driveUrl,
+            };
+          })
+        };
+      });
+
+      setUploadState(prev => ({ ...prev, stage: 'success' }));
+    } catch (err: any) {
+      alert('Gagal upload: ' + (err.message || 'Unknown error'));
+      setUploadState(prev => ({ ...prev, stage: 'select', progress: 0 }));
+    }
   };
 
   // Color mappings

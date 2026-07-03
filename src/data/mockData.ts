@@ -81,6 +81,33 @@ const getVillageCenter = (village: string): { lat: number; lng: number } => {
 
 // Generate highly detailed schools matching coordinates uploaded by the user
 const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
+  // ── TK NEGERI ──
+  {
+    npsn: '20244513',
+    name: 'TK NEGERI PEMBINA LEMAHABANG',
+    level: 'TK',
+    status: 'Negeri',
+    village: 'Lemahabang',
+    accreditation: 'B',
+    coordinates: { lat: -6.8273, lng: 108.6472 },
+    students: {
+      total: 90, male: 45, female: 45,
+      byGrade: { 'Kelompok A': 45, 'Kelompok B': 45 },
+      growthTrend: [80, 85, 88, 90, 90]
+    },
+    teachers: {
+      total: 6, certified: 3, pns: 2, pppk: 2, honorer: 2,
+      subjects: { 'Guru TK': 4, 'Agama': 1, 'Seni': 1 },
+      pendingCertification: 2, retiringSoon: 0
+    },
+    facilities: {
+      classroomCondition: { good: 2, lightDamage: 1, heavyDamage: 0 },
+      hasLibrary: false, hasLab: false,
+      toiletsGood: 2, toiletsDamaged: 0,
+      internetSpeedMbps: 10, internetProvider: 'Telkom'
+    }
+  },
+  // ── SD NEGERI (existing) ──
   {
     npsn: '20215287',
     name: 'SD NEGERI 1 CIPEUJEUH KULON',
@@ -608,30 +635,175 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
       hasLibrary: false, hasLab: false, toiletsGood: 2, toiletsDamaged: 1,
       internetSpeedMbps: 10, internetProvider: 'Telkomsel Flash'
     }
+  },
+  // ── TK SWASTA ──
+  {
+    npsn: '69987654',
+    name: 'TK PERTIWI LEMAHABANG',
+    level: 'TK',
+    status: 'Swasta',
+    village: 'Lemahabang',
+    accreditation: 'B',
+    coordinates: { lat: -6.830, lng: 108.620 },
+    students: {
+      total: 50, male: 25, female: 25,
+      byGrade: { 'Kelompok A': 25, 'Kelompok B': 25 },
+      growthTrend: [40, 42, 45, 48, 50]
+    },
+    teachers: {
+      total: 4, certified: 2, pns: 0, pppk: 0, honorer: 4,
+      subjects: { 'Guru TK': 3, 'Agama': 1 },
+      pendingCertification: 2, retiringSoon: 0
+    },
+    facilities: {
+      classroomCondition: { good: 2, lightDamage: 0, heavyDamage: 0 },
+      hasLibrary: false, hasLab: false,
+      toiletsGood: 1, toiletsDamaged: 0,
+      internetSpeedMbps: 5, internetProvider: 'IndiHome'
+    }
+  },
+  {
+    npsn: '69987655',
+    name: 'TK ISLAM AL-IKHLAS',
+    level: 'TK',
+    status: 'Swasta',
+    village: 'Cipeujeuh Wetan',
+    accreditation: 'A',
+    coordinates: { lat: -6.825, lng: 108.610 },
+    students: {
+      total: 40, male: 20, female: 20,
+      byGrade: { 'Kelompok A': 18, 'Kelompok B': 22 },
+      growthTrend: [30, 33, 36, 38, 40]
+    },
+    teachers: {
+      total: 4, certified: 1, pns: 0, pppk: 0, honorer: 4,
+      subjects: { 'Guru TK': 2, 'Agama': 1, 'Seni': 1 },
+      pendingCertification: 3, retiringSoon: 0
+    },
+    facilities: {
+      classroomCondition: { good: 1, lightDamage: 1, heavyDamage: 0 },
+      hasLibrary: false, hasLab: false,
+      toiletsGood: 1, toiletsDamaged: 0,
+      internetSpeedMbps: 5, internetProvider: 'Telkom'
+    }
+  },
+  // ── KB (KELOMPOK BERMAIN) ──
+  {
+    npsn: '69998765',
+    name: 'KB AL-FALAH',
+    level: 'KB',
+    status: 'Swasta',
+    village: 'Belawa',
+    accreditation: 'Belum Terakreditasi',
+    coordinates: { lat: -6.852, lng: 108.612 },
+    students: {
+      total: 25, male: 13, female: 12,
+      byGrade: { 'Kelompok Bermain': 25 },
+      growthTrend: [15, 18, 20, 22, 25]
+    },
+    teachers: {
+      total: 3, certified: 0, pns: 0, pppk: 0, honorer: 3,
+      subjects: { 'Guru KB': 2, 'Agama': 1 },
+      pendingCertification: 3, retiringSoon: 0
+    },
+    facilities: {
+      classroomCondition: { good: 1, lightDamage: 1, heavyDamage: 0 },
+      hasLibrary: false, hasLab: false,
+      toiletsGood: 1, toiletsDamaged: 0,
+      internetSpeedMbps: 3, internetProvider: 'Smartfren'
+    }
+  },
+  {
+    npsn: '69998766',
+    name: 'KB MELATI INDAH',
+    level: 'KB',
+    status: 'Swasta',
+    village: 'Picungpugur',
+    accreditation: 'Belum Terakreditasi',
+    coordinates: { lat: -6.842, lng: 108.632 },
+    students: {
+      total: 20, male: 10, female: 10,
+      byGrade: { 'Kelompok Bermain': 20 },
+      growthTrend: [12, 14, 16, 18, 20]
+    },
+    teachers: {
+      total: 2, certified: 0, pns: 0, pppk: 0, honorer: 2,
+      subjects: { 'Guru KB': 2 },
+      pendingCertification: 2, retiringSoon: 0
+    },
+    facilities: {
+      classroomCondition: { good: 1, lightDamage: 0, heavyDamage: 0 },
+      hasLibrary: false, hasLab: false,
+      toiletsGood: 1, toiletsDamaged: 0,
+      internetSpeedMbps: 3, internetProvider: 'Telkomsel'
+    }
+  },
+  // ── SD SWASTA ──
+  {
+    npsn: '69986420',
+    name: 'SD IT AL-FURQAN',
+    level: 'SD',
+    status: 'Swasta',
+    village: 'Lemahabang',
+    accreditation: 'A',
+    coordinates: { lat: -6.833, lng: 108.622 },
+    students: {
+      total: 168, male: 88, female: 80,
+      byGrade: { 'Kelas 1': 28, 'Kelas 2': 27, 'Kelas 3': 29, 'Kelas 4': 28, 'Kelas 5': 29, 'Kelas 6': 27 },
+      growthTrend: [140, 148, 155, 162, 168]
+    },
+    teachers: {
+      total: 10, certified: 4, pns: 0, pppk: 0, honorer: 10,
+      subjects: { 'Guru Kelas': 6, 'Agama Islam': 1, 'PJOK': 1, 'Bahasa Inggris': 1, 'TIK': 1 },
+      pendingCertification: 4, retiringSoon: 0
+    },
+    facilities: {
+      classroomCondition: { good: 6, lightDamage: 0, heavyDamage: 0 },
+      hasLibrary: true, hasLab: false,
+      toiletsGood: 4, toiletsDamaged: 0,
+      internetSpeedMbps: 20, internetProvider: 'Telkom'
+    }
+  },
+  {
+    npsn: '69986421',
+    name: 'SD ISLAM TERPADU NURUL HIKMAH',
+    level: 'SD',
+    status: 'Swasta',
+    village: 'Tuk Karangsuwung',
+    accreditation: 'B',
+    coordinates: { lat: -6.820, lng: 108.627 },
+    students: {
+      total: 132, male: 68, female: 64,
+      byGrade: { 'Kelas 1': 22, 'Kelas 2': 21, 'Kelas 3': 23, 'Kelas 4': 22, 'Kelas 5': 22, 'Kelas 6': 22 },
+      growthTrend: [110, 116, 120, 126, 132]
+    },
+    teachers: {
+      total: 9, certified: 3, pns: 0, pppk: 0, honorer: 9,
+      subjects: { 'Guru Kelas': 6, 'Agama Islam': 1, 'PJOK': 1, 'Bahasa Inggris': 1 },
+      pendingCertification: 5, retiringSoon: 0
+    },
+    facilities: {
+      classroomCondition: { good: 6, lightDamage: 1, heavyDamage: 0 },
+      hasLibrary: true, hasLab: false,
+      toiletsGood: 3, toiletsDamaged: 1,
+      internetSpeedMbps: 10, internetProvider: 'IndiHome'
+    }
   }
 ];
 
-// Dynamically generate the remaining schools up to 124 to represent real total volume
 const generateRestOfSchools = (): School[] => {
   const list: School[] = [];
   
-  // Calculate health indicators and scores for base schools
   baseSchools.forEach(bs => {
-    // Student to Teacher ratio: ideally <= 25:1 for SD, <= 30:1 for secondary
-    const ratio = bs.students.total / bs.teachers.total;
-    const isUnderstaffed = bs.level === 'SD' ? ratio > 28 : ratio > 32;
+    const ratio = bs.students.total / (bs.teachers.total || 1);
+    const isUnderstaffed = bs.level === 'SD' ? ratio > 28 : bs.level === 'TK' ? ratio > 15 : ratio > 12;
     
-    // Classrooms overloaded
     const classroomsCount = bs.facilities.classroomCondition.good + bs.facilities.classroomCondition.lightDamage + bs.facilities.classroomCondition.heavyDamage;
-    const isOverloaded = bs.students.total / classroomsCount > 38;
+    const isOverloaded = bs.students.total / (classroomsCount || 1) > 38;
     
-    // Infrastructure critical
     const isCriticalInfra = bs.facilities.classroomCondition.heavyDamage > 1 || bs.facilities.toiletsDamaged > bs.facilities.toiletsGood;
+    const isRetirementHigh = bs.teachers.retiringSoon / (bs.teachers.total || 1) > 0.15;
     
-    // Retirement exposure
-    const isRetirementHigh = bs.teachers.retiringSoon / bs.teachers.total > 0.15;
-    
-    // Severity calculation
     let teacherShortageSev = isUnderstaffed ? 25 : 0;
     let studentOverloadSev = isOverloaded ? 20 : 0;
     let infraDamageSev = isCriticalInfra ? 30 : bs.facilities.classroomCondition.lightDamage * 5;
@@ -652,8 +824,7 @@ const generateRestOfSchools = (): School[] => {
     });
   });
 
-  // Limit to exactly 21 SD Negeri
-  return list.slice(0, 21);
+  return list;
 };
 
 export const ALL_SCHOOLS = generateRestOfSchools();
