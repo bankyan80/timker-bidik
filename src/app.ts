@@ -533,6 +533,17 @@ app.get('/api/teachers/aggregate', async (req, res) => {
   res.json(aggregates);
 });
 
+app.get('/api/schools', async (req, res) => {
+  const schools = await getAllSchools();
+  res.json(schools.map(s => ({
+    npsn: s.npsn,
+    name: s.name,
+    level: s.level,
+    status: s.status === 'NEGERI' ? 'Negeri' : s.status === 'SWASTA' ? 'Swasta' : s.status,
+    village: s.village,
+  })));
+});
+
 app.get('/api/schools/stats', async (req, res) => {
   const schools = await getAllSchools();
   const studentAgg = await getStudentAggregates();

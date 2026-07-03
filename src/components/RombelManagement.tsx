@@ -1,23 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { School, Users, BookOpen, Search } from 'lucide-react';
-import { ALL_SCHOOLS } from '../data/mockData';
+import { School, BookOpen, AlertTriangle } from 'lucide-react';
 
-const THEME = 'dark';
+interface SchoolData {
+  npsn: string;
+  name: string;
+  level: string;
+  status: string;
+  village: string;
+}
+
+interface RombelEntry {
+  npsn: string;
+  rombel: string;
+  count: number;
+  jenjang: string;
+}
 
 export default function RombelManagement() {
-  const [levelTab, setLevelTab] = useState<string>('SD');
+  const [levelTab, setLevelTab] = useState('SD');
+  const [schools, setSchools] = useState<SchoolData[]>([]);
   const [stats, setStats] = useState<Record<string, { rombels: number; siswa: number }>>({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     (async () => {
       try {
-        const [rRombel, rSiswa] = await Promise.all([
-          fetch('/api/students/rombels').then(r => r.ok ? r.json() : []),
-          fetch('/api/students').then(r => r.ok ? r.json() : []),
+        const [rSchools, rRombel] = await Promise.all([
+          fetch('/api/schools').then(r => { if (!r.ok) throw new Error('Gagal memuat sekolah'); return r.json(); }),
+          fetch('/api/students/rombels').then(r => { if (!r.ok) throw new Error('Gagal memuat rombel'); return r.json(); }),
         ]);
+        setSchools(rSchools);
+
         const perSekolah: Record<string, { rombels: Set<string>; siswa: number }> = {};
-        for (const r of rRombel) {
+        for (const r of rRombel as RombelEntry[]) {
           if (!perSekolah[r.npsn]) perSekolah[r.npsn] = { rombels: new Set(), siswa: 0 };
           perSekolah[r.npsn].rombels.add(r.rombel);
           perSekolah[r.npsn].siswa += r.count;
@@ -27,13 +43,22 @@ export default function RombelManagement() {
           result[npsn] = { rombels: v.rombels.size, siswa: v.siswa };
         }
         setStats(result);
-      } catch {}
+      } catch (e: any) {
+        setError(e.message || 'Gagal memuat data');
+      }
       setLoading(false);
     })();
   }, []);
 
   const levels = ['SD', 'TK', 'KB'];
-  const schools = ALL_SCHOOLS.filter(s => s.level === levelTab).sort((a, b) => a.name.localeCompare(b.name));
+  const filteredSchools = schools
+    .filter(s => s.level === levelTab)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const levelCounts = levels.reduce((acc, lv) => {
+    acc[lv] = schools.filter(s => s.level === lv).length;
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
     <div className="space-y-6">
@@ -53,14 +78,19 @@ export default function RombelManagement() {
             className={`px-4 py-1.5 rounded text-xs font-mono font-bold transition-all cursor-pointer ${
               levelTab === lv ? 'bg-cyan-900/40 text-cyan-300 border border-cyan-800' : 'text-slate-400 hover:text-slate-200'
             }`}>
-            {lv} ({ALL_SCHOOLS.filter(s => s.level === lv).length} sekolah)
+            {lv} ({levelCounts[lv] || 0} sekolah)
           </button>
         ))}
       </div>
 
       {loading ? (
         <div className="text-center py-12 text-slate-500">Memuat data...</div>
-      ) : schools.length === 0 ? (
+      ) : error ? (
+        <div className="flex items-center justify-center gap-2 py-12 text-red-400">
+          <AlertTriangle className="h-5 w-5" />
+          <span>{error}</span>
+        </div>
+      ) : filteredSchools.length === 0 ? (
         <div className="text-center py-12 text-slate-500">
           <School className="h-12 w-12 mx-auto mb-3 opacity-30" />
           <p>Tidak ada sekolah jenjang {levelTab}</p>
@@ -79,7 +109,7 @@ export default function RombelManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
-              {schools.map(s => {
+              {filteredSchools.map(s => {
                 const st = stats[s.npsn] || { rombels: 0, siswa: 0 };
                 return (
                   <tr key={s.npsn} className="hover:bg-slate-800/30 transition-colors">

@@ -822,19 +822,22 @@ export async function getStudentsByRombel(npsn: string, rombel: string): Promise
   return result.rows as unknown as StudentRow[];
 }
 
-export async function getRombelList(): Promise<{ npsn: string; rombel: string; count: number }[]> {
+export async function getRombelList(): Promise<{ npsn: string; rombel: string; count: number; jenjang: string }[]> {
   const client = getDb();
   if (!client) return [];
   const result = await client.execute(`
-    SELECT school_npsn, rombel, COUNT(*) as cnt
-    FROM students WHERE LOWER(status_siswa) = 'aktif' AND rombel IS NOT NULL
-    GROUP BY school_npsn, rombel
-    ORDER BY school_npsn, rombel
+    SELECT s.school_npsn, s.rombel, COUNT(*) as cnt, sc.level as jenjang
+    FROM students s
+    LEFT JOIN schools sc ON s.school_npsn = sc.npsn
+    WHERE LOWER(s.status_siswa) = 'aktif' AND s.rombel IS NOT NULL
+    GROUP BY s.school_npsn, s.rombel, sc.level
+    ORDER BY s.school_npsn, s.rombel
   `);
   return result.rows.map(r => ({
     npsn: r.school_npsn as string,
     rombel: r.rombel as string,
     count: Number(r.cnt),
+    jenjang: (r.jenjang as string) || '',
   }));
 }
 
