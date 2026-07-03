@@ -2,43 +2,43 @@
 
 ## Current State
 - **6,612 students** total (SD 5,488 + TK 564 + KB 560) — after cleanup: deleted 3,409 case‑sensitive KELAS duplicates, 304 SD IT AL IRSYAD weird entries, 385 short‑form entries; fixed 173 empty‑jenjang students
-- **427 employees** (274 Lainnya, 90 Honorer, 24 PPPK PW, 23 ASN, 12 PPPK, 2 PNS, 2 GTY)
-- **1,465 documents** with Drive links
+- **427 employees** (156 Lainnya, 99 Honorer, 80 PPPK, 49 PNS, 31 PPPK PW, 10 ASN, 2 GTY) — 118 "Lainnya" fixed via tursodb cross‑reference
+- **2,294 documents** (1,465 existing + 829 from tursodb arsip) with Drive/Blob URLs
 - **45 schools** (23 SD: 21N+2S, 8 TK: 1N+7S, 15 KB: 15S)
+- **New tables**: `student_parents` (6,434), `student_addresses` (6,434), `student_health` (6,434) — enriched from tursodb
 
-## Key Changes (Last 2 Sessions)
-### DB Cleanup
-- Case‑sensitive duplicate deletion: 3,409 uppercase KELAS rows removed via COLLATE BINARY
-- 304 SD IT AL IRSYAD weird short‑form + 385 properly short‑form entries deleted
-- Re‑imported 3,704 portal-dinas SD records, updated 1,104 (case‑normalized rombel)
-- Fixed 173 empty‑jenjang students (1 moved to KB), 1 remaining `?` → TK
+## Key Changes (This Session)
+### Data Enrichment from tursodb (C:\Users\Bank Yan\Downloads\tursodb)
+- **Fixed 118 employee statuses**: Cross‑referenced 164 tursodb pegawai by NIK → updated timker‑bidik employees (Lainnya 274→156, PNS 2→49, PPPK 12→80, PPPK PW 24→31)
+- **Imported student detail**: 6,434 records each for parents, addresses, health (matched by NISN, 97% coverage)
+- **Merged 829 arsip documents**: All 841 tursodb arsip matched to timker employees; 12 duplicates skipped → total 2,294 docs
+- New tables created in DB but no UI yet
 
-### Pegawai Page Fixes
-- Removed fake "SD NEGERI 3 LEMAHABANG" entry from mockData.ts (NPSN 20215221 was duplicated — real school is SD IT AL IRSYAD AL ISLAMIYYAH)
-- API `/api/employees-with-docs` now LEFT JOINs `schools` table → returns `school_name`, `school_level`, `school_status` directly (no mock data fallback needed)
+### Pegawai Page Fixes (from last session)
+- Removed fake "SD NEGERI 3 LEMAHABANG" from mockData.ts (NPSN 20215221 was duplicated)
+- API `/api/employees-with-docs` now LEFT JOINs `schools` table → returns school_name/level/status
 - Employee rows sorted alphabetically within each school group
-- "Lainnya" status gets distinct dark‑grey badge (was falsely amber)
-- `useMemo` for filtered/grouped data (performance)
-- **Blocked: "Lainnya" (274 emp)** — portal-dinas source had empty status field; no way to recover without re‑scraping
-
-### Infrastructure
-- `GOOGLE_SERVICE_ACCOUNT_KEY` set as encrypted Production env var on Vercel
-- Build succeeds, deployed to `timker-bidik.online`
+- "Lainnya" status gets distinct dark‑grey badge
+- `useMemo` for filtered/grouped data
+- `scripts/fix-status-from-turso.mjs` — Fix status_pegawai from tursodb reference
+- `scripts/import-student-detail-from-turso.mjs` — Import parent/address/health data
+- `scripts/import-arsip-to-timker.mjs` — Merge arsip documents
 
 ## Remaining Issues
-- 257 employees with 0 docs (170 have docs)
+- 257 employees with 0 docs (down from 427 before arsip merge — need recalc)
 - Delete document web UI not integrated with backend API
-- Roman‑numeral rombels (Kelas II etc.) co‑exist with proper Kelas 2 form — 882 entries, 0 NISN overlap (genuinely different students)
+- Roman‑numeral rombels (Kelas II etc.) co‑exist with proper Kelas 2 form — 882 entries
 - SD IT AL IRSYAD (20215221): 32 employees but 0 students after cleanup
+- New tables (student_parents/addresses/health) have no API endpoints or UI yet
 
 ## Key Scripts
+- `scripts/fix-status-from-turso.mjs` — Cross‑reference tursodb pegawai by NIK, fix status_pegawai
+- `scripts/import-student-detail-from-turso.mjs` — Import parents/addresses/health from tursodb
+- `scripts/import-arsip-to-timker.mjs` — Merge arsip documents from tursodb
+- `scripts/emp-status-check.mjs` — Check employee status distribution
+- `scripts/sync-from-portal-dinas.mjs` — Full data sync from portal-dinas
 - `scripts/cleanup-final.mjs` — Case‑sensitive KELAS duplicate removal
 - `scripts/restore-and-clean.mjs` — Re‑import portal-dinas students + rombel cleanup
-- `scripts/fix-remaining.mjs` — Fix last empty‑jenjang student
-- `scripts/norm-status.mjs` — Normalize `honorer`/`pns`/`gty` casing, empty→Lainnya
-- `scripts/sync-from-portal-dinas.mjs` — Full data sync from portal-dinas (schools, employees, students)
-- `scripts/sync-from-sheets.mjs` — Process Google Sheets CSVs
-- `scripts/migrate-tk-kb.mjs` — Migrate TK/KB from laporan-pendidikan
 
 ## Relevant Files
 - `src/app.ts:408-435` — `/api/employees-with-docs` endpoint (JOINs schools)
