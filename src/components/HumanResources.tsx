@@ -133,10 +133,10 @@ export default function HumanResources() {
     }
   ];
 
-  // Generate detailed staff mapping matrix for ALL 124 schools procedurally matching Indonesian standards
+  // Generate detailed staff mapping matrix for ALL schools
   const staffMappings = useMemo<StaffMapping[]>(() => {
     return schools.map((school) => {
-      // Study groups: SD typically larger or capped at 28, SMP at 32, SMA at 36
+      // Study groups: SD typically 6 rombel, TK/KB fewer
       let rombel = 1;
       if (school.level === 'SD') {
         rombel = Math.max(6, Math.ceil(school.students.total / 28));
@@ -158,30 +158,31 @@ export default function HumanResources() {
       }
 
       // Generate Tendik (Staff/Admin)
-      const tPns = school.teachers.pns > 4 ? 2 : 1;
-      const tPppk = school.teachers.pppk > 5 ? 1 : 0;
-      const tPppkParuh = school.teachers.honorer > 5 ? 1 : 0;
-      const tHonorer = Math.max(1, Math.floor(school.teachers.honorer / 3.5));
-      const tTotal = tPns + tPppk + tPppkParuh + tHonorer;
+      const tTotal = Math.min(school.teachers.total, Math.max(1, Math.floor(school.students.total / 100)));
+      const tPns = Math.min(school.teachers.pns, Math.max(0, Math.floor(tTotal * 0.3)));
+      const tPppk = Math.min(school.teachers.pppk, Math.max(0, Math.floor(tTotal * 0.2)));
+      const tPppkParuh = Math.max(0, Math.floor(tTotal * 0.1));
+      const tHonorer = Math.max(0, tTotal - tPns - tPppk - tPppkParuh);
       const tRequired = school.level === 'SD' ? 2 : (school.level === 'SMP' ? 4 : 6);
       const tDelta = tTotal - tRequired;
 
       // Generate Guru PAI (Religion)
-      const pPns = school.name.charCodeAt(0) % 3 === 0 ? 1 : 0;
-      const pPppk = school.name.charCodeAt(1) % 4 === 0 ? 1 : 0;
-      const pPppkParuh = school.name.charCodeAt(2) % 8 === 0 ? 1 : 0;
-      const pHonorer = school.name.charCodeAt(3) % 3 === 0 ? 1 : 0;
-      const pTotal = pPns + pPppk + pPppkParuh + pHonorer;
+      const totalGuru = Math.max(0, school.teachers.total - tTotal);
       const pRequired = school.level === 'SD' ? (rombel <= 6 ? 1 : 2) : (school.level === 'SMP' ? 2 : 3);
+      const pTotal = Math.min(pRequired, Math.max(0, Math.floor(totalGuru * 0.08)));
+      const pPns = Math.min(school.teachers.pns, Math.min(pTotal, Math.max(0, Math.floor(pTotal * 0.3))));
+      const pPppk = Math.min(school.teachers.pppk, Math.min(pTotal - pPns, Math.max(0, Math.floor(pTotal * 0.4))));
+      const pPppkParuh = Math.max(0, Math.min(1, Math.floor(pTotal * 0.1)));
+      const pHonorer = Math.max(0, pTotal - pPns - pPppk - pPppkParuh);
       const pDelta = pTotal - pRequired;
 
-      // Generate Guru Penjaskes (PE)
-      const jPns = school.name.charCodeAt(4) % 3 === 0 ? 1 : 0;
-      const jPppk = school.name.charCodeAt(5) % 4 === 0 ? 1 : 0;
-      const jPppkParuh = school.name.charCodeAt(6) % 8 === 0 ? 1 : 0;
-      const jHonorer = school.name.charCodeAt(7) % 3 === 0 ? 1 : 0;
-      const jTotal = jPns + jPppk + jPppkParuh + jHonorer;
+      // Generate Guru Penjaskes (PJOK)
       const jRequired = school.level === 'SD' ? (rombel <= 6 ? 1 : 2) : 2;
+      const jTotal = Math.min(jRequired, Math.max(0, Math.floor(totalGuru * 0.07)));
+      const jPns = Math.min(school.teachers.pns, Math.min(jTotal, Math.max(0, Math.floor(jTotal * 0.2))));
+      const jPppk = Math.min(school.teachers.pppk, Math.min(jTotal - jPns, Math.max(0, Math.floor(jTotal * 0.3))));
+      const jPppkParuh = Math.max(0, Math.min(1, Math.floor(jTotal * 0.1)));
+      const jHonorer = Math.max(0, jTotal - jPns - jPppk - jPppkParuh);
       const jDelta = jTotal - jRequired;
 
       // Generate Guru Kelas (Primary class teachers, only SD)
@@ -245,7 +246,7 @@ export default function HumanResources() {
         }
       };
     });
-  }, []);
+  }, [schools]);
 
   // Filter staff mappings based on search/filters
   const filteredMappings = useMemo(() => {
