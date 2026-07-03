@@ -83,9 +83,16 @@ export default function StudentManagement() {
 
   function resetForm() { setForm({ school_npsn: '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki', tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: 'Kelas 1', rombel: '', tahun_pelajaran: '2025/2026' }); }
 
+  function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempuan' {
+    if (!val) return 'Laki-laki';
+    const low = val.toLowerCase();
+    if (low.includes('perempuan') || low.includes('p')) return 'Perempuan';
+    return 'Laki-laki';
+  }
+
   function openEdit(s: Student) {
     setEditId(s.id);
-    setForm({ school_npsn: s.school_npsn, nama: s.nama, nisn: s.nisn || '', nik: s.nik || '', jenis_kelamin: s.jenis_kelamin || 'Laki-laki', tempat_lahir: s.tempat_lahir || '', tanggal_lahir: s.tanggal_lahir || '', kelas_kelompok: s.kelas_kelompok, rombel: s.rombel || '', tahun_pelajaran: s.tahun_pelajaran });
+    setForm({ school_npsn: s.school_npsn, nama: s.nama, nisn: s.nisn || '', nik: s.nik || '', jenis_kelamin: normalizeGender(s.jenis_kelamin), tempat_lahir: s.tempat_lahir || '', tanggal_lahir: s.tanggal_lahir || '', kelas_kelompok: s.kelas_kelompok, rombel: s.rombel || '', tahun_pelajaran: s.tahun_pelajaran });
     setFormOpen(true);
   }
 
@@ -100,8 +107,8 @@ export default function StudentManagement() {
   const currentKelasList = kelasByLevel[levelTab] || ['Kelas 1'];
   const total = students.length;
   const filteredByLevel = students.filter(s => s.jenjang === levelTab);
-  const laki = filteredByLevel.filter(s => s.jenis_kelamin?.toLowerCase().includes('laki')).length;
-  const perempuan = filteredByLevel.filter(s => s.jenis_kelamin?.toLowerCase().includes('perempuan')).length;
+  const laki = filteredByLevel.filter(s => (s.jenis_kelamin || '').toLowerCase().includes('laki') || s.jenis_kelamin === 'L').length;
+  const perempuan = filteredByLevel.filter(s => (s.jenis_kelamin || '').toLowerCase().includes('perempuan') || s.jenis_kelamin === 'P').length;
   const schools = new Set(filteredByLevel.map(s => s.school_npsn));
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -193,8 +200,8 @@ export default function StudentManagement() {
                   <td className="px-4 py-3 text-white font-medium">{s.nama}</td>
                   <td className="px-4 py-3 text-slate-400 font-mono text-[11px]">{s.nisn || '-'}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-[11px] px-1.5 py-0.5 rounded font-mono ${s.jenis_kelamin?.toLowerCase().includes('laki') ? 'text-blue-400 bg-blue-950/40' : 'text-pink-400 bg-pink-950/40'}`}>
-                      {s.jenis_kelamin === 'Laki-laki' ? 'L' : 'P'}
+                    <span className={`text-[11px] px-1.5 py-0.5 rounded font-mono ${(s.jenis_kelamin || '').toLowerCase().includes('laki') || s.jenis_kelamin === 'L' ? 'text-blue-400 bg-blue-950/40' : 'text-pink-400 bg-pink-950/40'}`}>
+                      {(s.jenis_kelamin || '').toLowerCase().includes('laki') || s.jenis_kelamin === 'L' ? 'L' : 'P'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-slate-300">{s.kelas_kelompok}</td>
