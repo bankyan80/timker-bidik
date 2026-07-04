@@ -37,8 +37,8 @@ interface ReportSchool {
 }
 
 const TOTAL_PAGES = 10;
-const PAGE_WIDTH_MM = 210;
-const PAGE_HEIGHT_MM = 297;
+const PAGE_WIDTH_MM = 215;
+const PAGE_HEIGHT_MM = 330;
 const BASE_PX = 1.2;
 
 function mmToPx(mm: number): number { return mm * BASE_PX; }
@@ -949,7 +949,7 @@ export default function LaporanPreview({ onClose }: LaporanPreviewProps) {
       {/* ── Print Styles ── */}
       <style>{`
         @media print {
-          @page { size: A4 portrait; margin: 0; }
+          @page { size: 215mm 330mm portrait; margin: 0; }
           body { background: white !important; font-family: 'Times New Roman', Times, serif !important; font-size: 10pt !important; }
           .print\\:hidden { display: none !important; }
           #super-sidebar, #sidebar-toggle-btn, header { display: none !important; }
