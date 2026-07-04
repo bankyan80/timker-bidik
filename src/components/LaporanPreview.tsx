@@ -703,7 +703,7 @@ function PagePenutup({ school, period, kepalaSekolah, operator }: {
         <div className="grid grid-cols-3 gap-6">
           {/* Mengetahui — Ketua Tim Kerja */}
           <div className="text-center flex flex-col">
-            <div className="flex flex-col justify-end" style={{ minHeight: '140px' }}>
+            <div className="flex flex-col justify-end" style={{ minHeight: '180px' }}>
               <p className="text-[10px] leading-snug font-semibold text-gray-700 mb-6">Mengetahui,<br />a.n Kepala Dinas Pendidikan<br />Kabupaten Cirebon,<br />Ketua Tim Kerja Bidang Pendidikan Dasar<br />Kecamatan Lemahabang</p>
             </div>
             <div className="w-44 mx-auto">
@@ -715,7 +715,7 @@ function PagePenutup({ school, period, kepalaSekolah, operator }: {
 
           {/* Kepala Sekolah */}
           <div className="text-center flex flex-col">
-            <div className="flex flex-col justify-end" style={{ minHeight: '140px' }}>
+            <div className="flex flex-col justify-end" style={{ minHeight: '180px' }}>
               <p className="text-xs leading-snug font-semibold text-gray-700 mb-6">Mengetahui,<br />Kepala Sekolah</p>
             </div>
             <div className="w-44 mx-auto">
@@ -727,7 +727,7 @@ function PagePenutup({ school, period, kepalaSekolah, operator }: {
 
           {/* Operator Sekolah */}
           <div className="text-center flex flex-col">
-            <div className="flex flex-col justify-end" style={{ minHeight: '140px' }}>
+            <div className="flex flex-col justify-end" style={{ minHeight: '180px' }}>
               <p className="text-xs leading-snug font-semibold text-gray-700 mb-6">Penyusun Laporan,<br />Operator Sekolah</p>
             </div>
             <div className="w-44 mx-auto">
