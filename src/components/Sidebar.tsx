@@ -69,7 +69,7 @@ const ROLE_MENU_ACCESS: Record<string, string[]> = {
 };
 
 export default function Sidebar({ currentModule, setCurrentModule, theme, setTheme, isOpen, setIsOpen }: SidebarProps) {
-  const { user, logout, isRole } = useAuth();
+  const { user, isRole } = useAuth();
   const allowedModules = user ? ROLE_MENU_ACCESS[user.role] || [] : [];
 
   const menuGroups = [
@@ -290,13 +290,6 @@ export default function Sidebar({ currentModule, setCurrentModule, theme, setThe
               <p className="text-[7px] font-mono text-slate-600 truncate">{user.schoolName}</p>
             )}
           </div>
-          <button
-            onClick={logout}
-            className="p-1.5 rounded-md hover:bg-red-950/30 text-slate-500 hover:text-red-400 transition-colors"
-            title="Keluar"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-          </button>
         </div>
 
         <div className="text-[10px] font-mono opacity-55 uppercase pl-1">Pilih Tema Visual Hub</div>
