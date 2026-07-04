@@ -237,6 +237,7 @@ export function getRequiredDocsForStatus(
         { name: 'Penilaian Kinerja', category: 'Kinerja' },
         { name: 'Kenaikan Gaji Berkala (KGB)', category: 'Keuangan' },
         { name: 'Dokumen TPG / Sertifikasi', category: 'Keuangan' },
+        { name: 'Penetapan Angka Kredit (PAK)', category: 'PAK' },
       ];
     }
     return [
@@ -252,6 +253,7 @@ export function getRequiredDocsForStatus(
       { name: 'Penilaian Kinerja', category: 'Kinerja' },
       { name: 'Kenaikan Gaji Berkala (KGB)', category: 'Keuangan' },
       { name: 'Dokumen TPG / Sertifikasi', category: 'Keuangan' },
+      { name: 'Penetapan Angka Kredit (PAK)', category: 'PAK' },
     ];
   }
 
