@@ -696,19 +696,19 @@ function PagePenutup({ school, period, kepalaSekolah, operator }: {
 
       <div className="grid grid-cols-2 gap-10 mt-auto pt-6 border-t border-gray-200">
         <div className="text-center">
-          <p className="text-xs font-semibold text-gray-700 mb-10">Mengetahui,<br />Kepala Sekolah</p>
-          <div className="h-14" />
-          <div className="border-t-2 border-gray-600 w-44 mx-auto pt-1.5">
+          <p className="text-xs font-semibold text-gray-700 mb-8">Mengetahui,<br />Kepala Sekolah</p>
+          <div className="w-48 mx-auto">
             <p className="text-xs font-bold text-gray-800">{kepalaSekolah ? kepalaSekolah.nama : '( ___________________ )'}</p>
-            <p className="text-[10px] text-gray-500 mt-0.5">{kepalaSekolah?.nip ? `NIP. ${kepalaSekolah.nip}` : 'NIP. ________________'}</p>
+            <div className="border-t-2 border-gray-600 mt-1 mb-1" />
+            <p className="text-[10px] text-gray-500">{kepalaSekolah?.nip ? `NIP. ${kepalaSekolah.nip}` : 'NIP. ________________'}</p>
           </div>
         </div>
         <div className="text-center">
-          <p className="text-xs font-semibold text-gray-700 mb-10">Penyusun Laporan,<br />Operator Sekolah</p>
-          <div className="h-14" />
-          <div className="border-t-2 border-gray-600 w-44 mx-auto pt-1.5">
+          <p className="text-xs font-semibold text-gray-700 mb-8">Penyusun Laporan,<br />Operator Sekolah</p>
+          <div className="w-48 mx-auto">
             <p className="text-xs font-bold text-gray-800">{operator ? operator.nama : '( ___________________ )'}</p>
-            <p className="text-[10px] text-gray-500 mt-0.5">{operator?.nik ? `NIK. ${operator.nik}` : 'NIP/NIK. ___________'}</p>
+            <div className="border-t-2 border-gray-600 mt-1 mb-1" />
+            <p className="text-[10px] text-gray-500">{operator?.nik ? `NIK. ${operator.nik}` : 'NIP/NIK. ___________'}</p>
           </div>
         </div>
       </div>
