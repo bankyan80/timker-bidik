@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
 import {
   Search, Users, Building2, School,
-  Loader2, X, Calendar, Plus, Trash2
+  Loader2, X, Calendar, Plus, Trash2, Pencil, Save, AlertTriangle
 } from 'lucide-react';
 
 interface Pegawai {
@@ -16,6 +16,7 @@ interface Pegawai {
   sekolah_level: string;
   sekolah_status: string;
   doc_count: number;
+  _raw?: Record<string, any>;
 }
 
 interface EmployeePeriod {
@@ -28,6 +29,29 @@ interface EmployeePeriod {
   updated_at: number;
 }
 
+interface EditData {
+  nama: string;
+  nik: string;
+  nip: string;
+  nuptk: string;
+  email: string;
+  no_hp: string;
+  tempat_lahir: string;
+  tanggal_lahir: string;
+  jenis_kelamin: string;
+  jabatan: string;
+  status_pegawai: string;
+  pangkat_golongan: string;
+  pendidikan_terakhir: string;
+  jurusan: string;
+  sertifikasi: string;
+  tmt_kerja: string;
+  tanggal_bup: string;
+}
+
+const STATUS_OPTIONS = ['PNS', 'PPPK', 'PPPK PW', 'Honorer', 'Lainnya'];
+const GENDER_OPTIONS = ['Laki-laki', 'Perempuan'];
+
 export default function ManajemenPegawai() {
   const [pegawai, setPegawai] = useState<Pegawai[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +60,8 @@ export default function ManajemenPegawai() {
   const [levelTab, setLevelTab] = useState<string>('SD');
   const [periodModal, setPeriodModal] = useState<{ emp: Pegawai; periods: EmployeePeriod[]; loading: boolean } | null>(null);
   const [addingPeriod, setAddingPeriod] = useState(false);
+  const [editModal, setEditModal] = useState<{ emp: Pegawai; data: EditData; saving: boolean } | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -54,6 +80,7 @@ export default function ManajemenPegawai() {
           sekolah_level: r.school_level || 'SD',
           sekolah_status: r.school_status || 'Negeri',
           doc_count: (r.documents || []).length,
+          _raw: r,
         }));
         setPegawai(mapped);
       } catch { /* fallback mock */ }
@@ -133,6 +160,67 @@ export default function ManajemenPegawai() {
         periods: periodModal.periods.filter(p => p.id !== period.id),
       });
     } catch {}
+  };
+
+  const openEditModal = (emp: Pegawai) => {
+    const r = emp._raw || {};
+    setEditModal({
+      emp,
+      data: {
+        nama: r.nama || '',
+        nik: r.nik || '',
+        nip: r.nip || '',
+        nuptk: r.nuptk || '',
+        email: r.email || '',
+        no_hp: r.no_hp || '',
+        tempat_lahir: r.tempat_lahir || '',
+        tanggal_lahir: r.tanggal_lahir || '',
+        jenis_kelamin: r.jenis_kelamin || '',
+        jabatan: r.jabatan || '',
+        status_pegawai: r.status_pegawai || '',
+        pangkat_golongan: r.pangkat_golongan || '',
+        pendidikan_terakhir: r.pendidikan_terakhir || '',
+        jurusan: r.jurusan || '',
+        sertifikasi: r.sertifikasi || '',
+        tmt_kerja: r.tmt_kerja || '',
+        tanggal_bup: r.tanggal_bup || '',
+      },
+      saving: false,
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editModal) return;
+    setEditModal({ ...editModal, saving: true });
+    try {
+      const res = await api(`/api/employees/${editModal.emp.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editModal.data),
+      });
+      if (!res.ok) return;
+      setPegawai(prev => prev.map(p =>
+        p.id === editModal.emp.id
+          ? { ...p, nama: editModal.data.nama, nipNik: editModal.data.nip || editModal.data.nik || '-', status_pegawai: editModal.data.status_pegawai, jabatan: editModal.data.jabatan, _raw: { ...p._raw, ...editModal.data } }
+          : p
+      ));
+      setEditModal(null);
+    } catch {}
+    setEditModal(prev => prev ? { ...prev, saving: false } : null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    try {
+      const res = await api(`/api/employees/${deleteId}`, { method: 'DELETE' });
+      if (!res.ok) return;
+      setPegawai(prev => prev.filter(p => p.id !== deleteId));
+      setDeleteId(null);
+    } catch {}
+  };
+
+  const updateEditField = (key: keyof EditData, value: string) => {
+    setEditModal(prev => prev ? { ...prev, data: { ...prev.data, [key]: value } } : null);
   };
 
   const levels = ['SD', 'TK', 'KB'];
@@ -220,6 +308,7 @@ export default function ManajemenPegawai() {
                   <th className="text-left p-3 font-semibold">Sekolah</th>
                   <th className="text-center p-3 font-semibold">Dok</th>
                   <th className="text-center p-3 pr-4 font-semibold">Periode</th>
+                  <th className="text-center p-3 pr-4 font-semibold w-[80px]">Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -249,6 +338,18 @@ export default function ManajemenPegawai() {
                       ) : (
                         <span className="text-[10px] text-slate-600">—</span>
                       )}
+                    </td>
+                    <td className="p-3 pr-4 text-center whitespace-nowrap">
+                      <button onClick={() => openEditModal(emp)}
+                        className="p-1.5 text-slate-400 hover:text-cyan-300 hover:bg-cyan-950/30 rounded transition-all cursor-pointer"
+                        title="Edit">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => setDeleteId(emp.id)}
+                        className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-950/30 rounded transition-all cursor-pointer"
+                        title="Hapus">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -323,6 +424,100 @@ export default function ManajemenPegawai() {
           </div>
         </div>
       )}
+
+      {/* Edit Modal */}
+      {editModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setEditModal(null)}>
+          <div className="bg-[#151922] border border-[#1f2937] rounded-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1f2937] sticky top-0 bg-[#151922] z-10">
+              <h2 className="text-sm font-bold text-slate-200 font-mono flex items-center gap-2">
+                <Pencil className="h-4 w-4 text-cyan-400" /> Edit Pegawai
+              </h2>
+              <button onClick={() => setEditModal(null)} className="text-slate-500 hover:text-slate-300 cursor-pointer"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Nama" value={editModal.data.nama} onChange={v => updateEditField('nama', v)} />
+                <Field label="NIK" value={editModal.data.nik} onChange={v => updateEditField('nik', v)} />
+                <Field label="NIP" value={editModal.data.nip} onChange={v => updateEditField('nip', v)} />
+                <Field label="NUPTK" value={editModal.data.nuptk} onChange={v => updateEditField('nuptk', v)} />
+                <Field label="Email" value={editModal.data.email} onChange={v => updateEditField('email', v)} />
+                <Field label="No. HP" value={editModal.data.no_hp} onChange={v => updateEditField('no_hp', v)} />
+                <Field label="Tempat Lahir" value={editModal.data.tempat_lahir} onChange={v => updateEditField('tempat_lahir', v)} />
+                <Field label="Tanggal Lahir" value={editModal.data.tanggal_lahir} onChange={v => updateEditField('tanggal_lahir', v)} />
+                <Select label="Jenis Kelamin" value={editModal.data.jenis_kelamin} options={GENDER_OPTIONS} onChange={v => updateEditField('jenis_kelamin', v)} />
+                <Field label="Jabatan" value={editModal.data.jabatan} onChange={v => updateEditField('jabatan', v)} />
+                <Select label="Status Pegawai" value={editModal.data.status_pegawai} options={STATUS_OPTIONS} onChange={v => updateEditField('status_pegawai', v)} />
+                <Field label="Pangkat/Golongan" value={editModal.data.pangkat_golongan} onChange={v => updateEditField('pangkat_golongan', v)} />
+                <Field label="Pendidikan Terakhir" value={editModal.data.pendidikan_terakhir} onChange={v => updateEditField('pendidikan_terakhir', v)} />
+                <Field label="Jurusan" value={editModal.data.jurusan} onChange={v => updateEditField('jurusan', v)} />
+                <Field label="Sertifikasi" value={editModal.data.sertifikasi} onChange={v => updateEditField('sertifikasi', v)} />
+                <Field label="TMT Kerja" value={editModal.data.tmt_kerja} onChange={v => updateEditField('tmt_kerja', v)} />
+                <Field label="Tanggal BUP" value={editModal.data.tanggal_bup} onChange={v => updateEditField('tanggal_bup', v)} />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-[#1f2937]">
+              <button onClick={() => setEditModal(null)}
+                className="px-4 py-2 rounded-lg text-xs font-mono text-slate-400 border border-[#1f2937] hover:bg-[#1a1f2c] transition-all cursor-pointer">
+                Batal
+              </button>
+              <button onClick={saveEdit} disabled={editModal.saving}
+                className="px-4 py-2 rounded-lg text-xs font-mono font-bold bg-cyan-900/40 text-cyan-300 border border-cyan-800 hover:bg-cyan-900/60 transition-all cursor-pointer disabled:opacity-40 flex items-center gap-2">
+                {editModal.saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                Simpan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      {deleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setDeleteId(null)}>
+          <div className="bg-[#151922] border border-[#1f2937] rounded-xl w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+            <div className="p-6 text-center space-y-4">
+              <AlertTriangle className="h-10 w-10 mx-auto text-red-400" />
+              <div>
+                <h2 className="text-sm font-bold text-slate-200 font-mono">Hapus Pegawai</h2>
+                <p className="text-[11px] text-slate-500 font-mono mt-1">Yakin ingin menghapus pegawai ini? Data akan dinonaktifkan.</p>
+              </div>
+              <div className="flex items-center justify-center gap-3">
+                <button onClick={() => setDeleteId(null)}
+                  className="px-4 py-2 rounded-lg text-xs font-mono text-slate-400 border border-[#1f2937] hover:bg-[#1a1f2c] transition-all cursor-pointer">
+                  Batal
+                </button>
+                <button onClick={confirmDelete}
+                  className="px-4 py-2 rounded-lg text-xs font-mono font-bold bg-red-900/40 text-red-300 border border-red-800 hover:bg-red-900/60 transition-all cursor-pointer">
+                  Ya, Hapus
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <label className="block text-[10px] font-mono font-bold text-slate-500 mb-1 uppercase tracking-wider">{label}</label>
+      <input type="text" value={value} onChange={e => onChange(e.target.value)}
+        className="w-full bg-[#0c0e12] border border-[#1f2937] rounded-lg px-3 py-2 text-xs font-mono text-slate-200 placeholder:text-slate-600 outline-none focus:border-cyan-800 transition-all" />
+    </div>
+  );
+}
+
+function Select({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <label className="block text-[10px] font-mono font-bold text-slate-500 mb-1 uppercase tracking-wider">{label}</label>
+      <select value={value} onChange={e => onChange(e.target.value)}
+        className="w-full bg-[#0c0e12] border border-[#1f2937] rounded-lg px-3 py-2 text-xs font-mono text-slate-200 outline-none focus:border-cyan-800 transition-all cursor-pointer">
+        <option value="">—</option>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
     </div>
   );
 }
