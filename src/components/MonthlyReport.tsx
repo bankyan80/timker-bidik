@@ -323,6 +323,11 @@ export default function MonthlyReport() {
           body { background: white !important; color: #000 !important; font-size: 10pt; line-height: 1.5; font-family: 'Times New Roman', Times, serif; }
 
           .print\\:hidden { display: none !important; }
+          #super-sidebar { display: none !important; }
+          #sidebar-toggle-btn { display: none !important; }
+          #app-root > div.flex-1 { margin-left: 0 !important; width: 100% !important; }
+          header { display: none !important; }
+          main { padding: 0 !important; }
 
           .bg-\\[\\#0c0e12\\] { background: white !important; border-color: #999 !important; }
           .bg-\\[\\#08090b\\] { background: #f5f5f5 !important; }
