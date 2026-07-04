@@ -289,6 +289,16 @@ export async function initSchema() {
       riwayat_penyakit TEXT, kebutuhan_khusus TEXT, catatan TEXT
     )
   `);
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      role TEXT NOT NULL,
+      school_npsn TEXT
+    )
+  `);
 }
 
 export async function seedData() {
@@ -364,6 +374,17 @@ export async function seedData() {
   // Seed academic calendar
   await seedCalendarEvents();
 
+  // Seed users (run once)
+  const existingUsers = await client.execute('SELECT COUNT(*) as count FROM users');
+  if (Number(existingUsers.rows[0].count) === 0) {
+    await client.execute({ sql: 'INSERT INTO users (id, username, password, role) VALUES (?, ?, ?, ?)', args: ['u-admin', 'Admin', 'Timker456', 'admin'] });
+    await client.execute({ sql: 'INSERT INTO users (id, username, password, role) VALUES (?, ?, ?, ?)', args: ['u-staff', 'Admin2', 'Timker123', 'staff_kecamatan'] });
+    const schools = await getAllSchools();
+    for (const school of schools) {
+      await client.execute({ sql: 'INSERT INTO users (id, username, password, role, school_npsn) VALUES (?, ?, ?, ?, ?)',
+        args: [`u-op-${school.npsn}`, school.npsn, 'sp_' + school.npsn, 'operator_sekolah', school.npsn] });
+    }
+  }
 }
 
 export async function getAllSchools(): Promise<School[]> {
@@ -1096,6 +1117,28 @@ export async function upsertStudentHealth(nisn: string, data: Record<string, any
     });
     return true;
   } catch (e) { console.error('upsertStudentHealth error', e); return false; }
+}
+
+// ── User / Auth CRUD ──
+
+export async function getUserByUsername(username: string): Promise<{ id: string; username: string; password: string; role: string; school_npsn: string | null } | null> {
+  const client = getDb();
+  if (!client) return null;
+  try {
+    const r = await client.execute({ sql: 'SELECT * FROM users WHERE username = ?', args: [username] });
+    if (r.rows.length === 0) return null;
+    const row = r.rows[0] as any;
+    return { id: row.id, username: row.username, password: row.password, role: row.role, school_npsn: row.school_npsn || null };
+  } catch { return null; }
+}
+
+export async function changePassword(username: string, newPassword: string): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  try {
+    await client.execute({ sql: 'UPDATE users SET password = ? WHERE username = ?', args: [newPassword, username] });
+    return true;
+  } catch { return false; }
 }
 
 export { ALL_SCHOOLS as FALLBACK_SCHOOLS };

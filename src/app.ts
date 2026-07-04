@@ -71,32 +71,48 @@ app.post('/api/auth/login', async (req, res) => {
     return res.status(400).json({ error: 'Username dan password wajib diisi' });
   }
 
-  // Admin
+  // Try DB first
+  try {
+    const { getUserByUsername } = await import('./db');
+    const dbUser = await getUserByUsername(username);
+    if (dbUser && dbUser.password === password) {
+      if (dbUser.role === 'operator_sekolah' && dbUser.school_npsn) {
+        const schools = await getAllSchools();
+        const school = schools.find(s => s.npsn === dbUser.school_npsn);
+        if (school) {
+          const user: AuthUser = {
+            id: dbUser.id, username: dbUser.username, role: 'operator_sekolah',
+            schoolNpsn: school.npsn, schoolName: school.name,
+          };
+          const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+          return res.json({ token, user });
+        }
+      }
+      const user: AuthUser = { id: dbUser.id, username: dbUser.username, role: dbUser.role as any };
+      const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+      return res.json({ token, user });
+    }
+  } catch {}
+
+  // Fallback to hardcoded (for backwards compatibility)
   if (username === 'Admin' && password === 'Timker456') {
     const user: AuthUser = { id: '1', username: 'Admin', role: 'admin' };
     const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
     return res.json({ token, user });
   }
-
-  // Staf Kecamatan
   if (username === 'Admin2' && password === 'Timker123') {
     const user: AuthUser = { id: '2', username: 'Admin2', role: 'staff_kecamatan' };
     const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
     return res.json({ token, user });
   }
-
-  // Operator Sekolah — username = NPSN, password = "sp_" + NPSN
   const expectedOpPassword = 'sp_' + username;
   if (password === expectedOpPassword) {
     const schools = await getAllSchools();
     const school = schools.find(s => s.npsn === username);
     if (school) {
       const user: AuthUser = {
-        id: `op-${username}`,
-        username: username,
-        role: 'operator_sekolah',
-        schoolNpsn: school.npsn,
-        schoolName: school.name,
+        id: `op-${username}`, username: username, role: 'operator_sekolah',
+        schoolNpsn: school.npsn, schoolName: school.name,
       };
       const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
       return res.json({ token, user });
@@ -109,6 +125,28 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/auth/me', authenticateToken, (req, res) => {
   res.json({ user: req.user });
+});
+
+app.put('/api/auth/change-password', authenticateToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Password saat ini dan password baru wajib diisi' });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'Password baru minimal 6 karakter' });
+  }
+
+  // Verify current password via DB
+  const { getUserByUsername, changePassword } = await import('./db');
+  const dbUser = await getUserByUsername(req.user!.username);
+  if (!dbUser || dbUser.password !== currentPassword) {
+    return res.status(400).json({ error: 'Password saat ini salah' });
+  }
+
+  const ok = await changePassword(req.user!.username, newPassword);
+  if (!ok) return res.status(500).json({ error: 'Gagal mengubah password' });
+
+  res.json({ success: true, message: 'Password berhasil diubah' });
 });
 
 // Initialize Gemini Client safely
