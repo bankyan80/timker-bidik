@@ -105,7 +105,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
       classroomCondition: { good: 2, lightDamage: 1, heavyDamage: 0 },
       hasLibrary: false, hasLab: false,
       toiletsGood: 2, toiletsDamaged: 0,
-      internetSpeedMbps: 10, internetProvider: 'Telkom'
+      internetSpeedMbps: 10, internetProvider: 'Telkom',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   // ── SD NEGERI (existing) ──
@@ -130,7 +134,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 5, lightDamage: 1, heavyDamage: 0 },
       hasLibrary: true, hasLab: false, toiletsGood: 3, toiletsDamaged: 1,
-      internetSpeedMbps: 30, internetProvider: 'IndiHome'
+      internetSpeedMbps: 30, internetProvider: 'IndiHome',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -154,7 +162,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 2, lightDamage: 3, heavyDamage: 1 },
       hasLibrary: false, hasLab: false, toiletsGood: 1, toiletsDamaged: 2,
-      internetSpeedMbps: 15, internetProvider: 'Telkomsel Orbit'
+      internetSpeedMbps: 15, internetProvider: 'Telkomsel Orbit',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -178,7 +190,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 4, lightDamage: 2, heavyDamage: 0 },
       hasLibrary: true, hasLab: false, toiletsGood: 2, toiletsDamaged: 1,
-      internetSpeedMbps: 20, internetProvider: 'IndiHome'
+      internetSpeedMbps: 20, internetProvider: 'IndiHome',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -202,7 +218,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 2, lightDamage: 4, heavyDamage: 0 },
       hasLibrary: false, hasLab: false, toiletsGood: 1, toiletsDamaged: 1,
-      internetSpeedMbps: 10, internetProvider: 'Telkomsel Flash'
+      internetSpeedMbps: 10, internetProvider: 'Telkomsel Flash',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -226,7 +246,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 6, lightDamage: 0, heavyDamage: 0 },
       hasLibrary: true, hasLab: false, toiletsGood: 4, toiletsDamaged: 0,
-      internetSpeedMbps: 40, internetProvider: 'IndiHome'
+      internetSpeedMbps: 40, internetProvider: 'IndiHome',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -250,7 +274,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 7, lightDamage: 1, heavyDamage: 0 },
       hasLibrary: true, hasLab: false, toiletsGood: 4, toiletsDamaged: 1,
-      internetSpeedMbps: 50, internetProvider: 'Biznet'
+      internetSpeedMbps: 50, internetProvider: 'Biznet',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -274,7 +302,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 3, lightDamage: 3, heavyDamage: 0 },
       hasLibrary: false, hasLab: false, toiletsGood: 2, toiletsDamaged: 1,
-      internetSpeedMbps: 10, internetProvider: 'Telkomsel Orbit'
+      internetSpeedMbps: 10, internetProvider: 'Telkomsel Orbit',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -298,7 +330,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 8, lightDamage: 1, heavyDamage: 0 },
       hasLibrary: true, hasLab: false, toiletsGood: 5, toiletsDamaged: 1,
-      internetSpeedMbps: 50, internetProvider: 'IndiHome'
+      internetSpeedMbps: 50, internetProvider: 'IndiHome',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -322,7 +358,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 6, lightDamage: 2, heavyDamage: 0 },
       hasLibrary: true, hasLab: false, toiletsGood: 3, toiletsDamaged: 1,
-      internetSpeedMbps: 30, internetProvider: 'IndiHome'
+      internetSpeedMbps: 30, internetProvider: 'IndiHome',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -346,7 +386,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 3, lightDamage: 3, heavyDamage: 0 },
       hasLibrary: false, hasLab: false, toiletsGood: 2, toiletsDamaged: 1,
-      internetSpeedMbps: 15, internetProvider: 'Telkomsel Flash'
+      internetSpeedMbps: 15, internetProvider: 'Telkomsel Flash',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -370,7 +414,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 4, lightDamage: 2, heavyDamage: 0 },
       hasLibrary: true, hasLab: false, toiletsGood: 2, toiletsDamaged: 1,
-      internetSpeedMbps: 20, internetProvider: 'IndiHome'
+      internetSpeedMbps: 20, internetProvider: 'IndiHome',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -394,7 +442,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 5, lightDamage: 2, heavyDamage: 0 },
       hasLibrary: false, hasLab: false, toiletsGood: 3, toiletsDamaged: 1,
-      internetSpeedMbps: 20, internetProvider: 'IndiHome'
+      internetSpeedMbps: 20, internetProvider: 'IndiHome',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -418,7 +470,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 6, lightDamage: 2, heavyDamage: 0 },
       hasLibrary: true, hasLab: false, toiletsGood: 4, toiletsDamaged: 1,
-      internetSpeedMbps: 30, internetProvider: 'IndiHome'
+      internetSpeedMbps: 30, internetProvider: 'IndiHome',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -442,7 +498,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 4, lightDamage: 2, heavyDamage: 1 },
       hasLibrary: true, hasLab: false, toiletsGood: 2, toiletsDamaged: 1,
-      internetSpeedMbps: 15, internetProvider: 'Telkomsel Flash'
+      internetSpeedMbps: 15, internetProvider: 'Telkomsel Flash',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -466,7 +526,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 3, lightDamage: 4, heavyDamage: 1 },
       hasLibrary: false, hasLab: false, toiletsGood: 1, toiletsDamaged: 2,
-      internetSpeedMbps: 10, internetProvider: 'Telkomsel Flash'
+      internetSpeedMbps: 10, internetProvider: 'Telkomsel Flash',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -490,7 +554,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 0, lightDamage: 3, heavyDamage: 3 },
       hasLibrary: false, hasLab: false, toiletsGood: 0, toiletsDamaged: 3,
-      internetSpeedMbps: 5, internetProvider: 'Telkomsel Orbit'
+      internetSpeedMbps: 5, internetProvider: 'Telkomsel Orbit',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -514,7 +582,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 4, lightDamage: 3, heavyDamage: 0 },
       hasLibrary: true, hasLab: false, toiletsGood: 2, toiletsDamaged: 1,
-      internetSpeedMbps: 20, internetProvider: 'IndiHome'
+      internetSpeedMbps: 20, internetProvider: 'IndiHome',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -538,7 +610,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 5, lightDamage: 2, heavyDamage: 1 },
       hasLibrary: true, hasLab: false, toiletsGood: 3, toiletsDamaged: 1,
-      internetSpeedMbps: 25, internetProvider: 'IndiHome'
+      internetSpeedMbps: 25, internetProvider: 'IndiHome',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -562,7 +638,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 9, lightDamage: 2, heavyDamage: 0 },
       hasLibrary: true, hasLab: false, toiletsGood: 4, toiletsDamaged: 1,
-      internetSpeedMbps: 50, internetProvider: 'IndiHome'
+      internetSpeedMbps: 50, internetProvider: 'IndiHome',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -586,7 +666,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 1, lightDamage: 2, heavyDamage: 2 },
       hasLibrary: false, hasLab: false, toiletsGood: 1, toiletsDamaged: 2,
-      internetSpeedMbps: 8, internetProvider: 'Telkomsel Flash'
+      internetSpeedMbps: 8, internetProvider: 'Telkomsel Flash',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -610,7 +694,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
     facilities: {
       classroomCondition: { good: 3, lightDamage: 2, heavyDamage: 1 },
       hasLibrary: false, hasLab: false, toiletsGood: 2, toiletsDamaged: 1,
-      internetSpeedMbps: 10, internetProvider: 'Telkomsel Flash'
+      internetSpeedMbps: 10, internetProvider: 'Telkomsel Flash',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   // ── TK SWASTA ──
@@ -636,7 +724,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
       classroomCondition: { good: 2, lightDamage: 0, heavyDamage: 0 },
       hasLibrary: false, hasLab: false,
       toiletsGood: 1, toiletsDamaged: 0,
-      internetSpeedMbps: 5, internetProvider: 'IndiHome'
+      internetSpeedMbps: 5, internetProvider: 'IndiHome',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -661,7 +753,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
       classroomCondition: { good: 1, lightDamage: 1, heavyDamage: 0 },
       hasLibrary: false, hasLab: false,
       toiletsGood: 1, toiletsDamaged: 0,
-      internetSpeedMbps: 5, internetProvider: 'Telkom'
+      internetSpeedMbps: 5, internetProvider: 'Telkom',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   // ── KB (KELOMPOK BERMAIN) ──
@@ -687,7 +783,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
       classroomCondition: { good: 1, lightDamage: 1, heavyDamage: 0 },
       hasLibrary: false, hasLab: false,
       toiletsGood: 1, toiletsDamaged: 0,
-      internetSpeedMbps: 3, internetProvider: 'Smartfren'
+      internetSpeedMbps: 3, internetProvider: 'Smartfren',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   {
@@ -712,7 +812,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
       classroomCondition: { good: 1, lightDamage: 0, heavyDamage: 0 },
       hasLibrary: false, hasLab: false,
       toiletsGood: 1, toiletsDamaged: 0,
-      internetSpeedMbps: 3, internetProvider: 'Telkomsel'
+      internetSpeedMbps: 3, internetProvider: 'Telkomsel',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   },
   // ── SD SWASTA ──
@@ -739,7 +843,11 @@ const baseSchools: Omit<School, 'healthScore' | 'riskIndicators'>[] = [
       classroomCondition: { good: 4, lightDamage: 1, heavyDamage: 0 },
       hasLibrary: true, hasLab: false,
       toiletsGood: 2, toiletsDamaged: 0,
-      internetSpeedMbps: 10, internetProvider: 'Telkom'
+      internetSpeedMbps: 10, internetProvider: 'Telkom',
+      landArea: 0,
+      buildingArea: 0,
+      teacherRoom: { exists: false, condition: 'Tidak Ada' },
+      principalRoom: { exists: false, condition: 'Tidak Ada' },
     }
   }
 ];
@@ -801,5 +909,3 @@ export const GET_VILLAGE_STATS = (): VillageStats[] => {
     };
   });
 };
-
-

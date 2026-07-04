@@ -32,11 +32,14 @@ interface ReportSchool {
     classrooms: { good: number; lightDamage: number; heavyDamage: number; };
     toilets: { good: number; damaged: number; };
     hasLibrary: boolean; hasLab: boolean; internetSpeedMbps: number;
+    landArea: number; buildingArea: number;
+    teacherRoom: { exists: boolean; condition: string; };
+    principalRoom: { exists: boolean; condition: string; };
     alerts: { severity: string; message: string; category: string }[]; };
   mutations: { masuk: number; keluar: number };
 }
 
-const TOTAL_PAGES = 10;
+const TOTAL_PAGES = 9;
 const PAGE_WIDTH_MM = 215;
 const PAGE_HEIGHT_MM = 330;
 const BASE_PX = 96 / 25.4;
@@ -169,8 +172,8 @@ function PageCover({ school, period, employeeList }: { school: ReportSchool; per
     <div className="p-10 font-serif text-xs leading-relaxed">
       {/* Kop Surat */}
       <div className="flex items-start gap-5 border-b-2 border-black pb-4 mb-7">
-        <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center text-3xl shrink-0 border-2 border-gray-200">
-          <span className="text-gray-300">L</span>
+        <div className="w-16 h-16 shrink-0">
+          <img src="/logokab.png" alt="Logo Kabupaten" className="w-full h-full object-contain" />
         </div>
         <div className="flex-1 text-center">
           <p className="text-sm font-bold uppercase tracking-wider text-gray-800">Pemerintah Kabupaten Cirebon</p>
@@ -191,8 +194,8 @@ function PageCover({ school, period, employeeList }: { school: ReportSchool; per
         <p className="text-xs mt-3 text-gray-600">Bulan: <strong>{month}</strong> — Tahun Pelajaran: <strong>2025/2026</strong></p>
       </div>
 
-      {/* Identitas Sekolah */}
-      <div className="grid grid-cols-2 gap-6 mb-7">
+      {/* Identitas Sekolah — full width */}
+      <div className="mb-7">
         <div className="border border-gray-300 p-4 rounded">
           <FunctionBar label="IDENTITAS SEKOLAH" />
           <table className="w-full text-[11px]">
@@ -214,14 +217,6 @@ function PageCover({ school, period, employeeList }: { school: ReportSchool; per
               ))}
             </tbody>
           </table>
-        </div>
-        <div className="border border-gray-300 p-4 rounded flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-              <div className="w-full h-40 bg-gray-100 rounded flex items-center justify-center mb-2 border border-dashed border-gray-300">
-              <span className="text-gray-300 text-5xl">📷</span>
-            </div>
-            <p className="text-[11px] text-gray-400">Foto Gedung Sekolah</p>
-          </div>
         </div>
       </div>
 
@@ -316,6 +311,14 @@ function PageStudents({ school }: { school: ReportSchool }) {
 }
 
 function PageEmployees({ employeeList }: { employeeList: EmployeeRow[] }) {
+  const sorted = [...employeeList].sort((a, b) => {
+    const aj = (a.jabatan || '').toLowerCase();
+    const bj = (b.jabatan || '').toLowerCase();
+    const aIsKepsek = aj.includes('kepala sekolah') ? 0 : aj.includes('guru') ? 1 : 2;
+    const bIsKepsek = bj.includes('kepala sekolah') ? 0 : bj.includes('guru') ? 1 : 2;
+    return aIsKepsek - bIsKepsek || a.nama.localeCompare(b.nama);
+  });
+
   const pns = employeeList.filter(e => e.status_pegawai?.toLowerCase() === 'pns').length;
   const pppk = employeeList.filter(e => e.status_pegawai?.toLowerCase().includes('pppk')).length;
   const honorer = employeeList.filter(e => {
@@ -330,19 +333,18 @@ function PageEmployees({ employeeList }: { employeeList: EmployeeRow[] }) {
     <div className="p-10 font-serif text-xs leading-relaxed">
       <BABTitle label="Bab II — Data Pegawai" />
 
-      <ReportTable headers={['No', 'Nama', 'Jabatan', 'Status', 'Kehadiran']}>
-        {employeeList.slice(0, 30).map((e, i) => (
+      <ReportTable headers={['No', 'Nama', 'Status', 'Jenis Tugas']}>
+        {sorted.slice(0, 30).map((e, i) => (
           <tr key={e.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
             <td className="border border-gray-200 p-2.5 text-gray-900 text-center w-8">{i + 1}</td>
             <td className="border border-gray-200 p-2.5 text-gray-900">{e.nama}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900">{e.jabatan || '-'}</td>
             <td className="border border-gray-200 p-2.5 text-gray-900">{e.status_pegawai || '-'}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900 text-right">-</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{e.jabatan || '-'}</td>
           </tr>
         ))}
-        {employeeList.length > 30 && (
+        {sorted.length > 30 && (
           <tr>
-            <td colSpan={5} className="border border-gray-200 p-2.5 text-center text-gray-400">... dan {employeeList.length - 30} pegawai lainnya</td>
+            <td colSpan={4} className="border border-gray-200 p-2.5 text-gray-900 text-center text-gray-400">... dan {sorted.length - 30} pegawai lainnya</td>
           </tr>
         )}
       </ReportTable>
@@ -371,10 +373,14 @@ function PageEmployees({ employeeList }: { employeeList: EmployeeRow[] }) {
 function PageInfrastructure({ school }: { school: ReportSchool }) {
   const total = school.infrastructure.classrooms.good + school.infrastructure.classrooms.lightDamage + school.infrastructure.classrooms.heavyDamage;
   const infraItems = [
+    { name: 'Luas Tanah', value: `${school.infrastructure.landArea} m²` },
+    { name: 'Luas Bangunan', value: `${school.infrastructure.buildingArea} m²` },
     { name: 'Ruang Kelas', total, baik: school.infrastructure.classrooms.good, ringan: school.infrastructure.classrooms.lightDamage, berat: school.infrastructure.classrooms.heavyDamage },
+    { name: 'Ruang Guru', value: school.infrastructure.teacherRoom.exists ? school.infrastructure.teacherRoom.condition : 'Tidak Ada' },
+    { name: 'Ruang Kepala Sekolah', value: school.infrastructure.principalRoom.exists ? school.infrastructure.principalRoom.condition : 'Tidak Ada' },
+    { name: 'Perpustakaan', value: school.infrastructure.hasLibrary ? 'Ada' : 'Tidak Ada' },
+    { name: 'Laboratorium', value: school.infrastructure.hasLab ? 'Ada' : 'Tidak Ada' },
     { name: 'Toilet', total: school.infrastructure.toilets.good + school.infrastructure.toilets.damaged, baik: school.infrastructure.toilets.good, ringan: 0, berat: school.infrastructure.toilets.damaged },
-    { name: 'Perpustakaan', total: school.infrastructure.hasLibrary ? 1 : 0, baik: school.infrastructure.hasLibrary ? 1 : 0, ringan: 0, berat: 0 },
-    { name: 'Laboratorium', total: school.infrastructure.hasLab ? 1 : 0, baik: school.infrastructure.hasLab ? 1 : 0, ringan: 0, berat: 0 },
   ];
   const donutData = [
     { label: 'Baik', value: school.infrastructure.classrooms.good, color: '#16a34a' },
@@ -386,15 +392,15 @@ function PageInfrastructure({ school }: { school: ReportSchool }) {
     <div className="p-10 font-serif text-xs leading-relaxed">
       <BABTitle label="Bab III — Infrastruktur / Sarana Prasarana" />
 
-      <ReportTable headers={['No', 'Jenis Sarana', 'Jumlah', 'Baik', 'Rusak Ringan', 'Rusak Berat']}>
-        {infraItems.map((item, i) => (
+      <ReportTable headers={['No', 'Jenis Sarana', 'Jumlah / Luas', 'Kondisi']}>
+        {infraItems.map((item: any, i) => (
           <tr key={i} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
             <td className="border border-gray-200 p-2.5 text-gray-900 text-center w-8">{i + 1}</td>
             <td className="border border-gray-200 p-2.5 text-gray-900">{item.name}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900 text-right">{item.total}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900 text-right text-green-700">{item.baik}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900 text-right text-yellow-700">{item.ringan}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900 text-right text-red-700">{item.berat}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900 text-right">{'value' in item ? (item.value as string) : (item.total as number)}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">
+              {'value' in item ? '-' : `${item.baik} Baik / ${item.ringan} Ringan / ${item.berat} Berat`}
+            </td>
           </tr>
         ))}
       </ReportTable>
@@ -437,60 +443,49 @@ function PageInfrastructure({ school }: { school: ReportSchool }) {
   );
 }
 
-function PageMutationsMasuk({ mutations, period }: { mutations: MutationRow[]; period: string }) {
+function PageMutations({ mutations, period }: { mutations: MutationRow[]; period: string }) {
   const masuk = mutations.filter(m => m.jenis === 'MASUK');
-  return (
-    <div className="p-10 font-serif text-xs leading-relaxed">
-      <BABTitle label="Bab IV — Siswa Masuk" />
-      <p className="text-[11px] text-gray-500 mb-4">Periode: {period}</p>
-
-      <ReportTable headers={['No', 'Nama', 'NISN', 'Kelas Tujuan', 'Asal Sekolah', 'Tanggal']}>
-        {masuk.length === 0 ? (
-          <tr><td colSpan={6} className="border border-gray-200 p-4 text-center text-gray-400">-</td></tr>
-        ) : masuk.map((m, i) => (
-          <tr key={m.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-            <td className="border border-gray-200 p-2.5 text-gray-900 text-center w-8">{i + 1}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900">{m.siswa_nama}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900">{m.siswa_nisn}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900">{m.kelas_kelompok || '-'}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900">{m.alasan || '-'}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
-          </tr>
-        ))}
-      </ReportTable>
-
-      <InfoCard className="bg-green-50 border-green-200">
-        <p className="text-xs text-green-800"><strong>Ringkasan:</strong> Total <strong>{masuk.length}</strong> siswa masuk pada periode {period}.</p>
-      </InfoCard>
-    </div>
-  );
-}
-
-function PageMutationsKeluar({ mutations, period }: { mutations: MutationRow[]; period: string }) {
   const keluar = mutations.filter(m => m.jenis === 'KELUAR');
   return (
     <div className="p-10 font-serif text-xs leading-relaxed">
-      <BABTitle label="Bab V — Siswa Keluar" />
+      <BABTitle label="Bab IV — Mutasi Siswa" />
       <p className="text-[11px] text-gray-500 mb-4">Periode: {period}</p>
 
-      <ReportTable headers={['No', 'Nama', 'NISN', 'Kelas', 'Sekolah Tujuan', 'Tanggal']}>
-        {keluar.length === 0 ? (
-          <tr><td colSpan={6} className="border border-gray-200 p-4 text-center text-gray-400">-</td></tr>
-        ) : keluar.map((m, i) => (
-          <tr key={m.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-            <td className="border border-gray-200 p-2.5 text-gray-900 text-center w-8">{i + 1}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900">{m.siswa_nama}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900">{m.siswa_nisn}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900">{m.kelas_kelompok || '-'}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900">{m.alasan || '-'}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
-          </tr>
-        ))}
-      </ReportTable>
+      <div className="mb-6">
+        <FunctionBar label="SISWA MASUK" />
+        <ReportTable headers={['No', 'Nama', 'NISN', 'Kelas Tujuan', 'Asal Sekolah', 'Tanggal']}>
+          {masuk.length === 0 ? (
+            <tr><td colSpan={6} className="border border-gray-200 p-4 text-center text-gray-400">-</td></tr>
+          ) : masuk.map((m, i) => (
+            <tr key={m.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
+              <td className="border border-gray-200 p-2.5 text-gray-900 text-center w-8">{i + 1}</td>
+              <td className="border border-gray-200 p-2.5 text-gray-900">{m.siswa_nama}</td>
+              <td className="border border-gray-200 p-2.5 text-gray-900">{m.siswa_nisn}</td>
+              <td className="border border-gray-200 p-2.5 text-gray-900">{m.kelas_kelompok || '-'}</td>
+              <td className="border border-gray-200 p-2.5 text-gray-900">{m.alasan || '-'}</td>
+              <td className="border border-gray-200 p-2.5 text-gray-900">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
+            </tr>
+          ))}
+        </ReportTable>
+      </div>
 
-      <InfoCard className="bg-red-50 border-red-200">
-        <p className="text-xs text-red-800"><strong>Ringkasan:</strong> Total <strong>{keluar.length}</strong> siswa keluar pada periode {period}.</p>
-      </InfoCard>
+      <div>
+        <FunctionBar label="SISWA KELUAR" />
+        <ReportTable headers={['No', 'Nama', 'NISN', 'Kelas', 'Sekolah Tujuan', 'Tanggal']}>
+          {keluar.length === 0 ? (
+            <tr><td colSpan={6} className="border border-gray-200 p-4 text-center text-gray-400">-</td></tr>
+          ) : keluar.map((m, i) => (
+            <tr key={m.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
+              <td className="border border-gray-200 p-2.5 text-gray-900 text-center w-8">{i + 1}</td>
+              <td className="border border-gray-200 p-2.5 text-gray-900">{m.siswa_nama}</td>
+              <td className="border border-gray-200 p-2.5 text-gray-900">{m.siswa_nisn}</td>
+              <td className="border border-gray-200 p-2.5 text-gray-900">{m.kelas_kelompok || '-'}</td>
+              <td className="border border-gray-200 p-2.5 text-gray-900">{m.alasan || '-'}</td>
+              <td className="border border-gray-200 p-2.5 text-gray-900">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
+            </tr>
+          ))}
+        </ReportTable>
+      </div>
     </div>
   );
 }
@@ -512,7 +507,7 @@ function PageAnalisis({ school, employeeList }: { school: ReportSchool; employee
 
   return (
     <div className="p-10 font-serif text-xs leading-relaxed">
-      <BABTitle label="Bab VI — Analisis Bulanan" />
+      <BABTitle label="Bab V — Analisis Bulanan" />
 
       <FunctionBar label="INISIGHT & REKOMENDASI" />
       <div className="space-y-2 mb-5">
@@ -588,7 +583,7 @@ function PageGrafik({ school, employeeList }: { school: ReportSchool; employeeLi
 
   return (
     <div className="p-10 font-serif text-xs leading-relaxed">
-      <BABTitle label="Bab VII — Grafik dan Visualisasi" />
+      <BABTitle label="Bab VI — Grafik dan Visualisasi" />
 
       <div className="grid grid-cols-2 gap-5 mb-5">
         <div className="border border-gray-200 rounded p-4">
@@ -646,7 +641,7 @@ function PageKesimpulan({ school }: { school: ReportSchool }) {
 
   return (
     <div className="p-10 font-serif text-xs leading-relaxed">
-      <BABTitle label="Bab VIII — Kesimpulan" />
+      <BABTitle label="Bab VII — Kesimpulan" />
 
       <div className="mb-6">
         <FunctionBar label="A. KESIMPULAN" />
@@ -694,21 +689,39 @@ function PagePenutup({ school, period, kepalaSekolah, operator }: {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-10 mt-auto pt-6 border-t border-gray-200">
-        <div className="text-center">
-          <p className="text-xs font-semibold text-gray-700 mb-8">Mengetahui,<br />Kepala Sekolah</p>
-          <div className="w-48 mx-auto">
-            <p className="text-xs font-bold text-gray-800">{kepalaSekolah ? kepalaSekolah.nama : '( ___________________ )'}</p>
-            <div className="border-t-2 border-gray-600 mt-1 mb-1" />
-            <p className="text-[10px] text-gray-500">{kepalaSekolah?.nip ? `NIP. ${kepalaSekolah.nip}` : 'NIP. ________________'}</p>
+      <div className="mt-auto pt-6 border-t border-gray-200">
+        <div className="grid grid-cols-3 gap-6">
+          {/* Mengetahui — Ketua Tim Kerja */}
+          <div className="text-center">
+            <p className="text-xs font-semibold text-gray-700 mb-6">Mengetahui,<br />a.n Kepala Dinas Pendidikan<br />Kabupaten Cirebon,<br />Ketua Tim Kerja Bidang Pendidikan Dasar<br />Kecamatan Lemahabang</p>
+            <div className="h-12" />
+            <div className="w-44 mx-auto">
+              <p className="text-xs font-bold text-gray-800">( ___________________ )</p>
+              <div className="border-t-2 border-gray-600 mt-1 mb-1" />
+              <p className="text-[10px] text-gray-500">NIP. ________________</p>
+            </div>
           </div>
-        </div>
-        <div className="text-center">
-          <p className="text-xs font-semibold text-gray-700 mb-8">Penyusun Laporan,<br />Operator Sekolah</p>
-          <div className="w-48 mx-auto">
-            <p className="text-xs font-bold text-gray-800">{operator ? operator.nama : '( ___________________ )'}</p>
-            <div className="border-t-2 border-gray-600 mt-1 mb-1" />
-            <p className="text-[10px] text-gray-500">{operator?.nik ? `NIK. ${operator.nik}` : 'NIP/NIK. ___________'}</p>
+
+          {/* Kepala Sekolah */}
+          <div className="text-center">
+            <p className="text-xs font-semibold text-gray-700 mb-6">Mengetahui,<br />Kepala Sekolah</p>
+            <div className="h-14" />
+            <div className="w-44 mx-auto">
+              <p className="text-xs font-bold text-gray-800">{kepalaSekolah ? kepalaSekolah.nama : '( ___________________ )'}</p>
+              <div className="border-t-2 border-gray-600 mt-1 mb-1" />
+              <p className="text-[10px] text-gray-500">{kepalaSekolah?.nip ? `NIP. ${kepalaSekolah.nip}` : 'NIP. ________________'}</p>
+            </div>
+          </div>
+
+          {/* Operator Sekolah */}
+          <div className="text-center">
+            <p className="text-xs font-semibold text-gray-700 mb-6">Penyusun Laporan,<br />Operator Sekolah</p>
+            <div className="h-14" />
+            <div className="w-44 mx-auto">
+              <p className="text-xs font-bold text-gray-800">{operator ? operator.nama : '( ___________________ )'}</p>
+              <div className="border-t-2 border-gray-600 mt-1 mb-1" />
+              <p className="text-[10px] text-gray-500">{operator?.nik ? `NIK. ${operator.nik}` : 'NIP/NIK. ___________'}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -832,8 +845,7 @@ export default function LaporanPreview({ onClose }: LaporanPreviewProps) {
     <PageStudents key="students" school={school} />,
     <PageEmployees key="employees" employeeList={employeeList} />,
     <PageInfrastructure key="infra" school={school} />,
-    <PageMutationsMasuk key="mut-masuk" mutations={mutations} period={period} />,
-    <PageMutationsKeluar key="mut-keluar" mutations={mutations} period={period} />,
+    <PageMutations key="mutations" mutations={mutations} period={period} />,
     <PageAnalisis key="analisis" school={school} employeeList={employeeList} />,
     <PageGrafik key="grafik" school={school} employeeList={employeeList} />,
     <PageKesimpulan key="kesimpulan" school={school} />,

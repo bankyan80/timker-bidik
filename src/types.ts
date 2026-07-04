@@ -31,6 +31,10 @@ export interface School {
     toiletsDamaged: number;
     internetSpeedMbps: number;
     internetProvider: string;
+    landArea: number;
+    buildingArea: number;
+    teacherRoom: { exists: boolean; condition: string; };
+    principalRoom: { exists: boolean; condition: string; };
   };
   healthScore: number; // calculated 0-100
   riskIndicators: {
