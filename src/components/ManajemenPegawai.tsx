@@ -223,13 +223,13 @@ export default function ManajemenPegawai() {
     setEditModal(prev => {
       if (!prev) return null;
       const data = { ...prev.data, [key]: value };
-      // Auto-calculate BUP when tanggal_lahir or status_pegawai changes
-      if ((key === 'tanggal_lahir' || key === 'status_pegawai') && data.tanggal_lahir) {
+      // Auto-calculate BUP when tanggal_lahir or status_pegawai or jabatan changes
+      if ((key === 'tanggal_lahir' || key === 'status_pegawai' || key === 'jabatan') && data.tanggal_lahir) {
         const parts = data.tanggal_lahir.split('-');
         if (parts.length === 3) {
           const year = parseInt(parts[0]);
           const month = parseInt(parts[1]); // 1-12
-          const retirementAge = 60;
+          const retirementAge = data.jabatan === 'Tenaga Kependidikan' ? 58 : 60;
           const retYear = year + retirementAge;
           // BUP = 1st day of month following retirement month
           const bupMonth = month + 1;
