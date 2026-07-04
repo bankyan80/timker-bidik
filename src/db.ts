@@ -527,14 +527,18 @@ export async function getMonthlyReport(schoolNpsn?: string): Promise<MonthlyRepo
       .filter(a => a.schoolName === school.name)
       .map(a => ({ severity: a.severity, message: a.message, category: a.category }));
 
+    const studentTotal = byClass.reduce((s: number, c: any) => s + c.total, 0);
+    const studentMale = byClass.reduce((s: number, c: any) => s + c.male, 0);
+    const studentFemale = byClass.reduce((s: number, c: any) => s + c.female, 0);
+
     result.push({
-      npsn, name: school.name, level: school.level,
+      npsn: school.npsn, name: school.name, level: school.level,
       status: school.status === 'NEGERI' ? 'Negeri' : 'Swasta',
       village: school.village,
       students: {
-        total: school.students.total,
-        male: school.students.male,
-        female: school.students.female,
+        total: studentTotal,
+        male: studentMale,
+        female: studentFemale,
         byClass,
       },
       employees: {
