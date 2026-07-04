@@ -221,6 +221,7 @@ export default function Sidebar({ currentModule, setCurrentModule, theme, setThe
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 scrollbar-thin">
         {menuGroups.map((group, groupIdx) => {
           const filteredItems = group.items.filter(item => {
+            if (!allowedModules.includes(item.id)) return false;
             if (item.roles) return item.roles.some(r => user?.role === r);
             return true;
           });
