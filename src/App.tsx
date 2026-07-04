@@ -11,6 +11,7 @@ import DocumentIntel from './components/DocumentIntel';
 import CommandConsole from './components/CommandConsole';
 import ReportCenter from './components/ReportCenter';
 import MonthlyReport from './components/MonthlyReport';
+import LaporanPreview from './components/LaporanPreview';
 import StudentManagement from './components/StudentManagement';
 import SchoolProfile from './components/SchoolProfile';
 import SchoolComparison from './components/SchoolComparison';
@@ -139,6 +140,8 @@ export default function App() {
         return <ReportCenter />;
       case 'monthly-report':
         return <MonthlyReport />;
+      case 'laporan-preview':
+        return <LaporanPreview />;
       default:
         return (
           <ExecutiveDashboard

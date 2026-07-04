@@ -1125,6 +1125,40 @@ app.get('/api/reports/monthly', authenticateToken, async (req, res) => {
   });
 });
 
+// Student mutation details for report preview
+app.get('/api/reports/mutations/:npsn', authenticateToken, async (req, res) => {
+  const { getDb } = await import('./db');
+  const db = getDb();
+  if (!db) return res.json([]);
+  const schoolScope = getSchoolScope(req);
+  if (schoolScope && schoolScope !== req.params.npsn) return res.status(403).json({ error: 'Akses ditolak' });
+  const result = await db.execute({
+    sql: `SELECT m.*, s.kelas_kelompok, s.rombel
+          FROM student_mutations m
+          LEFT JOIN students s ON m.siswa_nisn = s.nisn AND m.school_npsn = s.school_npsn
+          WHERE m.school_npsn = ?
+          ORDER BY m.tanggal DESC`,
+    args: [req.params.npsn]
+  });
+  res.json(result.rows);
+});
+
+// Employees with full detail for report preview
+app.get('/api/reports/employees/:npsn', authenticateToken, async (req, res) => {
+  const { getDb } = await import('./db');
+  const db = getDb();
+  if (!db) return res.json([]);
+  const schoolScope = getSchoolScope(req);
+  if (schoolScope && schoolScope !== req.params.npsn) return res.status(403).json({ error: 'Akses ditolak' });
+  const result = await db.execute({
+    sql: `SELECT id, nama, jabatan, status_pegawai, nip, nik, sertifikasi
+          FROM employees WHERE sekolah_id = ? AND is_active = 1
+          ORDER BY nama`,
+    args: [req.params.npsn]
+  });
+  res.json(result.rows);
+});
+
 // Seed missing data (alerts, recommendations)
 app.post('/api/debug/seed', authenticateToken, requireRole('admin'), async (req, res) => {
   const { getDb } = await import('./db');
