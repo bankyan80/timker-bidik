@@ -104,8 +104,8 @@ export default function DocumentIntel() {
       try {
         const data = await loadEmployees();
         setEmployees(data);
-      } catch {
-        // fallback handled inside loadEmployees
+      } catch (e) {
+        console.error('Failed to load employees:', e);
       }
       setLoading(false);
     })();

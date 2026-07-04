@@ -54,15 +54,16 @@ function mapStatusPegawai(sp: string | null): 'PNS' | 'PPPK' | 'PPPK_PARUH_WAKTU
   return 'Honorer'
 }
 
-function formatBytes(bytes: number): string {
+function formatBytes(bytes: number | null | undefined): string {
+  if (!bytes) return ''
   if (bytes < 1024) return bytes + ' B'
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB'
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
 function mapDocToCategory(jenisDokumen: string, kategori: string): DocumentItem['category'] {
-  const k = kategori.toLowerCase()
-  const j = jenisDokumen.toLowerCase()
+  const k = (kategori || '').toLowerCase()
+  const j = (jenisDokumen || '').toLowerCase()
   if (j.includes('pak') || k.includes('pak') || j.includes('angka kredit') || j.includes('penetapan') && j.includes('kredit')) return 'PAK'
   if (k.includes('identitas') || j.includes('ktp') || j.includes('kk') || j.includes('npwp') || j.includes('foto') || j.includes('ijazah') || j.includes('rekening')) return 'Identitas'
   if (k.includes('pengangkatan') || j.includes('sk') || j.includes('sertifikat') || j.includes('spmt') || j.includes('skbm') || j.includes('kontrak') || j.includes('lamaran')) return 'Pengangkatan'
@@ -75,12 +76,13 @@ function mapDocToCategory(jenisDokumen: string, kategori: string): DocumentItem[
 // ── Async loader from API ──
 
 export async function loadEmployees(): Promise<Employee[]> {
-  const res = await fetch('/api/employees-with-docs')
-  if (!res.ok) return []
-  const rows: any[] = await res.json()
-const employees: Employee[] = []
+  try {
+    const res = await fetch('/api/employees-with-docs')
+    if (!res.ok) return []
+    const rows: any[] = await res.json()
+    const employees: Employee[] = []
 
-  for (const row of rows) {
+    for (const row of rows) {
     const docRows: EmployeeDocumentRow[] = row.documents || []
     const status = mapStatusPegawai(row.status_pegawai)
     const schoolStatus: 'Negeri' | 'Swasta' = (row.school_status || 'Negeri') === 'Swasta' ? 'Swasta' : 'Negeri'
@@ -116,7 +118,7 @@ const employees: Employee[] = []
           status: isVerified && !hasIssue ? 'available' : 'warning',
           uploadDate: matched.uploaded_at ? new Date(matched.uploaded_at).toISOString().slice(0, 10) : undefined,
           fileSize: formatBytes(matched.file_size),
-          fileType: matched.mime_type.includes('pdf') ? 'PDF' : matched.mime_type.includes('png') ? 'PNG' : matched.mime_type.includes('jpg') || matched.mime_type.includes('jpeg') ? 'JPG' : 'PDF',
+          fileType: (matched.mime_type || '').includes('pdf') ? 'PDF' : (matched.mime_type || '').includes('png') ? 'PNG' : (matched.mime_type || '').includes('jpg') || (matched.mime_type || '').includes('jpeg') ? 'JPG' : 'PDF',
           issue: hasIssue ? (matched.catatan_revisi || 'Menunggu verifikasi') : undefined,
           driveUrl: matched.drive_url || undefined,
           dbId: matched.id,
@@ -148,7 +150,7 @@ const employees: Employee[] = []
           status: doc.status_verifikasi === 'sudah_diverifikasi' ? 'available' : 'warning',
           uploadDate: doc.uploaded_at ? new Date(doc.uploaded_at).toISOString().slice(0, 10) : undefined,
           fileSize: formatBytes(doc.file_size),
-          fileType: doc.mime_type.includes('pdf') ? 'PDF' : doc.mime_type.includes('png') ? 'PNG' : 'PDF',
+          fileType: (doc.mime_type || '').includes('pdf') ? 'PDF' : (doc.mime_type || '').includes('png') ? 'PNG' : 'PDF',
           issue: doc.catatan_revisi || undefined,
           driveUrl: doc.drive_url || undefined,
           dbId: doc.id,
@@ -170,6 +172,10 @@ const employees: Employee[] = []
   }
 
   return employees
+  } catch (e) {
+    console.error('loadEmployees error:', e)
+    return []
+  }
 }
 
 export interface DocumentItem {
