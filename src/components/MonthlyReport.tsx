@@ -329,7 +329,7 @@ export default function MonthlyReport() {
 
       <style>{`
         @media print {
-          @page { size: A4 portrait; margin: 20mm 15mm; }
+          @page { size: 215mm 330mm portrait; margin: 0; }
           body { background: white !important; color: #000 !important; font-size: 10pt; line-height: 1.5; font-family: 'Times New Roman', Times, serif; }
 
           .print\\:hidden { display: none !important; }

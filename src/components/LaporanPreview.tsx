@@ -39,7 +39,7 @@ interface ReportSchool {
 const TOTAL_PAGES = 10;
 const PAGE_WIDTH_MM = 215;
 const PAGE_HEIGHT_MM = 330;
-const BASE_PX = 1.2;
+const BASE_PX = 96 / 25.4;
 
 function mmToPx(mm: number): number { return mm * BASE_PX; }
 
@@ -62,8 +62,8 @@ function BarChart({ data, max, color, height = 120 }: {
         return (
           <g key={i}>
             <rect x={x} y={height - barH} width={bw} height={barH} fill={color} rx={2} />
-            <text x={x + bw / 2} y={height + 12} textAnchor="middle" fontSize="8" fill="#444">{d.label}</text>
-            <text x={x + bw / 2} y={height - barH - 4} textAnchor="middle" fontSize="7" fill="#666">{d.value}</text>
+            <text x={x + bw / 2} y={height + 12} textAnchor="middle" fontSize="11" fill="#444">{d.label}</text>
+            <text x={x + bw / 2} y={height - barH - 4} textAnchor="middle" fontSize="10" fill="#666">{d.value}</text>
           </g>
         );
       })}
@@ -71,7 +71,7 @@ function BarChart({ data, max, color, height = 120 }: {
   );
 }
 
-function PieChart({ data, size = 160 }: { data: { label: string; value: number; color: string }[]; size?: number }) {
+function PieChart({ data, size = 200 }: { data: { label: string; value: number; color: string }[]; size?: number }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0) return <div className="text-center text-gray-400">Tidak ada data</div>;
   let offset = 0;
@@ -91,12 +91,12 @@ function PieChart({ data, size = 160 }: { data: { label: string; value: number; 
         offset += len;
         return el;
       })}
-      <text x={size / 2} y={size / 2 + 3} textAnchor="middle" fontSize="11" fontWeight="bold" fill="#333">{total}</text>
+      <text x={size / 2} y={size / 2 + 3} textAnchor="middle" fontSize="15" fontWeight="bold" fill="#333">{total}</text>
     </svg>
   );
 }
 
-function DonutChart({ data, size = 140 }: { data: { label: string; value: number; color: string }[]; size?: number }) {
+function DonutChart({ data, size = 180 }: { data: { label: string; value: number; color: string }[]; size?: number }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0) return <div className="text-center text-gray-400">Tidak ada data</div>;
   let offset = 0;
@@ -116,7 +116,7 @@ function DonutChart({ data, size = 140 }: { data: { label: string; value: number
         offset += len;
         return el;
       })}
-      <text x={size / 2} y={size / 2 + 2} textAnchor="middle" fontSize="10" fontWeight="bold" fill="#333">{total}</text>
+      <text x={size / 2} y={size / 2 + 2} textAnchor="middle" fontSize="13" fontWeight="bold" fill="#333">{total}</text>
     </svg>
   );
 }
@@ -141,7 +141,7 @@ function TrendChart({ data, height = 100 }: { data: { label: string; value: numb
         return (
           <g key={i}>
             <circle cx={x} cy={pad + (1 - (d.value - min) / range) * (height - pad * 2)} r="3" fill="#0891b2" />
-            {i % 2 === 0 && <text x={x} y={height + 10} textAnchor="middle" fontSize="7" fill="#666">{d.label}</text>}
+            {i % 2 === 0 && <text x={x} y={height + 10} textAnchor="middle" fontSize="10" fill="#666">{d.label}</text>}
           </g>
         );
       })}
@@ -152,7 +152,7 @@ function TrendChart({ data, height = 100 }: { data: { label: string; value: numb
 // ── Page Components ──
 
 function FunctionBar({ label }: { label: string }) {
-  return <div className="text-[10px] font-bold text-gray-700 bg-gray-100 px-3 py-1.5 rounded mb-3">{label}</div>;
+  return <div className="text-xs font-bold text-gray-700 bg-gray-100 px-4 py-2 rounded mb-3">{label}</div>;
 }
 
 function PageCover({ school, period, employeeList }: { school: ReportSchool; period: string; employeeList: EmployeeRow[] }) {
@@ -166,36 +166,36 @@ function PageCover({ school, period, employeeList }: { school: ReportSchool; per
     { label: 'Siswa Keluar', value: school.mutations.keluar, color: '#dc2626' },
   ];
   return (
-    <div className="p-10 font-serif text-[10px] leading-relaxed">
+    <div className="p-10 font-serif text-xs leading-relaxed">
       {/* Kop Surat */}
       <div className="flex items-start gap-5 border-b-2 border-black pb-4 mb-7">
         <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center text-3xl shrink-0 border-2 border-gray-200">
           <span className="text-gray-300">L</span>
         </div>
         <div className="flex-1 text-center">
-          <p className="text-xs font-bold uppercase tracking-wider text-gray-800">Pemerintah Kabupaten Cirebon</p>
-          <p className="text-[10px] text-gray-600">Dinas Pendidikan</p>
-          <p className="text-sm font-bold mt-1.5 text-gray-900">{school.name}</p>
-          <p className="text-[9px] text-gray-500 mt-0.5">
+          <p className="text-sm font-bold uppercase tracking-wider text-gray-800">Pemerintah Kabupaten Cirebon</p>
+          <p className="text-xs text-gray-600">Dinas Pendidikan</p>
+          <p className="text-base font-bold mt-1.5 text-gray-900">{school.name}</p>
+          <p className="text-[11px] text-gray-500 mt-0.5">
             Desa {school.village}, Kec. Lemahabang, Kab. Cirebon — Jawa Barat
           </p>
-          <p className="text-[9px] text-gray-400">NPSN: {school.npsn}</p>
+          <p className="text-[11px] text-gray-400">NPSN: {school.npsn}</p>
         </div>
       </div>
 
       {/* Judul */}
       <div className="text-center mb-9">
         <div className="inline-block border-b-2 border-gray-800 pb-2 px-8">
-          <h1 className="text-lg font-bold uppercase tracking-widest text-gray-900">Laporan Bulanan Sekolah</h1>
+          <h1 className="text-2xl font-bold uppercase tracking-widest text-gray-900">Laporan Bulanan Sekolah</h1>
         </div>
-        <p className="text-[10px] mt-3 text-gray-600">Bulan: <strong>{month}</strong> — Tahun Pelajaran: <strong>2025/2026</strong></p>
+        <p className="text-xs mt-3 text-gray-600">Bulan: <strong>{month}</strong> — Tahun Pelajaran: <strong>2025/2026</strong></p>
       </div>
 
       {/* Identitas Sekolah */}
       <div className="grid grid-cols-2 gap-6 mb-7">
         <div className="border border-gray-300 p-4 rounded">
           <FunctionBar label="IDENTITAS SEKOLAH" />
-          <table className="w-full text-[9px]">
+          <table className="w-full text-[11px]">
             <tbody>
               {[
                 ['Nama Sekolah', school.name],
@@ -217,10 +217,10 @@ function PageCover({ school, period, employeeList }: { school: ReportSchool; per
         </div>
         <div className="border border-gray-300 p-4 rounded flex items-center justify-center bg-gray-50">
           <div className="text-center">
-            <div className="w-full h-32 bg-gray-100 rounded flex items-center justify-center mb-2 border border-dashed border-gray-300">
-              <span className="text-gray-300 text-4xl">📷</span>
+              <div className="w-full h-40 bg-gray-100 rounded flex items-center justify-center mb-2 border border-dashed border-gray-300">
+              <span className="text-gray-300 text-5xl">📷</span>
             </div>
-            <p className="text-[9px] text-gray-400">Foto Gedung Sekolah</p>
+            <p className="text-[11px] text-gray-400">Foto Gedung Sekolah</p>
           </div>
         </div>
       </div>
@@ -230,16 +230,16 @@ function PageCover({ school, period, employeeList }: { school: ReportSchool; per
         <FunctionBar label="RINGKASAN EKSEKUTIF" />
         <div className="grid grid-cols-5 gap-3">
           {summary.map((s, i) => (
-            <div key={i} className="border border-gray-200 rounded p-3 text-center">
-              <div className="text-lg font-bold" style={{ color: s.color }}>{typeof s.value === 'number' ? s.value.toLocaleString('id-ID') : s.value}</div>
-              <div className="text-[8px] text-gray-500 mt-0.5 uppercase tracking-wider">{s.label}</div>
+            <div key={i} className="border border-gray-200 rounded p-4 text-center">
+              <div className="text-2xl font-bold" style={{ color: s.color }}>{typeof s.value === 'number' ? s.value.toLocaleString('id-ID') : s.value}</div>
+              <div className="text-xs text-gray-500 mt-0.5 uppercase tracking-wider">{s.label}</div>
             </div>
           ))}
         </div>
       </div>
 
       {/* Footer info */}
-      <div className="text-[8px] text-gray-400 text-center mt-8 pt-3">
+      <div className="text-[10px] text-gray-400 text-center mt-8 pt-3">
         <span className="border-t border-gray-200 pt-2 inline-block px-8">Dokumen Resmi — Dicetak: {formatDate(new Date().toISOString())}</span>
       </div>
     </div>
@@ -250,7 +250,7 @@ function BABTitle({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-3 mb-5">
       <div className="h-6 w-1 bg-gray-800 rounded" />
-      <h2 className="text-sm font-bold uppercase text-gray-900">{label}</h2>
+      <h2 className="text-base font-bold uppercase text-gray-900">{label}</h2>
       <div className="flex-1 border-b border-gray-300" />
     </div>
   );
@@ -258,11 +258,11 @@ function BABTitle({ label }: { label: string }) {
 
 function ReportTable({ headers, children, footer }: { headers: string[]; children: React.ReactNode; footer?: React.ReactNode }) {
   return (
-    <table className="w-full text-[9px] border-collapse mb-4">
+    <table className="w-full text-[11px] border-collapse mb-4">
       <thead>
         <tr className="bg-gray-800 text-white">
           {headers.map((h, i) => (
-            <th key={i} className="border border-gray-600 p-2 text-left font-medium">{h}</th>
+            <th key={i} className="border border-gray-600 p-2.5 text-left font-medium">{h}</th>
           ))}
         </tr>
       </thead>
@@ -273,36 +273,36 @@ function ReportTable({ headers, children, footer }: { headers: string[]; childre
 }
 
 function InfoCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`border border-gray-200 rounded p-3 bg-gray-50 ${className}`}>{children}</div>;
+  return <div className={`border border-gray-200 rounded p-4 bg-gray-50 ${className}`}>{children}</div>;
 }
 
 function PageStudents({ school }: { school: ReportSchool }) {
   const max = Math.max(...school.students.byClass.map(c => c.total), 1);
   const barData = school.students.byClass.map(c => ({ label: c.kelas, value: c.total }));
   return (
-    <div className="p-10 font-serif text-[10px] leading-relaxed">
+    <div className="p-10 font-serif text-xs leading-relaxed">
       <BABTitle label="Bab I — Data Siswa per Kelas" />
 
       <ReportTable headers={['No', 'Kelas', 'L', 'P', 'Total', 'Mutasi Masuk', 'Mutasi Keluar']}
         footer={
-          <tr className="bg-gray-100 font-bold text-[10px]">
-            <td colSpan={2} className="border border-gray-300 p-2 text-right">Total</td>
-            <td className="border border-gray-300 p-2 text-right">{school.students.male}</td>
-            <td className="border border-gray-300 p-2 text-right">{school.students.female}</td>
-            <td className="border border-gray-300 p-2 text-right">{school.students.total}</td>
-            <td className="border border-gray-300 p-2 text-right text-green-700">{school.mutations.masuk}</td>
-            <td className="border border-gray-300 p-2 text-right text-red-700">{school.mutations.keluar}</td>
+          <tr className="bg-gray-100 font-bold text-xs">
+            <td colSpan={2} className="border border-gray-300 p-2.5 text-right">Total</td>
+            <td className="border border-gray-300 p-2.5 text-right">{school.students.male}</td>
+            <td className="border border-gray-300 p-2.5 text-right">{school.students.female}</td>
+            <td className="border border-gray-300 p-2.5 text-right">{school.students.total}</td>
+            <td className="border border-gray-300 p-2.5 text-right text-green-700">{school.mutations.masuk}</td>
+            <td className="border border-gray-300 p-2.5 text-right text-red-700">{school.mutations.keluar}</td>
           </tr>
         }>
         {school.students.byClass.map((c, i) => (
           <tr key={i} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-            <td className="border border-gray-200 p-2 text-center w-8">{i + 1}</td>
-            <td className="border border-gray-200 p-2">{c.kelas}</td>
-            <td className="border border-gray-200 p-2 text-right">{c.male}</td>
-            <td className="border border-gray-200 p-2 text-right">{c.female}</td>
-            <td className="border border-gray-200 p-2 text-right font-semibold">{c.total}</td>
-            <td className="border border-gray-200 p-2 text-right text-green-600">-</td>
-            <td className="border border-gray-200 p-2 text-right text-red-600">-</td>
+            <td className="border border-gray-200 p-2.5 text-center w-8">{i + 1}</td>
+            <td className="border border-gray-200 p-2.5">{c.kelas}</td>
+            <td className="border border-gray-200 p-2.5 text-right">{c.male}</td>
+            <td className="border border-gray-200 p-2.5 text-right">{c.female}</td>
+            <td className="border border-gray-200 p-2.5 text-right font-semibold">{c.total}</td>
+            <td className="border border-gray-200 p-2.5 text-right text-green-600">-</td>
+            <td className="border border-gray-200 p-2.5 text-right text-red-600">-</td>
           </tr>
         ))}
       </ReportTable>
@@ -327,22 +327,22 @@ function PageEmployees({ employeeList }: { employeeList: EmployeeRow[] }) {
   const certified = employeeList.filter(e => e.sertifikasi && e.sertifikasi !== '').length;
 
   return (
-    <div className="p-10 font-serif text-[10px] leading-relaxed">
+    <div className="p-10 font-serif text-xs leading-relaxed">
       <BABTitle label="Bab II — Data Pegawai" />
 
       <ReportTable headers={['No', 'Nama', 'Jabatan', 'Status', 'Kehadiran']}>
         {employeeList.slice(0, 30).map((e, i) => (
           <tr key={e.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-            <td className="border border-gray-200 p-2 text-center w-8">{i + 1}</td>
-            <td className="border border-gray-200 p-2">{e.nama}</td>
-            <td className="border border-gray-200 p-2">{e.jabatan || '-'}</td>
-            <td className="border border-gray-200 p-2">{e.status_pegawai || '-'}</td>
-            <td className="border border-gray-200 p-2 text-right">-</td>
+            <td className="border border-gray-200 p-2.5 text-center w-8">{i + 1}</td>
+            <td className="border border-gray-200 p-2.5">{e.nama}</td>
+            <td className="border border-gray-200 p-2.5">{e.jabatan || '-'}</td>
+            <td className="border border-gray-200 p-2.5">{e.status_pegawai || '-'}</td>
+            <td className="border border-gray-200 p-2.5 text-right">-</td>
           </tr>
         ))}
         {employeeList.length > 30 && (
           <tr>
-            <td colSpan={5} className="border border-gray-200 p-2 text-center text-gray-400">... dan {employeeList.length - 30} pegawai lainnya</td>
+            <td colSpan={5} className="border border-gray-200 p-2.5 text-center text-gray-400">... dan {employeeList.length - 30} pegawai lainnya</td>
           </tr>
         )}
       </ReportTable>
@@ -359,8 +359,8 @@ function PageEmployees({ employeeList }: { employeeList: EmployeeRow[] }) {
           { label: 'Sertifikasi', value: certified, color: 'bg-purple-50 text-purple-800 border-purple-200' },
         ].map((item, i) => (
           <div key={i} className={`border rounded p-2 text-center ${item.color}`}>
-            <div className="text-sm font-bold">{item.value}</div>
-            <div className="text-[7px] mt-0.5">{item.label}</div>
+              <div className="text-base font-bold">{item.value}</div>
+              <div className="text-xs mt-0.5">{item.label}</div>
           </div>
         ))}
       </div>
@@ -383,30 +383,30 @@ function PageInfrastructure({ school }: { school: ReportSchool }) {
   ].filter(d => d.value > 0);
 
   return (
-    <div className="p-10 font-serif text-[10px] leading-relaxed">
+    <div className="p-10 font-serif text-xs leading-relaxed">
       <BABTitle label="Bab III — Infrastruktur / Sarana Prasarana" />
 
       <ReportTable headers={['No', 'Jenis Sarana', 'Jumlah', 'Baik', 'Rusak Ringan', 'Rusak Berat']}>
         {infraItems.map((item, i) => (
           <tr key={i} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-            <td className="border border-gray-200 p-2 text-center w-8">{i + 1}</td>
-            <td className="border border-gray-200 p-2">{item.name}</td>
-            <td className="border border-gray-200 p-2 text-right">{item.total}</td>
-            <td className="border border-gray-200 p-2 text-right text-green-700">{item.baik}</td>
-            <td className="border border-gray-200 p-2 text-right text-yellow-700">{item.ringan}</td>
-            <td className="border border-gray-200 p-2 text-right text-red-700">{item.berat}</td>
+            <td className="border border-gray-200 p-2.5 text-center w-8">{i + 1}</td>
+            <td className="border border-gray-200 p-2.5">{item.name}</td>
+            <td className="border border-gray-200 p-2.5 text-right">{item.total}</td>
+            <td className="border border-gray-200 p-2.5 text-right text-green-700">{item.baik}</td>
+            <td className="border border-gray-200 p-2.5 text-right text-yellow-700">{item.ringan}</td>
+            <td className="border border-gray-200 p-2.5 text-right text-red-700">{item.berat}</td>
           </tr>
         ))}
       </ReportTable>
 
       <div className="grid grid-cols-2 gap-5 mt-4">
-        <div className="border border-gray-200 rounded p-3">
+        <div className="border border-gray-200 rounded p-4">
           <FunctionBar label="KONDISI RUANG KELAS" />
           <DonutChart data={donutData} />
         </div>
-        <div className="border border-gray-200 rounded p-3">
+        <div className="border border-gray-200 rounded p-4">
           <FunctionBar label="DETAIL INFRASTRUKTUR" />
-          <table className="w-full text-[9px]">
+          <table className="w-full text-[11px]">
             <tbody>
               {[
                 ['Health Score', `${school.infrastructure.healthScore}/100`],
@@ -425,9 +425,9 @@ function PageInfrastructure({ school }: { school: ReportSchool }) {
           </table>
           {school.infrastructure.alerts.length > 0 && (
             <div className="mt-3 pt-3 border-t border-gray-200">
-              <p className="text-[8px] font-bold text-red-600 mb-1">⚠ PERINGATAN:</p>
+              <p className="text-[10px] font-bold text-red-600 mb-1">⚠ PERINGATAN:</p>
               {school.infrastructure.alerts.map((a, i) => (
-                <p key={i} className="text-[8px] text-red-500">- {a.message}</p>
+                <p key={i} className="text-[10px] text-red-500">- {a.message}</p>
               ))}
             </div>
           )}
@@ -440,27 +440,27 @@ function PageInfrastructure({ school }: { school: ReportSchool }) {
 function PageMutationsMasuk({ mutations, period }: { mutations: MutationRow[]; period: string }) {
   const masuk = mutations.filter(m => m.jenis === 'MASUK');
   return (
-    <div className="p-10 font-serif text-[10px] leading-relaxed">
+    <div className="p-10 font-serif text-xs leading-relaxed">
       <BABTitle label="Bab IV — Siswa Masuk" />
-      <p className="text-[9px] text-gray-500 mb-4">Periode: {period}</p>
+      <p className="text-[11px] text-gray-500 mb-4">Periode: {period}</p>
 
       <ReportTable headers={['No', 'Nama', 'NISN', 'Kelas Tujuan', 'Asal Sekolah', 'Tanggal']}>
         {masuk.length === 0 ? (
           <tr><td colSpan={6} className="border border-gray-200 p-4 text-center text-gray-400">-</td></tr>
         ) : masuk.map((m, i) => (
           <tr key={m.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-            <td className="border border-gray-200 p-2 text-center w-8">{i + 1}</td>
-            <td className="border border-gray-200 p-2">{m.siswa_nama}</td>
-            <td className="border border-gray-200 p-2">{m.siswa_nisn}</td>
-            <td className="border border-gray-200 p-2">{m.kelas_kelompok || '-'}</td>
-            <td className="border border-gray-200 p-2">{m.alasan || '-'}</td>
-            <td className="border border-gray-200 p-2">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
+            <td className="border border-gray-200 p-2.5 text-center w-8">{i + 1}</td>
+            <td className="border border-gray-200 p-2.5">{m.siswa_nama}</td>
+            <td className="border border-gray-200 p-2.5">{m.siswa_nisn}</td>
+            <td className="border border-gray-200 p-2.5">{m.kelas_kelompok || '-'}</td>
+            <td className="border border-gray-200 p-2.5">{m.alasan || '-'}</td>
+            <td className="border border-gray-200 p-2.5">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
           </tr>
         ))}
       </ReportTable>
 
       <InfoCard className="bg-green-50 border-green-200">
-        <p className="text-[10px] text-green-800"><strong>Ringkasan:</strong> Total <strong>{masuk.length}</strong> siswa masuk pada periode {period}.</p>
+        <p className="text-xs text-green-800"><strong>Ringkasan:</strong> Total <strong>{masuk.length}</strong> siswa masuk pada periode {period}.</p>
       </InfoCard>
     </div>
   );
@@ -469,27 +469,27 @@ function PageMutationsMasuk({ mutations, period }: { mutations: MutationRow[]; p
 function PageMutationsKeluar({ mutations, period }: { mutations: MutationRow[]; period: string }) {
   const keluar = mutations.filter(m => m.jenis === 'KELUAR');
   return (
-    <div className="p-10 font-serif text-[10px] leading-relaxed">
+    <div className="p-10 font-serif text-xs leading-relaxed">
       <BABTitle label="Bab V — Siswa Keluar" />
-      <p className="text-[9px] text-gray-500 mb-4">Periode: {period}</p>
+      <p className="text-[11px] text-gray-500 mb-4">Periode: {period}</p>
 
       <ReportTable headers={['No', 'Nama', 'NISN', 'Kelas', 'Sekolah Tujuan', 'Tanggal']}>
         {keluar.length === 0 ? (
           <tr><td colSpan={6} className="border border-gray-200 p-4 text-center text-gray-400">-</td></tr>
         ) : keluar.map((m, i) => (
           <tr key={m.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-            <td className="border border-gray-200 p-2 text-center w-8">{i + 1}</td>
-            <td className="border border-gray-200 p-2">{m.siswa_nama}</td>
-            <td className="border border-gray-200 p-2">{m.siswa_nisn}</td>
-            <td className="border border-gray-200 p-2">{m.kelas_kelompok || '-'}</td>
-            <td className="border border-gray-200 p-2">{m.alasan || '-'}</td>
-            <td className="border border-gray-200 p-2">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
+            <td className="border border-gray-200 p-2.5 text-center w-8">{i + 1}</td>
+            <td className="border border-gray-200 p-2.5">{m.siswa_nama}</td>
+            <td className="border border-gray-200 p-2.5">{m.siswa_nisn}</td>
+            <td className="border border-gray-200 p-2.5">{m.kelas_kelompok || '-'}</td>
+            <td className="border border-gray-200 p-2.5">{m.alasan || '-'}</td>
+            <td className="border border-gray-200 p-2.5">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
           </tr>
         ))}
       </ReportTable>
 
       <InfoCard className="bg-red-50 border-red-200">
-        <p className="text-[10px] text-red-800"><strong>Ringkasan:</strong> Total <strong>{keluar.length}</strong> siswa keluar pada periode {period}.</p>
+        <p className="text-xs text-red-800"><strong>Ringkasan:</strong> Total <strong>{keluar.length}</strong> siswa keluar pada periode {period}.</p>
       </InfoCard>
     </div>
   );
@@ -511,13 +511,13 @@ function PageAnalisis({ school, employeeList }: { school: ReportSchool; employee
   const trendData = school.students.byClass.map(c => ({ label: c.kelas, value: c.total }));
 
   return (
-    <div className="p-10 font-serif text-[10px] leading-relaxed">
+    <div className="p-10 font-serif text-xs leading-relaxed">
       <BABTitle label="Bab VI — Analisis Bulanan" />
 
       <FunctionBar label="INISIGHT & REKOMENDASI" />
       <div className="space-y-2 mb-5">
         {insights.map((ins, i) => (
-          <div key={i} className={`flex items-start gap-2.5 p-2.5 rounded text-[9px] border ${
+          <div key={i} className={`flex items-start gap-2.5 p-2.5 rounded text-[11px] border ${
             ins.type === 'danger' ? 'bg-red-50 border-red-200 text-red-800' :
             ins.type === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
             'bg-green-50 border-green-200 text-green-800'
@@ -534,7 +534,7 @@ function PageAnalisis({ school, employeeList }: { school: ReportSchool; employee
         <InfoCard>
           <FunctionBar label="RASIO PEGAWAI : SISWA" />
           <p className="text-lg font-bold text-gray-800">{rasio} : 1</p>
-          <p className="text-[8px] text-gray-500 mt-0.5">1 pegawai melayani {rasio} siswa</p>
+          <p className="text-xs text-gray-500 mt-0.5">1 pegawai melayani {rasio} siswa</p>
         </InfoCard>
         <InfoCard>
           <FunctionBar label="DISTRIBUSI SISWA" />
@@ -546,14 +546,14 @@ function PageAnalisis({ school, employeeList }: { school: ReportSchool; employee
             ].map((d, i) => (
               <div key={i}>
                 <div className={`text-sm font-bold ${d.color}`}>{d.value}</div>
-                <div className="text-[7px] text-gray-500">{d.label}</div>
+                <div className="text-xs text-gray-500">{d.label}</div>
               </div>
             ))}
           </div>
         </InfoCard>
       </div>
 
-      <div className="border border-gray-200 rounded p-3">
+      <div className="border border-gray-200 rounded p-4">
         <FunctionBar label="TREN SISWA PER KELAS" />
         <TrendChart data={trendData} />
       </div>
@@ -587,14 +587,14 @@ function PageGrafik({ school, employeeList }: { school: ReportSchool; employeeLi
   const max = Math.max(...barData.map(d => d.value), 1);
 
   return (
-    <div className="p-10 font-serif text-[10px] leading-relaxed">
+    <div className="p-10 font-serif text-xs leading-relaxed">
       <BABTitle label="Bab VII — Grafik dan Visualisasi" />
 
       <div className="grid grid-cols-2 gap-5 mb-5">
-        <div className="border border-gray-200 rounded p-3">
+        <div className="border border-gray-200 rounded p-4">
           <FunctionBar label="KOMPOSISI PEGAWAI" />
           <PieChart data={pieEmployee} />
-          <div className="flex justify-center gap-3 mt-2 text-[7px] text-gray-500">
+          <div className="flex justify-center gap-3 mt-2 text-[9px] text-gray-500">
             {pieEmployee.map((d, i) => (
               <span key={i} className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: d.color }} />
@@ -603,10 +603,10 @@ function PageGrafik({ school, employeeList }: { school: ReportSchool; employeeLi
             ))}
           </div>
         </div>
-        <div className="border border-gray-200 rounded p-3">
+        <div className="border border-gray-200 rounded p-4">
           <FunctionBar label="KONDISI INFRASTRUKTUR" />
           <DonutChart data={infraDonut} />
-          <div className="flex justify-center gap-3 mt-2 text-[7px] text-gray-500">
+          <div className="flex justify-center gap-3 mt-2 text-[9px] text-gray-500">
             {infraDonut.map((d, i) => (
               <span key={i} className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: d.color }} />
@@ -617,7 +617,7 @@ function PageGrafik({ school, employeeList }: { school: ReportSchool; employeeLi
         </div>
       </div>
 
-      <div className="border border-gray-200 rounded p-3">
+      <div className="border border-gray-200 rounded p-4">
         <FunctionBar label="DISTRIBUSI SISWA PER KELAS" />
         <BarChart data={barData} max={max} color="#0891b2" />
       </div>
@@ -645,14 +645,14 @@ function PageKesimpulan({ school }: { school: ReportSchool }) {
   ];
 
   return (
-    <div className="p-10 font-serif text-[10px] leading-relaxed">
+    <div className="p-10 font-serif text-xs leading-relaxed">
       <BABTitle label="Bab VIII — Kesimpulan" />
 
       <div className="mb-6">
         <FunctionBar label="A. KESIMPULAN" />
         <div className="space-y-2.5">
           {kesimpulan.map((par, i) => (
-            <p key={i} className="text-[10px] leading-relaxed text-justify text-gray-800">{par}</p>
+            <p key={i} className="text-xs leading-relaxed text-justify text-gray-800">{par}</p>
           ))}
         </div>
       </div>
@@ -661,7 +661,7 @@ function PageKesimpulan({ school }: { school: ReportSchool }) {
         <FunctionBar label="B. REKOMENDASI" />
         <ol className="list-decimal ml-5 space-y-1.5">
           {rekomendasi.map((r, i) => (
-            <li key={i} className="text-[10px] leading-relaxed text-gray-800">{r}</li>
+            <li key={i} className="text-xs leading-relaxed text-gray-800">{r}</li>
           ))}
         </ol>
       </div>
@@ -680,11 +680,11 @@ function PageKesimpulan({ school }: { school: ReportSchool }) {
 
 function PagePenutup({ school, period }: { school: ReportSchool; period: string }) {
   return (
-    <div className="p-10 font-serif text-[10px] leading-relaxed flex flex-col min-h-[calc(100%-2.5rem)]">
+    <div className="p-10 font-serif text-xs leading-relaxed flex flex-col min-h-[calc(100%-2.5rem)]">
       <BABTitle label="Penutup" />
 
       <div className="border-l-2 border-gray-300 pl-4 mb-8">
-        <p className="text-[10px] leading-relaxed text-justify text-gray-800">
+        <p className="text-xs leading-relaxed text-justify text-gray-800">
           Demikian laporan bulanan ini kami buat sebagai bahan evaluasi dan tindak lanjut
           dalam rangka meningkatkan mutu pendidikan di {school.name}. Semoga laporan ini
           bermanfaat bagi semua pihak yang berkepentingan.
@@ -693,24 +693,24 @@ function PagePenutup({ school, period }: { school: ReportSchool; period: string 
 
       <div className="grid grid-cols-2 gap-10 mt-auto pt-6 border-t border-gray-200">
         <div className="text-center">
-          <p className="text-[10px] font-semibold text-gray-700 mb-10">Mengetahui,<br />Kepala Sekolah</p>
+          <p className="text-xs font-semibold text-gray-700 mb-10">Mengetahui,<br />Kepala Sekolah</p>
           <div className="h-14" />
           <div className="border-t-2 border-gray-600 w-44 mx-auto pt-1.5">
-            <p className="text-[10px] font-bold text-gray-800">( ___________________ )</p>
-            <p className="text-[8px] text-gray-500 mt-0.5">NIP. ________________</p>
+            <p className="text-xs font-bold text-gray-800">( ___________________ )</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">NIP. ________________</p>
           </div>
         </div>
         <div className="text-center">
-          <p className="text-[10px] font-semibold text-gray-700 mb-10">Penyusun Laporan,<br />Operator Sekolah</p>
+          <p className="text-xs font-semibold text-gray-700 mb-10">Penyusun Laporan,<br />Operator Sekolah</p>
           <div className="h-14" />
           <div className="border-t-2 border-gray-600 w-44 mx-auto pt-1.5">
-            <p className="text-[10px] font-bold text-gray-800">( ___________________ )</p>
-            <p className="text-[8px] text-gray-500 mt-0.5">NIP/NIK. ___________</p>
+            <p className="text-xs font-bold text-gray-800">( ___________________ )</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">NIP/NIK. ___________</p>
           </div>
         </div>
       </div>
 
-      <div className="text-center text-[8px] text-gray-400 mt-6 pt-4 border-t border-gray-200">
+      <div className="text-center text-[10px] text-gray-400 mt-6 pt-4 border-t border-gray-200">
         <p>Laporan Bulanan — {school.name} — Periode {period}</p>
         <p>Dicetak: {formatDate(new Date().toISOString())} — Dokumen Resmi</p>
       </div>
@@ -883,11 +883,11 @@ export default function LaporanPreview({ onClose }: LaporanPreviewProps) {
           <button onClick={() => setRotate(r => (r + 90) % 360)} className="p-1.5 hover:bg-gray-100 rounded text-gray-600" title="Rotate"><RotateCw className="w-4 h-4" /></button>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handlePrint} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded flex items-center gap-1.5">
-            <Printer className="w-3.5 h-3.5" /> Cetak
+          <button onClick={handlePrint} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded flex items-center gap-1.5">
+            <Printer className="w-4 h-4" /> Cetak
           </button>
-          <button onClick={handlePrint} className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded flex items-center gap-1.5">
-            <Download className="w-3.5 h-3.5" /> Export PDF
+          <button onClick={handlePrint} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded flex items-center gap-1.5">
+            <Download className="w-4 h-4" /> Export PDF
           </button>
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded text-gray-500" title="Tutup">
             <X className="w-4 h-4" />
@@ -901,7 +901,7 @@ export default function LaporanPreview({ onClose }: LaporanPreviewProps) {
         {!user?.schoolNpsn && (
           <div className="w-40 bg-gray-800 overflow-y-auto shrink-0 p-2 space-y-2 print:hidden">
             <select value={selectedNpsn} onChange={e => handleSelectSchool(e.target.value)}
-              className="w-full text-[10px] bg-gray-700 text-white border border-gray-600 rounded px-2 py-1 mb-3">
+              className="w-full text-xs bg-gray-700 text-white border border-gray-600 rounded px-2 py-1 mb-3">
               {schools.map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
             </select>
             {pageNumbers.map(p => (
@@ -910,11 +910,11 @@ export default function LaporanPreview({ onClose }: LaporanPreviewProps) {
                 className={`cursor-pointer rounded overflow-hidden border-2 transition-colors ${
                   currentPage === p ? 'border-blue-500' : 'border-transparent'
                 }`}>
-                <div className="bg-white aspect-[210/297] relative flex items-center justify-center text-gray-300 text-[8px] p-1"
+                <div className="bg-white aspect-[210/297] relative flex items-center justify-center text-gray-300 text-[10px] p-1"
                   style={{ transform: 'scale(0.6)', transformOrigin: 'top left', width: 132, height: 187 }}>
                   <span className="absolute bottom-1 right-1 text-gray-400 text-[6px]">{p}</span>
                 </div>
-                <div className="text-center text-[9px] text-gray-400 py-0.5">Halaman {p}</div>
+                <div className="text-center text-[11px] text-gray-400 py-0.5">Halaman {p}</div>
               </div>
             ))}
           </div>
@@ -936,7 +936,7 @@ export default function LaporanPreview({ onClose }: LaporanPreviewProps) {
                 }}>
                 {content}
                 {/* Page footer */}
-                <div className="text-[7px] text-gray-400 px-8 pb-2 flex justify-between border-t border-gray-100 pt-1.5 print:fixed print:bottom-0 print:left-0 print:right-0">
+                <div className="text-[9px] text-gray-400 px-8 pb-2 flex justify-between border-t border-gray-100 pt-1.5 print:fixed print:bottom-0 print:left-0 print:right-0">
                   <span>{school.name} | {period}</span>
                   <span>Halaman {i + 1} dari {TOTAL_PAGES}</span>
                 </div>
