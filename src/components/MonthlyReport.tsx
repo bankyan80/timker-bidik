@@ -42,7 +42,8 @@ export default function MonthlyReport() {
     (async () => {
       try {
         const res = await api('/api/reports/monthly');
-        setData(res);
+        const json = await res.json();
+        setData(json);
       } catch (e: any) {
         setError(e.message || 'Gagal memuat laporan');
       } finally {
