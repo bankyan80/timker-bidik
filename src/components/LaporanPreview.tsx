@@ -703,8 +703,8 @@ function PagePenutup({ school, period, kepalaSekolah, operator }: {
         <div className="grid grid-cols-3 gap-6">
           {/* Mengetahui — Ketua Tim Kerja */}
           <div className="text-center flex flex-col">
-            <div className="flex flex-col justify-end" style={{ minHeight: '110px' }}>
-              <p className="text-[10px] leading-snug font-semibold text-gray-700 mb-5">Mengetahui,<br />a.n Kepala Dinas Pendidikan<br />Kabupaten Cirebon,<br />Ketua Tim Kerja Bidang Pendidikan Dasar<br />Kecamatan Lemahabang</p>
+            <div className="flex flex-col justify-end" style={{ minHeight: '140px' }}>
+              <p className="text-[10px] leading-snug font-semibold text-gray-700 mb-6">Mengetahui,<br />a.n Kepala Dinas Pendidikan<br />Kabupaten Cirebon,<br />Ketua Tim Kerja Bidang Pendidikan Dasar<br />Kecamatan Lemahabang</p>
             </div>
             <div className="w-44 mx-auto">
               <p className="text-xs font-bold text-gray-800">ETI BUDIWATI, S.Pd</p>
@@ -715,8 +715,8 @@ function PagePenutup({ school, period, kepalaSekolah, operator }: {
 
           {/* Kepala Sekolah */}
           <div className="text-center flex flex-col">
-            <div className="flex flex-col justify-end" style={{ minHeight: '110px' }}>
-              <p className="text-xs leading-snug font-semibold text-gray-700 mb-5">Mengetahui,<br />Kepala Sekolah</p>
+            <div className="flex flex-col justify-end" style={{ minHeight: '140px' }}>
+              <p className="text-xs leading-snug font-semibold text-gray-700 mb-6">Mengetahui,<br />Kepala Sekolah</p>
             </div>
             <div className="w-44 mx-auto">
               <p className="text-xs font-bold text-gray-800">{kepalaSekolah ? namaWithGelar(kepalaSekolah) : '( ___________________ )'}</p>
@@ -727,8 +727,8 @@ function PagePenutup({ school, period, kepalaSekolah, operator }: {
 
           {/* Operator Sekolah */}
           <div className="text-center flex flex-col">
-            <div className="flex flex-col justify-end" style={{ minHeight: '110px' }}>
-              <p className="text-xs leading-snug font-semibold text-gray-700 mb-5">Penyusun Laporan,<br />Operator Sekolah</p>
+            <div className="flex flex-col justify-end" style={{ minHeight: '140px' }}>
+              <p className="text-xs leading-snug font-semibold text-gray-700 mb-6">Penyusun Laporan,<br />Operator Sekolah</p>
             </div>
             <div className="w-44 mx-auto">
               <p className="text-xs font-bold text-gray-800">{operator ? namaWithGelar(operator) : '( ___________________ )'}</p>
