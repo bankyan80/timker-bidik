@@ -49,7 +49,7 @@ export default function StudentManagement() {
   const [form, setForm] = useState({
     school_npsn: isOperator ? operatorNpsn : '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki',
     tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: 'Kelas 1',
-    rombel: '', tahun_pelajaran: '2025/2026'
+    rombel: '', tahun_pelajaran: getTahunPelajaran()
   });
 
   useEffect(() => { load(); }, []);

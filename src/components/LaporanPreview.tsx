@@ -51,6 +51,12 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
+function getTahunPelajaran(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  return now.getMonth() >= 6 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
+}
+
 // ── SVG Charts ──
 
 function BarChart({ data, max, color, height = 120 }: {
@@ -191,14 +197,14 @@ function PageCover({ school, period, employeeList }: { school: ReportSchool; per
         <div className="inline-block border-b-2 border-gray-800 pb-2 px-8">
           <h1 className="text-2xl font-bold uppercase tracking-widest text-gray-900">Laporan Bulanan Sekolah</h1>
         </div>
-        <p className="text-xs mt-3 text-gray-600">Bulan: <strong>{month}</strong> — Tahun Pelajaran: <strong>2025/2026</strong></p>
+        <p className="text-xs mt-3 text-gray-600">Bulan: <strong>{month}</strong> — Tahun Pelajaran: <strong>{getTahunPelajaran()}</strong></p>
       </div>
 
       {/* Identitas Sekolah — full width */}
       <div className="mb-7">
         <div className="border border-gray-300 p-4 rounded">
           <FunctionBar label="IDENTITAS SEKOLAH" />
-          <table className="w-full text-[11px]">
+          <table className="w-full text-xs">
             <tbody>
               {[
                 ['Nama Sekolah', school.name],
@@ -211,8 +217,8 @@ function PageCover({ school, period, employeeList }: { school: ReportSchool; per
                 ['Provinsi', 'Jawa Barat'],
               ].map(([label, value], i) => (
                 <tr key={i} className={i < 7 ? 'border-b border-gray-100' : ''}>
-                  <td className="py-1.5 text-gray-500 w-28">{label}</td>
-                  <td className="py-1.5 font-medium">{value}</td>
+                  <td className="py-2 text-gray-600 w-28 font-medium">{label}</td>
+                  <td className="py-2 font-semibold text-gray-900">{value}</td>
                 </tr>
               ))}
             </tbody>
