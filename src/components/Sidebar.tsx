@@ -24,7 +24,6 @@ interface SidebarProps {
   currentModule: string;
   setCurrentModule: (mod: string) => void;
   theme: 'light' | 'dark' | 'command' | 'emerald';
-  setTheme: (theme: 'light' | 'dark' | 'command' | 'emerald') => void;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
 }
@@ -62,7 +61,7 @@ const ROLE_MENU_ACCESS: Record<string, string[]> = {
   ],
 };
 
-export default function Sidebar({ currentModule, setCurrentModule, theme, setTheme, isOpen, setIsOpen }: SidebarProps) {
+export default function Sidebar({ currentModule, setCurrentModule, theme, isOpen, setIsOpen }: SidebarProps) {
   const { user, isRole } = useAuth();
   const allowedModules = user ? ROLE_MENU_ACCESS[user.role] || [] : [];
 

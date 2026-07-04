@@ -22,7 +22,7 @@ import LoginPage from './components/LoginPage';
 import { useAuth } from './components/AuthContext';
 
 import { School, Recommendation } from './types';
-import { Menu, PanelLeftClose, PanelLeft, LogOut, KeyRound, Loader2, Check, X } from 'lucide-react';
+import { Menu, PanelLeftClose, PanelLeft, LogOut, KeyRound, Loader2, Check, X, Sun, Moon, MonitorCheck, Leaf } from 'lucide-react';
 
 export default function App() {
   const { user, loading, logout } = useAuth();
@@ -172,7 +172,6 @@ export default function App() {
         currentModule={currentModule}
         setCurrentModule={setCurrentModule}
         theme={theme}
-        setTheme={setTheme}
         isOpen={sidebarOpen}
         setIsOpen={setSidebarOpen}
       />
@@ -213,6 +212,13 @@ export default function App() {
                 <span>STATUS: COGNITIVE DEPLOYED</span>
               </>
             )}
+            <div className="h-4 w-px bg-[#1f2937]" />
+            <div className="flex items-center gap-1">
+              <button onClick={() => setTheme('light')} className={`p-1 rounded cursor-pointer ${theme === 'light' ? 'bg-white text-slate-900' : 'text-slate-500 hover:text-slate-200'}`} title="Light"><Sun className="h-3 w-3" /></button>
+              <button onClick={() => setTheme('dark')} className={`p-1 rounded cursor-pointer ${theme === 'dark' ? 'bg-[#08090b] text-cyan-400' : 'text-slate-500 hover:text-slate-200'}`} title="Dark HUD"><Moon className="h-3 w-3" /></button>
+              <button onClick={() => setTheme('command')} className={`p-1 rounded cursor-pointer ${theme === 'command' ? 'bg-amber-950/60 text-amber-400' : 'text-slate-500 hover:text-amber-400'}`} title="Terminal"><MonitorCheck className="h-3 w-3" /></button>
+              <button onClick={() => setTheme('emerald')} className={`p-1 rounded cursor-pointer ${theme === 'emerald' ? 'bg-emerald-950/60 text-emerald-400' : 'text-slate-500 hover:text-emerald-400'}`} title="Mint"><Leaf className="h-3 w-3" /></button>
+            </div>
             <div className="h-4 w-px bg-[#1f2937]" />
             <div className="flex items-center gap-2">
               <div className="flex flex-col items-end">
