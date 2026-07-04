@@ -4,7 +4,7 @@ import fs from 'fs';
 import jwt from 'jsonwebtoken';
 import { GoogleGenAI } from '@google/genai';
 import { SimulationScenario, SimulationResult } from './types';
-import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod } from './db';
+import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod, getMonthlyReport } from './db';
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -1108,6 +1108,21 @@ app.post('/api/recommendations/:id/apply', authenticateToken, async (req, res) =
   } catch {
     res.status(400).json({ error: 'Failed to apply recommendation' });
   }
+});
+
+// Monthly report endpoint
+app.get('/api/reports/monthly', authenticateToken, async (req, res) => {
+  const { getMonthlyReport } = await import('./db');
+  const schoolScope = getSchoolScope(req);
+  const report = await getMonthlyReport(schoolScope || undefined);
+  res.json({
+    generatedAt: new Date().toISOString(),
+    period: new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }),
+    totalSchools: report.length,
+    totalStudents: report.reduce((s: number, r: any) => s + r.students.total, 0),
+    totalEmployees: report.reduce((s: number, r: any) => s + r.employees.total, 0),
+    schools: report,
+  });
 });
 
 // Seed missing data (alerts, recommendations)

@@ -42,7 +42,7 @@ const ROLE_MENU_ACCESS: Record<string, string[]> = {
     'hr', 'advanced-hr', 'infrastructure', 'school-profile', 'school-comparison',
     'academic-calendar', 'kpi',
     'simulator',
-    'documents', 'reports',
+    'documents', 'monthly-report', 'reports',
   ],
   staff_kecamatan: [
     'dashboard', 'monitor', 'console', 'gis',
@@ -50,14 +50,14 @@ const ROLE_MENU_ACCESS: Record<string, string[]> = {
     'hr', 'advanced-hr', 'infrastructure', 'school-profile', 'school-comparison',
     'academic-calendar', 'kpi',
     'simulator',
-    'documents', 'reports',
+    'documents', 'monthly-report', 'reports',
   ],
   operator_sekolah: [
     'dashboard', 'monitor',
     'pegawai', 'students', 'rombels',
     'school-profile',
     'academic-calendar',
-    'documents', 'reports',
+    'documents', 'monthly-report', 'reports',
   ],
 };
 
@@ -123,6 +123,7 @@ export default function Sidebar({ currentModule, setCurrentModule, theme, isOpen
       roles: ['admin', 'staff_kecamatan', 'operator_sekolah'],
       items: [
         { id: 'documents', label: 'Intelijen Dokumen', icon: FileSearch },
+        { id: 'monthly-report', label: 'Laporan Bulanan', icon: FileSpreadsheet },
         { id: 'reports', label: 'Pusat Laporan Pintar', icon: FileSpreadsheet }
       ]
     }

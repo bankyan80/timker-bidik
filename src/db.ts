@@ -299,6 +299,20 @@ export async function initSchema() {
       school_npsn TEXT
     )
   `);
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS student_mutations (
+      id TEXT PRIMARY KEY,
+      siswa_nisn TEXT NOT NULL,
+      siswa_nama TEXT NOT NULL,
+      school_npsn TEXT NOT NULL,
+      jenis TEXT NOT NULL CHECK(jenis IN ('MASUK', 'KELUAR')),
+      tanggal TEXT NOT NULL,
+      alasan TEXT,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+      updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+    )
+  `);
 }
 
 export async function seedData() {
@@ -423,6 +437,126 @@ export async function getAlerts(): Promise<AlertMessage[]> {
     message: row.message as string,
     category: row.category as AlertMessage['category'],
   }));
+}
+
+export interface MonthlyReportSchool {
+  npsn: string;
+  name: string;
+  level: string;
+  status: string;
+  village: string;
+  students: {
+    total: number; male: number; female: number;
+    byClass: { kelas: string; total: number; male: number; female: number; rombel: string | null }[];
+  };
+  employees: {
+    total: number; pns: number; pppk: number; honorer: number;
+    guru: number; tendik: number; certified: number;
+  };
+  infrastructure: {
+    healthScore: number;
+    classrooms: { good: number; lightDamage: number; heavyDamage: number };
+    toilets: { good: number; damaged: number };
+    hasLibrary: boolean; hasLab: boolean; internetSpeedMbps: number;
+    alerts: { severity: string; message: string; category: string }[];
+  };
+  mutations: { masuk: number; keluar: number };
+}
+
+export async function getMonthlyReport(schoolNpsn?: string): Promise<MonthlyReportSchool[]> {
+  const client = getDb();
+  if (!client) return [];
+
+  const schools = await getAllSchools();
+  const filtered = schoolNpsn ? schools.filter(s => s.npsn === schoolNpsn) : schools;
+
+  const allAlerts = await getAlerts();
+
+  const result: MonthlyReportSchool[] = [];
+
+  for (const school of filtered) {
+    const npsn = school.npsn;
+
+    // Students per class
+    const students = await client.execute({
+      sql: `SELECT kelas_kelompok, rombel,
+            COUNT(*) as total,
+            SUM(CASE WHEN LOWER(jenis_kelamin) LIKE '%laki%' THEN 1 ELSE 0 END) as male,
+            SUM(CASE WHEN LOWER(jenis_kelamin) LIKE '%perempuan%' THEN 1 ELSE 0 END) as female
+            FROM students WHERE school_npsn = ? AND LOWER(status_siswa) = 'aktif'
+            GROUP BY kelas_kelompok, rombel ORDER BY kelas_kelompok, rombel`,
+      args: [npsn]
+    });
+    const byClass = students.rows.map((r: any) => ({
+      kelas: r.kelas_kelompok as string,
+      total: Number(r.total), male: Number(r.male), female: Number(r.female),
+      rombel: r.rombel as string | null,
+    }));
+
+    // Employee counts
+    const employees = await client.execute({
+      sql: `SELECT
+            COUNT(*) as total,
+            SUM(CASE WHEN LOWER(status_pegawai) = 'pns' THEN 1 ELSE 0 END) as pns,
+            SUM(CASE WHEN LOWER(status_pegawai) LIKE '%pppk%' THEN 1 ELSE 0 END) as pppk,
+            SUM(CASE WHEN LOWER(status_pegawai) NOT IN ('pns') AND LOWER(status_pegawai) NOT LIKE '%pppk%' THEN 1 ELSE 0 END) as honorer,
+            SUM(CASE WHEN LOWER(jabatan) LIKE '%guru%' OR LOWER(jabatan) LIKE '%kepala sekolah%' OR LOWER(jabatan) LIKE '%wali kelas%' THEN 1 ELSE 0 END) as guru,
+            SUM(CASE WHEN LOWER(jabatan) NOT LIKE '%guru%' AND LOWER(jabatan) NOT LIKE '%kepala sekolah%' AND LOWER(jabatan) NOT LIKE '%wali kelas%' THEN 1 ELSE 0 END) as tendik,
+            SUM(CASE WHEN sertifikasi IS NOT NULL AND sertifikasi != '' THEN 1 ELSE 0 END) as certified
+            FROM employees WHERE sekolah_id = ? AND is_active = 1`,
+      args: [npsn]
+    });
+    const emp = employees.rows[0] as any;
+
+    // Mutations this month
+    const now = new Date();
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    const mutations = await client.execute({
+      sql: `SELECT jenis, COUNT(*) as cnt FROM student_mutations
+            WHERE school_npsn = ? AND tanggal >= ? GROUP BY jenis`,
+      args: [npsn, monthStart]
+    });
+    let masuk = 0, keluar = 0;
+    for (const m of mutations.rows as any[]) {
+      if ((m.jenis as string) === 'MASUK') masuk = Number(m.cnt);
+      if ((m.jenis as string) === 'KELUAR') keluar = Number(m.cnt);
+    }
+
+    // School alerts
+    const schoolAlerts = allAlerts
+      .filter(a => a.schoolName === school.name)
+      .map(a => ({ severity: a.severity, message: a.message, category: a.category }));
+
+    result.push({
+      npsn, name: school.name, level: school.level,
+      status: school.status === 'NEGERI' ? 'Negeri' : 'Swasta',
+      village: school.village,
+      students: {
+        total: school.students.total,
+        male: school.students.male,
+        female: school.students.female,
+        byClass,
+      },
+      employees: {
+        total: Number(emp.total) || 0, pns: Number(emp.pns) || 0,
+        pppk: Number(emp.pppk) || 0, honorer: Number(emp.honorer) || 0,
+        guru: Number(emp.guru) || 0, tendik: Number(emp.tendik) || 0,
+        certified: Number(emp.certified) || 0,
+      },
+      infrastructure: {
+        healthScore: school.healthScore,
+        classrooms: school.facilities.classroomCondition,
+        toilets: { good: school.facilities.toiletsGood, damaged: school.facilities.toiletsDamaged },
+        hasLibrary: school.facilities.hasLibrary,
+        hasLab: school.facilities.hasLab,
+        internetSpeedMbps: school.facilities.internetSpeedMbps,
+        alerts: schoolAlerts,
+      },
+      mutations: { masuk, keluar },
+    });
+  }
+
+  return result;
 }
 
 export async function getRecommendations(): Promise<Recommendation[]> {

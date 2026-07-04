@@ -10,6 +10,7 @@ import ScenarioSimulator from './components/ScenarioSimulator';
 import DocumentIntel from './components/DocumentIntel';
 import CommandConsole from './components/CommandConsole';
 import ReportCenter from './components/ReportCenter';
+import MonthlyReport from './components/MonthlyReport';
 import StudentManagement from './components/StudentManagement';
 import SchoolProfile from './components/SchoolProfile';
 import SchoolComparison from './components/SchoolComparison';
@@ -136,6 +137,8 @@ export default function App() {
         return <TargetKPI />;
       case 'reports':
         return <ReportCenter />;
+      case 'monthly-report':
+        return <MonthlyReport />;
       default:
         return (
           <ExecutiveDashboard
