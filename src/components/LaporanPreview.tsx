@@ -151,134 +151,164 @@ function TrendChart({ data, height = 100 }: { data: { label: string; value: numb
 
 // ── Page Components ──
 
+function FunctionBar({ label }: { label: string }) {
+  return <div className="text-[10px] font-bold text-gray-700 bg-gray-100 px-3 py-1.5 rounded mb-3">{label}</div>;
+}
+
 function PageCover({ school, period, employeeList }: { school: ReportSchool; period: string; employeeList: EmployeeRow[] }) {
   const month = period;
   const totalClass = school.infrastructure.classrooms.good + school.infrastructure.classrooms.lightDamage + school.infrastructure.classrooms.heavyDamage;
   const summary = [
-    { label: 'Total Siswa', value: school.students.total, icon: '🎓', color: '#0891b2' },
-    { label: 'Total Pegawai', value: employeeList.length, icon: '👥', color: '#059669' },
-    { label: 'Total Aset', value: totalClass, icon: '🏗️', color: '#7c3aed' },
-    { label: 'Siswa Masuk', value: school.mutations.masuk, icon: '📈', color: '#16a34a' },
-    { label: 'Siswa Keluar', value: school.mutations.keluar, icon: '📉', color: '#dc2626' },
+    { label: 'Total Siswa', value: school.students.total, color: '#0891b2' },
+    { label: 'Total Pegawai', value: employeeList.length, color: '#059669' },
+    { label: 'Total Aset', value: totalClass, color: '#7c3aed' },
+    { label: 'Siswa Masuk', value: school.mutations.masuk, color: '#16a34a' },
+    { label: 'Siswa Keluar', value: school.mutations.keluar, color: '#dc2626' },
   ];
   return (
-    <div className="p-8 font-serif" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
+    <div className="p-10 font-serif text-[10px] leading-relaxed">
       {/* Kop Surat */}
-      <div className="flex items-start gap-4 border-b-2 border-black pb-4 mb-6">
-        <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center text-2xl shrink-0 border border-gray-300">
-          🏫
+      <div className="flex items-start gap-5 border-b-2 border-black pb-4 mb-7">
+        <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center text-3xl shrink-0 border-2 border-gray-200">
+          <span className="text-gray-300">L</span>
         </div>
         <div className="flex-1 text-center">
-          <p className="text-xs font-bold uppercase">Pemerintah Kabupaten Cirebon</p>
-          <p className="text-xs">Dinas Pendidikan</p>
-          <p className="text-sm font-bold mt-1">{school.name}</p>
-          <p className="text-[9px] text-gray-600">
-            Desa {school.village}, Kec. Lemahabang, Kab. Cirebon
+          <p className="text-xs font-bold uppercase tracking-wider text-gray-800">Pemerintah Kabupaten Cirebon</p>
+          <p className="text-[10px] text-gray-600">Dinas Pendidikan</p>
+          <p className="text-sm font-bold mt-1.5 text-gray-900">{school.name}</p>
+          <p className="text-[9px] text-gray-500 mt-0.5">
+            Desa {school.village}, Kec. Lemahabang, Kab. Cirebon — Jawa Barat
           </p>
-          <p className="text-[9px] text-gray-600">NPSN: {school.npsn}</p>
+          <p className="text-[9px] text-gray-400">NPSN: {school.npsn}</p>
         </div>
       </div>
 
       {/* Judul */}
-      <div className="text-center mb-8">
-        <h1 className="text-xl font-bold uppercase tracking-wider">Laporan Bulanan Sekolah</h1>
-        <p className="text-sm mt-1">Bulan: {month}</p>
-        <p className="text-sm">Tahun Pelajaran: 2025/2026</p>
+      <div className="text-center mb-9">
+        <div className="inline-block border-b-2 border-gray-800 pb-2 px-8">
+          <h1 className="text-lg font-bold uppercase tracking-widest text-gray-900">Laporan Bulanan Sekolah</h1>
+        </div>
+        <p className="text-[10px] mt-3 text-gray-600">Bulan: <strong>{month}</strong> — Tahun Pelajaran: <strong>2025/2026</strong></p>
       </div>
 
       {/* Identitas Sekolah */}
-      <div className="grid grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-2 gap-6 mb-7">
         <div className="border border-gray-300 p-4 rounded">
-          <h3 className="text-xs font-bold uppercase mb-2 text-gray-700">Identitas Sekolah</h3>
-          <table className="text-[9px] w-full">
+          <FunctionBar label="IDENTITAS SEKOLAH" />
+          <table className="w-full text-[9px]">
             <tbody>
-              <tr><td className="py-1 text-gray-500 w-28">Nama Sekolah</td><td>: {school.name}</td></tr>
-              <tr><td className="py-1 text-gray-500">NPSN</td><td>: {school.npsn}</td></tr>
-              <tr><td className="py-1 text-gray-500">Jenjang</td><td>: {school.level}</td></tr>
-              <tr><td className="py-1 text-gray-500">Status</td><td>: {school.status}</td></tr>
-              <tr><td className="py-1 text-gray-500">Desa</td><td>: {school.village}</td></tr>
-              <tr><td className="py-1 text-gray-500">Kecamatan</td><td>: Lemahabang</td></tr>
-              <tr><td className="py-1 text-gray-500">Kabupaten</td><td>: Cirebon</td></tr>
-              <tr><td className="py-1 text-gray-500">Provinsi</td><td>: Jawa Barat</td></tr>
+              {[
+                ['Nama Sekolah', school.name],
+                ['NPSN', school.npsn],
+                ['Jenjang', school.level],
+                ['Status', school.status],
+                ['Desa', school.village],
+                ['Kecamatan', 'Lemahabang'],
+                ['Kabupaten', 'Cirebon'],
+                ['Provinsi', 'Jawa Barat'],
+              ].map(([label, value], i) => (
+                <tr key={i} className={i < 7 ? 'border-b border-gray-100' : ''}>
+                  <td className="py-1.5 text-gray-500 w-28">{label}</td>
+                  <td className="py-1.5 font-medium">{value}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
         <div className="border border-gray-300 p-4 rounded flex items-center justify-center bg-gray-50">
           <div className="text-center">
-            <div className="text-4xl mb-2">📷</div>
+            <div className="w-full h-32 bg-gray-100 rounded flex items-center justify-center mb-2 border border-dashed border-gray-300">
+              <span className="text-gray-300 text-4xl">📷</span>
+            </div>
             <p className="text-[9px] text-gray-400">Foto Gedung Sekolah</p>
           </div>
         </div>
       </div>
 
       {/* Ringkasan Eksekutif */}
-      <h3 className="text-xs font-bold uppercase mb-3 text-gray-700">Ringkasan Eksekutif</h3>
-      <div className="grid grid-cols-5 gap-2">
-        {summary.map((s, i) => (
-          <div key={i} className="border border-gray-200 rounded p-2 text-center shadow-sm">
-            <div className="text-lg">{s.icon}</div>
-            <div className="text-lg font-bold" style={{ color: s.color }}>{s.value}</div>
-            <div className="text-[7px] text-gray-500 mt-0.5">{s.label}</div>
-            <div className="text-[6px] text-gray-400">0% (stabil)</div>
-          </div>
-        ))}
+      <div>
+        <FunctionBar label="RINGKASAN EKSEKUTIF" />
+        <div className="grid grid-cols-5 gap-3">
+          {summary.map((s, i) => (
+            <div key={i} className="border border-gray-200 rounded p-3 text-center">
+              <div className="text-lg font-bold" style={{ color: s.color }}>{typeof s.value === 'number' ? s.value.toLocaleString('id-ID') : s.value}</div>
+              <div className="text-[8px] text-gray-500 mt-0.5 uppercase tracking-wider">{s.label}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Footer info */}
-      <div className="text-[8px] text-gray-400 text-center mt-8 border-t border-gray-200 pt-3">
-        Dokumen Resmi — Dicetak: {formatDate(new Date().toISOString())}
+      <div className="text-[8px] text-gray-400 text-center mt-8 pt-3">
+        <span className="border-t border-gray-200 pt-2 inline-block px-8">Dokumen Resmi — Dicetak: {formatDate(new Date().toISOString())}</span>
       </div>
     </div>
   );
+}
+
+function BABTitle({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 mb-5">
+      <div className="h-6 w-1 bg-gray-800 rounded" />
+      <h2 className="text-sm font-bold uppercase text-gray-900">{label}</h2>
+      <div className="flex-1 border-b border-gray-300" />
+    </div>
+  );
+}
+
+function ReportTable({ headers, children, footer }: { headers: string[]; children: React.ReactNode; footer?: React.ReactNode }) {
+  return (
+    <table className="w-full text-[9px] border-collapse mb-4">
+      <thead>
+        <tr className="bg-gray-800 text-white">
+          {headers.map((h, i) => (
+            <th key={i} className="border border-gray-600 p-2 text-left font-medium">{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody className="bg-white">{children}</tbody>
+      {footer && <tfoot>{footer}</tfoot>}
+    </table>
+  );
+}
+
+function InfoCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <div className={`border border-gray-200 rounded p-3 bg-gray-50 ${className}`}>{children}</div>;
 }
 
 function PageStudents({ school }: { school: ReportSchool }) {
   const max = Math.max(...school.students.byClass.map(c => c.total), 1);
   const barData = school.students.byClass.map(c => ({ label: c.kelas, value: c.total }));
   return (
-    <div className="p-8 font-serif" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
-      <h2 className="text-base font-bold uppercase text-center border-b border-gray-300 pb-2 mb-4">Bab I — Data Siswa per Kelas</h2>
+    <div className="p-10 font-serif text-[10px] leading-relaxed">
+      <BABTitle label="Bab I — Data Siswa per Kelas" />
 
-      <table className="w-full text-[9px] border-collapse mb-4">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border border-gray-300 p-1.5 text-left w-8">No</th>
-            <th className="border border-gray-300 p-1.5 text-left">Kelas</th>
-            <th className="border border-gray-300 p-1.5 text-right">L</th>
-            <th className="border border-gray-300 p-1.5 text-right">P</th>
-            <th className="border border-gray-300 p-1.5 text-right">Total</th>
-            <th className="border border-gray-300 p-1.5 text-right">Mutasi Masuk</th>
-            <th className="border border-gray-300 p-1.5 text-right">Mutasi Keluar</th>
+      <ReportTable headers={['No', 'Kelas', 'L', 'P', 'Total', 'Mutasi Masuk', 'Mutasi Keluar']}
+        footer={
+          <tr className="bg-gray-100 font-bold text-[10px]">
+            <td colSpan={2} className="border border-gray-300 p-2 text-right">Total</td>
+            <td className="border border-gray-300 p-2 text-right">{school.students.male}</td>
+            <td className="border border-gray-300 p-2 text-right">{school.students.female}</td>
+            <td className="border border-gray-300 p-2 text-right">{school.students.total}</td>
+            <td className="border border-gray-300 p-2 text-right text-green-700">{school.mutations.masuk}</td>
+            <td className="border border-gray-300 p-2 text-right text-red-700">{school.mutations.keluar}</td>
           </tr>
-        </thead>
-        <tbody>
-          {school.students.byClass.map((c, i) => (
-            <tr key={i} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-              <td className="border border-gray-300 p-1.5 text-center">{i + 1}</td>
-              <td className="border border-gray-300 p-1.5">{c.kelas}</td>
-              <td className="border border-gray-300 p-1.5 text-right">{c.male}</td>
-              <td className="border border-gray-300 p-1.5 text-right">{c.female}</td>
-              <td className="border border-gray-300 p-1.5 text-right font-bold">{c.total}</td>
-              <td className="border border-gray-300 p-1.5 text-right text-green-600">-</td>
-              <td className="border border-gray-300 p-1.5 text-right text-red-600">-</td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr className="bg-gray-50 font-bold">
-            <td colSpan={2} className="border border-gray-300 p-1.5 text-right">Total</td>
-            <td className="border border-gray-300 p-1.5 text-right">{school.students.male}</td>
-            <td className="border border-gray-300 p-1.5 text-right">{school.students.female}</td>
-            <td className="border border-gray-300 p-1.5 text-right">{school.students.total}</td>
-            <td className="border border-gray-300 p-1.5 text-right text-green-600">{school.mutations.masuk}</td>
-            <td className="border border-gray-300 p-1.5 text-right text-red-600">{school.mutations.keluar}</td>
+        }>
+        {school.students.byClass.map((c, i) => (
+          <tr key={i} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
+            <td className="border border-gray-200 p-2 text-center w-8">{i + 1}</td>
+            <td className="border border-gray-200 p-2">{c.kelas}</td>
+            <td className="border border-gray-200 p-2 text-right">{c.male}</td>
+            <td className="border border-gray-200 p-2 text-right">{c.female}</td>
+            <td className="border border-gray-200 p-2 text-right font-semibold">{c.total}</td>
+            <td className="border border-gray-200 p-2 text-right text-green-600">-</td>
+            <td className="border border-gray-200 p-2 text-right text-red-600">-</td>
           </tr>
-        </tfoot>
-      </table>
+        ))}
+      </ReportTable>
 
-      {/* Bar Chart */}
-      <div className="mt-4">
-        <h3 className="text-[10px] font-bold mb-2 text-gray-700">Grafik Jumlah Siswa per Kelas</h3>
+      <div className="mt-5">
+        <FunctionBar label="GRAFIK JUMLAH SISWA PER KELAS" />
         <BarChart data={barData} max={max} color="#0891b2" />
       </div>
     </div>
@@ -297,69 +327,42 @@ function PageEmployees({ employeeList }: { employeeList: EmployeeRow[] }) {
   const certified = employeeList.filter(e => e.sertifikasi && e.sertifikasi !== '').length;
 
   return (
-    <div className="p-8 font-serif" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
-      <h2 className="text-base font-bold uppercase text-center border-b border-gray-300 pb-2 mb-4">Bab II — Data Pegawai</h2>
+    <div className="p-10 font-serif text-[10px] leading-relaxed">
+      <BABTitle label="Bab II — Data Pegawai" />
 
-      <table className="w-full text-[9px] border-collapse mb-4">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border border-gray-300 p-1.5 text-left w-8">No</th>
-            <th className="border border-gray-300 p-1.5 text-left">Nama</th>
-            <th className="border border-gray-300 p-1.5 text-left">Jabatan</th>
-            <th className="border border-gray-300 p-1.5 text-left">Status</th>
-            <th className="border border-gray-300 p-1.5 text-right">Kehadiran</th>
+      <ReportTable headers={['No', 'Nama', 'Jabatan', 'Status', 'Kehadiran']}>
+        {employeeList.slice(0, 30).map((e, i) => (
+          <tr key={e.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
+            <td className="border border-gray-200 p-2 text-center w-8">{i + 1}</td>
+            <td className="border border-gray-200 p-2">{e.nama}</td>
+            <td className="border border-gray-200 p-2">{e.jabatan || '-'}</td>
+            <td className="border border-gray-200 p-2">{e.status_pegawai || '-'}</td>
+            <td className="border border-gray-200 p-2 text-right">-</td>
           </tr>
-        </thead>
-        <tbody>
-          {employeeList.slice(0, 30).map((e, i) => (
-            <tr key={e.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-              <td className="border border-gray-300 p-1.5 text-center">{i + 1}</td>
-              <td className="border border-gray-300 p-1.5">{e.nama}</td>
-              <td className="border border-gray-300 p-1.5">{e.jabatan || '-'}</td>
-              <td className="border border-gray-300 p-1.5">{e.status_pegawai || '-'}</td>
-              <td className="border border-gray-300 p-1.5 text-right">-</td>
-            </tr>
-          ))}
-          {employeeList.length > 30 && (
-            <tr>
-              <td colSpan={5} className="border border-gray-300 p-1.5 text-center text-gray-400">... dan {employeeList.length - 30} pegawai lainnya</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+        ))}
+        {employeeList.length > 30 && (
+          <tr>
+            <td colSpan={5} className="border border-gray-200 p-2 text-center text-gray-400">... dan {employeeList.length - 30} pegawai lainnya</td>
+          </tr>
+        )}
+      </ReportTable>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-4 gap-2 mb-3">
-        <div className="border border-gray-200 p-2 rounded text-center bg-gray-50">
-          <div className="text-sm font-bold text-gray-800">{employeeList.length}</div>
-          <div className="text-[8px] text-gray-500">Total Aktif</div>
-        </div>
-        <div className="border border-gray-200 p-2 rounded text-center bg-blue-50">
-          <div className="text-sm font-bold text-blue-700">{pns}</div>
-          <div className="text-[8px] text-gray-500">PNS</div>
-        </div>
-        <div className="border border-gray-200 p-2 rounded text-center bg-yellow-50">
-          <div className="text-sm font-bold text-yellow-700">{pppk}</div>
-          <div className="text-[8px] text-gray-500">PPPK</div>
-        </div>
-        <div className="border border-gray-200 p-2 rounded text-center bg-gray-50">
-          <div className="text-sm font-bold text-gray-800">{honorer}</div>
-          <div className="text-[8px] text-gray-500">Honorer</div>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        <div className="border border-gray-200 p-2 rounded text-center">
-          <div className="text-sm font-bold text-gray-800">{guru}</div>
-          <div className="text-[8px] text-gray-500">Guru</div>
-        </div>
-        <div className="border border-gray-200 p-2 rounded text-center">
-          <div className="text-sm font-bold text-gray-800">{tendik}</div>
-          <div className="text-[8px] text-gray-500">Tendik</div>
-        </div>
-        <div className="border border-gray-200 p-2 rounded text-center bg-purple-50">
-          <div className="text-sm font-bold text-purple-700">{certified}</div>
-          <div className="text-[8px] text-gray-500">Tersertifikasi</div>
-        </div>
+      <FunctionBar label="RINGKASAN PEGAWAI" />
+      <div className="grid grid-cols-7 gap-2 mb-2">
+        {[
+          { label: 'Total Aktif', value: employeeList.length, color: 'bg-gray-800 text-white' },
+          { label: 'PNS', value: pns, color: 'bg-blue-50 text-blue-800 border-blue-200' },
+          { label: 'PPPK', value: pppk, color: 'bg-yellow-50 text-yellow-800 border-yellow-200' },
+          { label: 'Honorer', value: honorer, color: 'bg-gray-50 text-gray-800 border-gray-200' },
+          { label: 'Guru', value: guru, color: 'bg-white text-gray-800' },
+          { label: 'Tendik', value: tendik, color: 'bg-white text-gray-800' },
+          { label: 'Sertifikasi', value: certified, color: 'bg-purple-50 text-purple-800 border-purple-200' },
+        ].map((item, i) => (
+          <div key={i} className={`border rounded p-2 text-center ${item.color}`}>
+            <div className="text-sm font-bold">{item.value}</div>
+            <div className="text-[7px] mt-0.5">{item.label}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -380,54 +383,51 @@ function PageInfrastructure({ school }: { school: ReportSchool }) {
   ].filter(d => d.value > 0);
 
   return (
-    <div className="p-8 font-serif" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
-      <h2 className="text-base font-bold uppercase text-center border-b border-gray-300 pb-2 mb-4">Bab III — Infrastruktur / Sarana Prasarana</h2>
+    <div className="p-10 font-serif text-[10px] leading-relaxed">
+      <BABTitle label="Bab III — Infrastruktur / Sarana Prasarana" />
 
-      <table className="w-full text-[9px] border-collapse mb-4">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border border-gray-300 p-1.5 text-left w-8">No</th>
-            <th className="border border-gray-300 p-1.5 text-left">Jenis Sarana</th>
-            <th className="border border-gray-300 p-1.5 text-right">Jumlah</th>
-            <th className="border border-gray-300 p-1.5 text-right">Baik</th>
-            <th className="border border-gray-300 p-1.5 text-right">Rusak Ringan</th>
-            <th className="border border-gray-300 p-1.5 text-right">Rusak Berat</th>
+      <ReportTable headers={['No', 'Jenis Sarana', 'Jumlah', 'Baik', 'Rusak Ringan', 'Rusak Berat']}>
+        {infraItems.map((item, i) => (
+          <tr key={i} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
+            <td className="border border-gray-200 p-2 text-center w-8">{i + 1}</td>
+            <td className="border border-gray-200 p-2">{item.name}</td>
+            <td className="border border-gray-200 p-2 text-right">{item.total}</td>
+            <td className="border border-gray-200 p-2 text-right text-green-700">{item.baik}</td>
+            <td className="border border-gray-200 p-2 text-right text-yellow-700">{item.ringan}</td>
+            <td className="border border-gray-200 p-2 text-right text-red-700">{item.berat}</td>
           </tr>
-        </thead>
-        <tbody>
-          {infraItems.map((item, i) => (
-            <tr key={i} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-              <td className="border border-gray-300 p-1.5 text-center">{i + 1}</td>
-              <td className="border border-gray-300 p-1.5">{item.name}</td>
-              <td className="border border-gray-300 p-1.5 text-right">{item.total}</td>
-              <td className="border border-gray-300 p-1.5 text-right text-green-600">{item.baik}</td>
-              <td className="border border-gray-300 p-1.5 text-right text-yellow-600">{item.ringan}</td>
-              <td className="border border-gray-300 p-1.5 text-right text-red-600">{item.berat}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        ))}
+      </ReportTable>
 
-      <div className="grid grid-cols-2 gap-4 mt-4">
-        <div>
-          <h3 className="text-[10px] font-bold mb-2 text-gray-700">Kondisi Ruang Kelas</h3>
+      <div className="grid grid-cols-2 gap-5 mt-4">
+        <div className="border border-gray-200 rounded p-3">
+          <FunctionBar label="KONDISI RUANG KELAS" />
           <DonutChart data={donutData} />
         </div>
-        <div>
-          <h3 className="text-[10px] font-bold mb-2 text-gray-700">Detail</h3>
-          <div className="text-[9px] space-y-1">
-            <p>Health Score: <strong>{school.infrastructure.healthScore}/100</strong></p>
-            <p>Internet: <strong>{school.infrastructure.internetSpeedMbps} Mbps</strong></p>
-            <p>Toilet Baik: <strong>{school.infrastructure.toilets.good}</strong></p>
-            <p>Toilet Rusak: <strong>{school.infrastructure.toilets.damaged}</strong></p>
-            <p>Perpustakaan: <strong>{school.infrastructure.hasLibrary ? 'Ada' : 'Tidak Ada'}</strong></p>
-            <p>Laboratorium: <strong>{school.infrastructure.hasLab ? 'Ada' : 'Tidak Ada'}</strong></p>
-          </div>
+        <div className="border border-gray-200 rounded p-3">
+          <FunctionBar label="DETAIL INFRASTRUKTUR" />
+          <table className="w-full text-[9px]">
+            <tbody>
+              {[
+                ['Health Score', `${school.infrastructure.healthScore}/100`],
+                ['Internet', `${school.infrastructure.internetSpeedMbps} Mbps`],
+                ['Toilet Baik', String(school.infrastructure.toilets.good)],
+                ['Toilet Rusak', String(school.infrastructure.toilets.damaged)],
+                ['Perpustakaan', school.infrastructure.hasLibrary ? 'Ada' : 'Tidak Ada'],
+                ['Laboratorium', school.infrastructure.hasLab ? 'Ada' : 'Tidak Ada'],
+              ].map(([l, v], i) => (
+                <tr key={i} className={i < 5 ? 'border-b border-gray-100' : ''}>
+                  <td className="py-1.5 text-gray-500 w-28">{l}</td>
+                  <td className="py-1.5 font-medium">{v}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           {school.infrastructure.alerts.length > 0 && (
-            <div className="mt-3">
-              <p className="text-[9px] font-bold text-red-600 mb-1">Peringatan:</p>
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <p className="text-[8px] font-bold text-red-600 mb-1">⚠ PERINGATAN:</p>
               {school.infrastructure.alerts.map((a, i) => (
-                <p key={i} className="text-[8px] text-red-500">⚠ {a.message}</p>
+                <p key={i} className="text-[8px] text-red-500">- {a.message}</p>
               ))}
             </div>
           )}
@@ -440,42 +440,28 @@ function PageInfrastructure({ school }: { school: ReportSchool }) {
 function PageMutationsMasuk({ mutations, period }: { mutations: MutationRow[]; period: string }) {
   const masuk = mutations.filter(m => m.jenis === 'MASUK');
   return (
-    <div className="p-8 font-serif" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
-      <h2 className="text-base font-bold uppercase text-center border-b border-gray-300 pb-2 mb-4">Bab IV — Siswa Masuk</h2>
-      <p className="text-[9px] text-gray-500 mb-3">Periode: {period}</p>
+    <div className="p-10 font-serif text-[10px] leading-relaxed">
+      <BABTitle label="Bab IV — Siswa Masuk" />
+      <p className="text-[9px] text-gray-500 mb-4">Periode: {period}</p>
 
-      <table className="w-full text-[9px] border-collapse mb-4">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border border-gray-300 p-1.5 text-left w-8">No</th>
-            <th className="border border-gray-300 p-1.5 text-left">Nama</th>
-            <th className="border border-gray-300 p-1.5 text-left">NISN</th>
-            <th className="border border-gray-300 p-1.5 text-left">Kelas Tujuan</th>
-            <th className="border border-gray-300 p-1.5 text-left">Asal Sekolah</th>
-            <th className="border border-gray-300 p-1.5 text-left">Tanggal</th>
+      <ReportTable headers={['No', 'Nama', 'NISN', 'Kelas Tujuan', 'Asal Sekolah', 'Tanggal']}>
+        {masuk.length === 0 ? (
+          <tr><td colSpan={6} className="border border-gray-200 p-4 text-center text-gray-400">-</td></tr>
+        ) : masuk.map((m, i) => (
+          <tr key={m.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
+            <td className="border border-gray-200 p-2 text-center w-8">{i + 1}</td>
+            <td className="border border-gray-200 p-2">{m.siswa_nama}</td>
+            <td className="border border-gray-200 p-2">{m.siswa_nisn}</td>
+            <td className="border border-gray-200 p-2">{m.kelas_kelompok || '-'}</td>
+            <td className="border border-gray-200 p-2">{m.alasan || '-'}</td>
+            <td className="border border-gray-200 p-2">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
           </tr>
-        </thead>
-        <tbody>
-          {masuk.length === 0 ? (
-            <tr>
-              <td colSpan={6} className="border border-gray-300 p-3 text-center text-gray-400">-</td>
-            </tr>
-          ) : masuk.map((m, i) => (
-            <tr key={m.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-              <td className="border border-gray-300 p-1.5 text-center">{i + 1}</td>
-              <td className="border border-gray-300 p-1.5">{m.siswa_nama}</td>
-              <td className="border border-gray-300 p-1.5">{m.siswa_nisn}</td>
-              <td className="border border-gray-300 p-1.5">{m.kelas_kelompok || '-'}</td>
-              <td className="border border-gray-300 p-1.5">{m.alasan || '-'}</td>
-              <td className="border border-gray-300 p-1.5">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        ))}
+      </ReportTable>
 
-      <div className="border border-gray-300 p-3 rounded bg-green-50 mt-2">
-        <p className="text-[10px]"><strong>Ringkasan:</strong> Total {masuk.length} siswa masuk pada periode {period}.</p>
-      </div>
+      <InfoCard className="bg-green-50 border-green-200">
+        <p className="text-[10px] text-green-800"><strong>Ringkasan:</strong> Total <strong>{masuk.length}</strong> siswa masuk pada periode {period}.</p>
+      </InfoCard>
     </div>
   );
 }
@@ -483,42 +469,28 @@ function PageMutationsMasuk({ mutations, period }: { mutations: MutationRow[]; p
 function PageMutationsKeluar({ mutations, period }: { mutations: MutationRow[]; period: string }) {
   const keluar = mutations.filter(m => m.jenis === 'KELUAR');
   return (
-    <div className="p-8 font-serif" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
-      <h2 className="text-base font-bold uppercase text-center border-b border-gray-300 pb-2 mb-4">Bab V — Siswa Keluar</h2>
-      <p className="text-[9px] text-gray-500 mb-3">Periode: {period}</p>
+    <div className="p-10 font-serif text-[10px] leading-relaxed">
+      <BABTitle label="Bab V — Siswa Keluar" />
+      <p className="text-[9px] text-gray-500 mb-4">Periode: {period}</p>
 
-      <table className="w-full text-[9px] border-collapse mb-4">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border border-gray-300 p-1.5 text-left w-8">No</th>
-            <th className="border border-gray-300 p-1.5 text-left">Nama</th>
-            <th className="border border-gray-300 p-1.5 text-left">NISN</th>
-            <th className="border border-gray-300 p-1.5 text-left">Kelas</th>
-            <th className="border border-gray-300 p-1.5 text-left">Sekolah Tujuan</th>
-            <th className="border border-gray-300 p-1.5 text-left">Tanggal</th>
+      <ReportTable headers={['No', 'Nama', 'NISN', 'Kelas', 'Sekolah Tujuan', 'Tanggal']}>
+        {keluar.length === 0 ? (
+          <tr><td colSpan={6} className="border border-gray-200 p-4 text-center text-gray-400">-</td></tr>
+        ) : keluar.map((m, i) => (
+          <tr key={m.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
+            <td className="border border-gray-200 p-2 text-center w-8">{i + 1}</td>
+            <td className="border border-gray-200 p-2">{m.siswa_nama}</td>
+            <td className="border border-gray-200 p-2">{m.siswa_nisn}</td>
+            <td className="border border-gray-200 p-2">{m.kelas_kelompok || '-'}</td>
+            <td className="border border-gray-200 p-2">{m.alasan || '-'}</td>
+            <td className="border border-gray-200 p-2">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
           </tr>
-        </thead>
-        <tbody>
-          {keluar.length === 0 ? (
-            <tr>
-              <td colSpan={6} className="border border-gray-300 p-3 text-center text-gray-400">-</td>
-            </tr>
-          ) : keluar.map((m, i) => (
-            <tr key={m.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-              <td className="border border-gray-300 p-1.5 text-center">{i + 1}</td>
-              <td className="border border-gray-300 p-1.5">{m.siswa_nama}</td>
-              <td className="border border-gray-300 p-1.5">{m.siswa_nisn}</td>
-              <td className="border border-gray-300 p-1.5">{m.kelas_kelompok || '-'}</td>
-              <td className="border border-gray-300 p-1.5">{m.alasan || '-'}</td>
-              <td className="border border-gray-300 p-1.5">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        ))}
+      </ReportTable>
 
-      <div className="border border-gray-300 p-3 rounded bg-red-50 mt-2">
-        <p className="text-[10px]"><strong>Ringkasan:</strong> Total {keluar.length} siswa keluar pada periode {period}.</p>
-      </div>
+      <InfoCard className="bg-red-50 border-red-200">
+        <p className="text-[10px] text-red-800"><strong>Ringkasan:</strong> Total <strong>{keluar.length}</strong> siswa keluar pada periode {period}.</p>
+      </InfoCard>
     </div>
   );
 }
@@ -527,7 +499,7 @@ function PageAnalisis({ school, employeeList }: { school: ReportSchool; employee
   const maxClass = [...school.students.byClass].sort((a, b) => b.total - a.total)[0];
   const rasio = employeeList.length > 0 ? (school.students.total / employeeList.length).toFixed(1) : '0';
 
-  const insights: { type: 'success' | 'warning' | 'danger'; text: string }[] = [];
+  const insights: { type: string; text: string }[] = [];
   if (maxClass) insights.push({ type: 'success', text: `Kelas dengan siswa terbanyak: ${maxClass.kelas} (${maxClass.total} siswa)` });
   if (school.mutations.masuk > school.mutations.keluar) insights.push({ type: 'success', text: `Mutasi positif: ${school.mutations.masuk} masuk vs ${school.mutations.keluar} keluar` });
   else if (school.mutations.keluar > 0) insights.push({ type: 'warning', text: `Perlu perhatian: ${school.mutations.keluar} siswa keluar bulan ini` });
@@ -539,43 +511,50 @@ function PageAnalisis({ school, employeeList }: { school: ReportSchool; employee
   const trendData = school.students.byClass.map(c => ({ label: c.kelas, value: c.total }));
 
   return (
-    <div className="p-8 font-serif" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
-      <h2 className="text-base font-bold uppercase text-center border-b border-gray-300 pb-2 mb-4">Bab VI — Analisis Bulanan</h2>
+    <div className="p-10 font-serif text-[10px] leading-relaxed">
+      <BABTitle label="Bab VI — Analisis Bulanan" />
 
-      {/* Insight Panel */}
-      <div className="space-y-2 mb-6">
+      <FunctionBar label="INISIGHT & REKOMENDASI" />
+      <div className="space-y-2 mb-5">
         {insights.map((ins, i) => (
-          <div key={i} className={`flex items-start gap-2 p-2 rounded text-[9px] border ${
-            ins.type === 'danger' ? 'bg-red-50 border-red-200 text-red-700' :
-            ins.type === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
-            'bg-green-50 border-green-200 text-green-700'
+          <div key={i} className={`flex items-start gap-2.5 p-2.5 rounded text-[9px] border ${
+            ins.type === 'danger' ? 'bg-red-50 border-red-200 text-red-800' :
+            ins.type === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
+            'bg-green-50 border-green-200 text-green-800'
           }`}>
-            <span className="mt-0.5 shrink-0">
+            <span className="text-xs mt-0.5 shrink-0">
               {ins.type === 'danger' ? '🔴' : ins.type === 'warning' ? '🟡' : '🟢'}
             </span>
-            <span>{ins.text}</span>
+            <span className="leading-snug">{ins.text}</span>
           </div>
         ))}
       </div>
 
-      {/* Rasio & Statistik */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="border border-gray-300 p-3 rounded">
-          <h3 className="text-[10px] font-bold mb-2 text-gray-700">Rasio Pegawai terhadap Siswa</h3>
-          <p className="text-sm font-bold">{rasio} : 1</p>
-          <p className="text-[8px] text-gray-500">1 pegawai melayani {rasio} siswa</p>
-        </div>
-        <div className="border border-gray-300 p-3 rounded">
-          <h3 className="text-[10px] font-bold mb-2 text-gray-700">Distribusi Siswa</h3>
-          <p className="text-[9px]">Total: <strong>{school.students.total}</strong></p>
-          <p className="text-[9px]">Laki-laki: <strong>{school.students.male}</strong></p>
-          <p className="text-[9px]">Perempuan: <strong>{school.students.female}</strong></p>
-        </div>
+      <div className="grid grid-cols-2 gap-4 mb-5">
+        <InfoCard>
+          <FunctionBar label="RASIO PEGAWAI : SISWA" />
+          <p className="text-lg font-bold text-gray-800">{rasio} : 1</p>
+          <p className="text-[8px] text-gray-500 mt-0.5">1 pegawai melayani {rasio} siswa</p>
+        </InfoCard>
+        <InfoCard>
+          <FunctionBar label="DISTRIBUSI SISWA" />
+          <div className="grid grid-cols-3 gap-2 text-center">
+            {[
+              { label: 'Total', value: school.students.total, color: 'text-gray-800' },
+              { label: 'Laki-laki', value: school.students.male, color: 'text-blue-700' },
+              { label: 'Perempuan', value: school.students.female, color: 'text-pink-700' },
+            ].map((d, i) => (
+              <div key={i}>
+                <div className={`text-sm font-bold ${d.color}`}>{d.value}</div>
+                <div className="text-[7px] text-gray-500">{d.label}</div>
+              </div>
+            ))}
+          </div>
+        </InfoCard>
       </div>
 
-      {/* Trend Chart */}
-      <div>
-        <h3 className="text-[10px] font-bold mb-2 text-gray-700">Tren Siswa per Kelas</h3>
+      <div className="border border-gray-200 rounded p-3">
+        <FunctionBar label="TREN SISWA PER KELAS" />
         <TrendChart data={trendData} />
       </div>
     </div>
@@ -608,29 +587,29 @@ function PageGrafik({ school, employeeList }: { school: ReportSchool; employeeLi
   const max = Math.max(...barData.map(d => d.value), 1);
 
   return (
-    <div className="p-8 font-serif" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
-      <h2 className="text-base font-bold uppercase text-center border-b border-gray-300 pb-2 mb-4">Bab VII — Grafik dan Visualisasi</h2>
+    <div className="p-10 font-serif text-[10px] leading-relaxed">
+      <BABTitle label="Bab VII — Grafik dan Visualisasi" />
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="border border-gray-300 p-3 rounded">
-          <h3 className="text-[10px] font-bold mb-2 text-gray-700 text-center">Komposisi Pegawai</h3>
+      <div className="grid grid-cols-2 gap-5 mb-5">
+        <div className="border border-gray-200 rounded p-3">
+          <FunctionBar label="KOMPOSISI PEGAWAI" />
           <PieChart data={pieEmployee} />
           <div className="flex justify-center gap-3 mt-2 text-[7px] text-gray-500">
             {pieEmployee.map((d, i) => (
               <span key={i} className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full inline-block" style={{ background: d.color }} />
+                <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: d.color }} />
                 {d.label}
               </span>
             ))}
           </div>
         </div>
-        <div className="border border-gray-300 p-3 rounded">
-          <h3 className="text-[10px] font-bold mb-2 text-gray-700 text-center">Kondisi Infrastruktur</h3>
+        <div className="border border-gray-200 rounded p-3">
+          <FunctionBar label="KONDISI INFRASTRUKTUR" />
           <DonutChart data={infraDonut} />
           <div className="flex justify-center gap-3 mt-2 text-[7px] text-gray-500">
             {infraDonut.map((d, i) => (
               <span key={i} className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full inline-block" style={{ background: d.color }} />
+                <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: d.color }} />
                 {d.label}
               </span>
             ))}
@@ -638,8 +617,8 @@ function PageGrafik({ school, employeeList }: { school: ReportSchool; employeeLi
         </div>
       </div>
 
-      <div className="border border-gray-300 p-3 rounded">
-        <h3 className="text-[10px] font-bold mb-2 text-gray-700">Distribusi Siswa per Kelas</h3>
+      <div className="border border-gray-200 rounded p-3">
+        <FunctionBar label="DISTRIBUSI SISWA PER KELAS" />
         <BarChart data={barData} max={max} color="#0891b2" />
       </div>
     </div>
@@ -666,70 +645,72 @@ function PageKesimpulan({ school }: { school: ReportSchool }) {
   ];
 
   return (
-    <div className="p-8 font-serif" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
-      <h2 className="text-base font-bold uppercase text-center border-b border-gray-300 pb-2 mb-4">Bab VIII — Kesimpulan</h2>
+    <div className="p-10 font-serif text-[10px] leading-relaxed">
+      <BABTitle label="Bab VIII — Kesimpulan" />
 
       <div className="mb-6">
-        <h3 className="text-[10px] font-bold text-gray-700 mb-2">A. Kesimpulan</h3>
-        <div className="space-y-2">
+        <FunctionBar label="A. KESIMPULAN" />
+        <div className="space-y-2.5">
           {kesimpulan.map((par, i) => (
-            <p key={i} className="text-[9px] leading-relaxed text-justify">{par}</p>
+            <p key={i} className="text-[10px] leading-relaxed text-justify text-gray-800">{par}</p>
           ))}
         </div>
       </div>
 
       <div className="mb-6">
-        <h3 className="text-[10px] font-bold text-gray-700 mb-2">B. Rekomendasi</h3>
-        <ol className="list-decimal ml-4 space-y-1">
+        <FunctionBar label="B. REKOMENDASI" />
+        <ol className="list-decimal ml-5 space-y-1.5">
           {rekomendasi.map((r, i) => (
-            <li key={i} className="text-[9px] leading-relaxed">{r}</li>
+            <li key={i} className="text-[10px] leading-relaxed text-gray-800">{r}</li>
           ))}
         </ol>
       </div>
 
-      <div className="border border-gray-300 p-3 rounded bg-gray-50">
-        <h3 className="text-[10px] font-bold text-gray-700 mb-1">C. Catatan Evaluasi</h3>
-        <p className="text-[9px] text-gray-500 italic">
-          _______________________________________________<br />
-          _______________________________________________<br />
-          _______________________________________________<br />
-        </p>
-      </div>
+      <InfoCard>
+        <FunctionBar label="C. CATATAN EVALUASI" />
+        <div className="space-y-3 pt-1">
+          <div className="border-b border-dashed border-gray-300 pb-1" />
+          <div className="border-b border-dashed border-gray-300 pb-1" />
+          <div className="border-b border-dashed border-gray-300 pb-1" />
+        </div>
+      </InfoCard>
     </div>
   );
 }
 
 function PagePenutup({ school, period }: { school: ReportSchool; period: string }) {
   return (
-    <div className="p-8 font-serif flex flex-col h-full" style={{ fontFamily: "'Times New Roman', Times, serif" }}>
-      <h2 className="text-base font-bold uppercase text-center border-b border-gray-300 pb-2 mb-8">Penutup</h2>
+    <div className="p-10 font-serif text-[10px] leading-relaxed flex flex-col min-h-[calc(100%-2.5rem)]">
+      <BABTitle label="Penutup" />
 
-      <p className="text-[9px] text-justify leading-relaxed mb-8">
-        Demikian laporan bulanan ini kami buat sebagai bahan evaluasi dan tindak lanjut
-        dalam rangka meningkatkan mutu pendidikan di {school.name}. Semoga laporan ini
-        bermanfaat bagi semua pihak yang berkepentingan.
-      </p>
+      <div className="border-l-2 border-gray-300 pl-4 mb-8">
+        <p className="text-[10px] leading-relaxed text-justify text-gray-800">
+          Demikian laporan bulanan ini kami buat sebagai bahan evaluasi dan tindak lanjut
+          dalam rangka meningkatkan mutu pendidikan di {school.name}. Semoga laporan ini
+          bermanfaat bagi semua pihak yang berkepentingan.
+        </p>
+      </div>
 
-      <div className="grid grid-cols-2 gap-8 mt-auto pt-8">
+      <div className="grid grid-cols-2 gap-10 mt-auto pt-6 border-t border-gray-200">
         <div className="text-center">
-          <p className="text-[9px] font-bold mb-8">Mengetahui,<br />Kepala Sekolah</p>
-          <div className="h-16" />
-          <div className="border-t border-gray-400 w-40 mx-auto pt-1">
-            <p className="text-[9px] font-bold">___________________</p>
-            <p className="text-[8px] text-gray-500">NIP. ________________</p>
+          <p className="text-[10px] font-semibold text-gray-700 mb-10">Mengetahui,<br />Kepala Sekolah</p>
+          <div className="h-14" />
+          <div className="border-t-2 border-gray-600 w-44 mx-auto pt-1.5">
+            <p className="text-[10px] font-bold text-gray-800">( ___________________ )</p>
+            <p className="text-[8px] text-gray-500 mt-0.5">NIP. ________________</p>
           </div>
         </div>
         <div className="text-center">
-          <p className="text-[9px] font-bold mb-8">Penyusun Laporan,<br />Operator Sekolah</p>
-          <div className="h-16" />
-          <div className="border-t border-gray-400 w-40 mx-auto pt-1">
-            <p className="text-[9px] font-bold">___________________</p>
-            <p className="text-[8px] text-gray-500">NIP/NIK. ___________</p>
+          <p className="text-[10px] font-semibold text-gray-700 mb-10">Penyusun Laporan,<br />Operator Sekolah</p>
+          <div className="h-14" />
+          <div className="border-t-2 border-gray-600 w-44 mx-auto pt-1.5">
+            <p className="text-[10px] font-bold text-gray-800">( ___________________ )</p>
+            <p className="text-[8px] text-gray-500 mt-0.5">NIP/NIK. ___________</p>
           </div>
         </div>
       </div>
 
-      <div className="text-center text-[8px] text-gray-400 mt-8 pt-4 border-t border-gray-200">
+      <div className="text-center text-[8px] text-gray-400 mt-6 pt-4 border-t border-gray-200">
         <p>Laporan Bulanan — {school.name} — Periode {period}</p>
         <p>Dicetak: {formatDate(new Date().toISOString())} — Dokumen Resmi</p>
       </div>
