@@ -18,11 +18,15 @@ import ManajemenPegawai from './components/ManajemenPegawai';
 import AdvancedHR from './components/AdvancedHR';
 import AcademicCalendar from './components/AcademicCalendar';
 import TargetKPI from './components/TargetKPI';
+import LoginPage from './components/LoginPage';
+import { useAuth } from './components/AuthContext';
 
 import { School, Recommendation } from './types';
-import { Menu, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { Menu, PanelLeftClose, PanelLeft, LogOut } from 'lucide-react';
 
 export default function App() {
+  const { user, loading, logout } = useAuth();
+
   // Restore module from URL hash on mount
   const [currentModule, setCurrentModuleState] = useState<string>(() => {
     if (typeof window !== 'undefined') {
@@ -42,6 +46,21 @@ export default function App() {
   const [selectedSchool, setSelectedSchool] = useState<School | undefined>(undefined);
   const [recs, setRecs] = useState<Recommendation[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#08090b] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-mono text-slate-500">Memuat sesi...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
 
   // Synced select school helper:
   // If a user spotlights or selects a school from any dashboard, automatically route them
@@ -179,7 +198,7 @@ export default function App() {
 
           <div className="flex items-center gap-4 text-[10px] font-mono text-slate-500">
             {theme === 'dark' ? (
-              <div className="flex space-x-4 text-[11px] font-mono">
+              <div className="flex space-x-4 text-[11px] font-mono items-center">
                 <span className="text-emerald-400">● GIS: STABLE</span>
                 <span className="text-cyan-400">● AI: ACTIVE</span>
                 <span className="text-blue-400">● OPS: NORMAL</span>
@@ -190,6 +209,22 @@ export default function App() {
                 <span>STATUS: COGNITIVE DEPLOYED</span>
               </>
             )}
+            <div className="h-4 w-px bg-[#1f2937]" />
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] text-cyan-400 font-bold">{user.username}</span>
+                <span className="text-[8px] text-slate-500 uppercase tracking-wider">
+                  {user.role === 'admin' ? 'Super Admin' : user.role === 'staff_kecamatan' ? 'Staf Kecamatan' : `Operator ${user.schoolName || ''}`}
+                </span>
+              </div>
+              <button
+                onClick={logout}
+                className="p-1.5 rounded-md hover:bg-red-950/30 text-slate-400 hover:text-red-400 transition-colors"
+                title="Keluar"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         </header>
 

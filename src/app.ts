@@ -1,12 +1,105 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import jwt from 'jsonwebtoken';
 import { GoogleGenAI } from '@google/genai';
 import { SimulationScenario, SimulationResult } from './types';
 import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod } from './db';
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
+
+const JWT_SECRET = process.env.JWT_SECRET || 'timker-bidik-secret-key-change-in-production';
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  role: 'admin' | 'staff_kecamatan' | 'operator_sekolah';
+  schoolNpsn?: string;
+  schoolName?: string;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: AuthUser;
+    }
+  }
+}
+
+function authenticateToken(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as AuthUser;
+    req.user = decoded;
+    next();
+  } catch {
+    return res.status(403).json({ error: 'Invalid or expired token' });
+  }
+}
+
+function requireRole(...roles: string[]) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden: insufficient role' });
+    }
+    next();
+  };
+}
+
+// ── Auth endpoints ──
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username dan password wajib diisi' });
+  }
+
+  // Admin
+  if (username === 'Admin' && password === 'Timker456') {
+    const user: AuthUser = { id: '1', username: 'Admin', role: 'admin' };
+    const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+    return res.json({ token, user });
+  }
+
+  // Staf Kecamatan
+  if (username === 'Admin2' && password === 'Timker123') {
+    const user: AuthUser = { id: '2', username: 'Admin2', role: 'staff_kecamatan' };
+    const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+    return res.json({ token, user });
+  }
+
+  // Operator Sekolah — username = NPSN, password = "sp_" + NPSN
+  const expectedOpPassword = 'sp_' + username;
+  if (password === expectedOpPassword) {
+    const schools = await getAllSchools();
+    const school = schools.find(s => s.npsn === username);
+    if (school) {
+      const user: AuthUser = {
+        id: `op-${username}`,
+        username: username,
+        role: 'operator_sekolah',
+        schoolNpsn: school.npsn,
+        schoolName: school.name,
+      };
+      const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+      return res.json({ token, user });
+    }
+    return res.status(401).json({ error: 'NPSN tidak ditemukan' });
+  }
+
+  return res.status(401).json({ error: 'Username atau password salah' });
+});
+
+app.get('/api/auth/me', authenticateToken, (req, res) => {
+  res.json({ user: req.user });
+});
 
 // Initialize Gemini Client safely
 let aiClient: GoogleGenAI | null = null;
