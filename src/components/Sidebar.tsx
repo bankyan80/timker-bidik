@@ -10,10 +10,6 @@ import {
   Cpu,
   FileSearch,
   FileSpreadsheet,
-  Sun,
-  Moon,
-  MonitorCheck,
-  Leaf,
   GraduationCap,
   School,
   GitCompare,
@@ -21,8 +17,6 @@ import {
   Briefcase,
   Calendar,
   Target,
-  LogOut,
-  Shield
 } from 'lucide-react';
 import { useAuth } from './AuthContext';
 
@@ -138,23 +132,19 @@ export default function Sidebar({ currentModule, setCurrentModule, theme, setThe
   // Resolve theme-specific background and border styles
   let sidebarClass = "bg-[#0c0e12] border-[#1f2937] text-[#d1d5db]";
   let headerBorderClass = "border-[#1f2937]";
-  let footerBorderClass = "border-[#1f2937]";
   let accentTextClass = "text-cyan-400";
 
   if (theme === 'light') {
     sidebarClass = "bg-white border-slate-200 text-slate-800 shadow-sm";
     headerBorderClass = "border-slate-100";
-    footerBorderClass = "border-slate-100";
     accentTextClass = "text-indigo-600";
   } else if (theme === 'command') {
     sidebarClass = "bg-black border-amber-950 text-amber-500 font-mono";
     headerBorderClass = "border-amber-950";
-    footerBorderClass = "border-amber-950";
     accentTextClass = "text-amber-500";
   } else if (theme === 'emerald') {
     sidebarClass = "bg-[#040605] border-[#14532d] text-[#e6f4ea]";
     headerBorderClass = "border-[#14532d]";
-    footerBorderClass = "border-[#14532d]";
     accentTextClass = "text-[#10b981]";
   }
 
@@ -275,79 +265,6 @@ export default function Sidebar({ currentModule, setCurrentModule, theme, setThe
         })}
       </div>
 
-      {/* User Info Footer */}
-      <div className={`p-3 border-t flex flex-col gap-2 ${footerBorderClass}`}>
-        <div className="flex items-center gap-2 p-2 rounded-lg bg-[#0a0c10] border border-[#1f2937]/50">
-          <div className="p-1.5 rounded-md bg-cyan-950/30 text-cyan-400 border border-cyan-900/40">
-            <Shield className="h-3.5 w-3.5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-mono font-bold text-slate-200 truncate">{user?.username}</p>
-            <p className="text-[8px] font-mono text-slate-500 uppercase tracking-wider truncate">
-              {user?.role === 'admin' ? 'Super Admin' : user?.role === 'staff_kecamatan' ? 'Staf Kecamatan' : 'Operator Sekolah'}
-            </p>
-            {user?.schoolName && (
-              <p className="text-[7px] font-mono text-slate-600 truncate">{user.schoolName}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="text-[10px] font-mono opacity-55 uppercase pl-1">Pilih Tema Visual Hub</div>
-        <div className="grid grid-cols-4 gap-1 bg-slate-100/50 dark:bg-[#11141a] command:bg-zinc-950/50 p-1 rounded-lg border dark:border-[#1f2937]">
-          <button
-            id="theme-light"
-            onClick={() => setTheme('light')}
-            className={`flex flex-col items-center justify-center py-1.5 rounded transition-all ${
-              theme === 'light'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Nordic Clean Light"
-          >
-            <Sun className="h-3 w-3" />
-            <span className="text-[8px] font-mono mt-1">LIGHT</span>
-          </button>
-          <button
-            id="theme-dark"
-            onClick={() => setTheme('dark')}
-            className={`flex flex-col items-center justify-center py-1.5 rounded transition-all ${
-              theme === 'dark'
-                ? 'bg-[#08090b] text-cyan-400 border border-cyan-800 shadow-xs'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Cosmic Cyan HUD"
-          >
-            <Moon className="h-3 w-3" />
-            <span className="text-[8px] font-mono mt-1">HUD</span>
-          </button>
-          <button
-            id="theme-command"
-            onClick={() => setTheme('command')}
-            className={`flex flex-col items-center justify-center py-1.5 rounded transition-all ${
-              theme === 'command'
-                ? 'bg-amber-950/60 text-amber-400 border border-amber-900 shadow-xs'
-                : 'text-slate-500 hover:text-amber-500'
-            }`}
-            title="Amber Terminal Mode"
-          >
-            <MonitorCheck className="h-3 w-3" />
-            <span className="text-[8px] font-mono mt-1">TERM</span>
-          </button>
-          <button
-            id="theme-emerald"
-            onClick={() => setTheme('emerald')}
-            className={`flex flex-col items-center justify-center py-1.5 rounded transition-all ${
-              theme === 'emerald'
-                ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-900 shadow-xs'
-                : 'text-slate-500 hover:text-emerald-400'
-            }`}
-            title="Deep Mint Forest"
-          >
-            <Leaf className="h-3 w-3" />
-            <span className="text-[8px] font-mono mt-1">MINT</span>
-          </button>
-        </div>
-      </div>
     </div>
   </aside>
   );
