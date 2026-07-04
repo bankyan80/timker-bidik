@@ -181,8 +181,8 @@ function PageCover({ school, period, employeeList }: { school: ReportSchool; per
   return (
     <div className="p-10 font-serif text-xs leading-relaxed">
       {/* Kop Surat */}
-      <div className="flex items-start gap-5 border-b-2 border-black pb-4 mb-7">
-        <div className="w-16 h-16 shrink-0">
+      <div className="flex items-stretch gap-5 border-b-2 border-black pb-4 mb-7">
+        <div className="w-16 shrink-0 flex items-center">
           <img src="/logokab.png" alt="Logo Kabupaten" className="w-full h-full object-contain" />
         </div>
         <div className="flex-1 text-center">
@@ -899,9 +899,9 @@ export default function LaporanPreview({ onClose }: LaporanPreviewProps) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-100 overflow-hidden print:bg-white print:overflow-visible">
+    <div className="h-full flex flex-col bg-gray-100 print:bg-white print:overflow-visible -mt-6 -mx-6" style={{ width: 'calc(100% + 48px)', height: 'calc(100% + 24px)' }}>
       {/* ── Toolbar ── */}
-      <div className="bg-white border-b border-gray-200 shadow-sm px-4 py-2 flex items-center justify-between shrink-0 print:hidden z-10">
+      <div className="bg-white border-b border-gray-200 shadow-sm px-4 py-2 flex items-center justify-between shrink-0 print:hidden sticky top-0 z-20">
         <div className="flex items-center gap-3">
           <span className="text-sm font-bold text-gray-700">Preview Laporan Bulanan</span>
           <span className="text-xs text-gray-400 px-2 py-0.5 bg-gray-100 rounded">{currentPage} / {TOTAL_PAGES}</span>
