@@ -1132,7 +1132,7 @@ app.get('/api/reports/employees/:npsn', authenticateToken, async (req, res) => {
   const schoolScope = getSchoolScope(req);
   if (schoolScope && schoolScope !== req.params.npsn) return res.status(403).json({ error: 'Akses ditolak' });
   const result = await db.execute({
-    sql: `SELECT id, nama, jabatan, status_pegawai, nip, nik, sertifikasi
+    sql: `SELECT id, nama, gelar_depan, gelar_belakang, jabatan, status_pegawai, nip, nik, sertifikasi
           FROM employees WHERE sekolah_id = ? AND is_active = 1
           ORDER BY nama`,
     args: [req.params.npsn]

@@ -18,10 +18,14 @@ interface MutationRow {
 }
 
 interface EmployeeRow {
-  id: string; nama: string; jabatan: string | null;
+  id: string; nama: string; gelar_depan?: string; gelar_belakang?: string;
+  jabatan: string | null;
   status_pegawai: string | null; nip: string | null;
   nik: string; sertifikasi: string | null;
 }
+
+const namaWithGelar = (e: EmployeeRow) =>
+  [e.gelar_depan, e.nama, e.gelar_belakang ? `, ${e.gelar_belakang}` : ''].filter(Boolean).join(' ');
 
 interface ReportSchool {
   npsn: string; name: string; level: string; status: string; village: string;
@@ -343,7 +347,7 @@ function PageEmployees({ employeeList }: { employeeList: EmployeeRow[] }) {
         {sorted.slice(0, 30).map((e, i) => (
           <tr key={e.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
             <td className="border border-gray-200 p-2.5 text-gray-900 text-center w-8">{i + 1}</td>
-            <td className="border border-gray-200 p-2.5 text-gray-900">{e.nama}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{namaWithGelar(e)}</td>
             <td className="border border-gray-200 p-2.5 text-gray-900">{e.status_pegawai || '-'}</td>
             <td className="border border-gray-200 p-2.5 text-gray-900">{e.jabatan || '-'}</td>
           </tr>
@@ -703,9 +707,9 @@ function PagePenutup({ school, period, kepalaSekolah, operator }: {
               <p className="text-[10px] leading-snug font-semibold text-gray-700 mb-5">Mengetahui,<br />a.n Kepala Dinas Pendidikan<br />Kabupaten Cirebon,<br />Ketua Tim Kerja Bidang Pendidikan Dasar<br />Kecamatan Lemahabang</p>
             </div>
             <div className="w-44 mx-auto">
-              <p className="text-xs font-bold text-gray-800">( ___________________ )</p>
+              <p className="text-xs font-bold text-gray-800">ETI BUDIWATI, S.Pd</p>
               <div className="border-t-2 border-gray-600 mt-1 mb-1" />
-              <p className="text-[10px] text-gray-500">NIP. ________________</p>
+              <p className="text-[10px] text-gray-500">NIP. 196910022006042005</p>
             </div>
           </div>
 
@@ -715,7 +719,7 @@ function PagePenutup({ school, period, kepalaSekolah, operator }: {
               <p className="text-xs leading-snug font-semibold text-gray-700 mb-5">Mengetahui,<br />Kepala Sekolah</p>
             </div>
             <div className="w-44 mx-auto">
-              <p className="text-xs font-bold text-gray-800">{kepalaSekolah ? kepalaSekolah.nama : '( ___________________ )'}</p>
+              <p className="text-xs font-bold text-gray-800">{kepalaSekolah ? namaWithGelar(kepalaSekolah) : '( ___________________ )'}</p>
               <div className="border-t-2 border-gray-600 mt-1 mb-1" />
               <p className="text-[10px] text-gray-500">{kepalaSekolah?.nip ? `NIP. ${kepalaSekolah.nip}` : 'NIP. ________________'}</p>
             </div>
@@ -727,9 +731,9 @@ function PagePenutup({ school, period, kepalaSekolah, operator }: {
               <p className="text-xs leading-snug font-semibold text-gray-700 mb-5">Penyusun Laporan,<br />Operator Sekolah</p>
             </div>
             <div className="w-44 mx-auto">
-              <p className="text-xs font-bold text-gray-800">{operator ? operator.nama : '( ___________________ )'}</p>
+              <p className="text-xs font-bold text-gray-800">{operator ? namaWithGelar(operator) : '( ___________________ )'}</p>
               <div className="border-t-2 border-gray-600 mt-1 mb-1" />
-              <p className="text-[10px] text-gray-500">{operator?.nik ? `NIK. ${operator.nik}` : 'NIP/NIK. ___________'}</p>
+              <p className="text-[10px] text-gray-500">{operator?.nip ? `NIP. ${operator.nip}` : operator?.nik ? `NIK. ${operator.nik}` : 'NIP/NIK. ___________'}</p>
             </div>
           </div>
         </div>
