@@ -1000,7 +1000,16 @@ export default function DocumentIntel() {
 
                       {/* School unit */}
                       <td className="py-3 px-4 text-slate-300 font-sans truncate max-w-[200px]" title={emp.school}>
-                        {emp.school}
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate">{emp.school}</span>
+                          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                            emp.schoolStatus === 'Swasta'
+                              ? 'bg-purple-950/40 text-purple-400 border border-purple-800/40'
+                              : 'bg-cyan-950/40 text-cyan-400 border border-cyan-800/40'
+                          }`}>
+                            {emp.schoolStatus}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Files Count */}

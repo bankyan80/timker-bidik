@@ -83,7 +83,8 @@ const employees: Employee[] = []
   for (const row of rows) {
     const docRows: EmployeeDocumentRow[] = row.documents || []
     const status = mapStatusPegawai(row.status_pegawai)
-    const requiredDocs = getRequiredDocsForStatus(status)
+    const schoolStatus: 'Negeri' | 'Swasta' = (row.school_status || 'Negeri') === 'Swasta' ? 'Swasta' : 'Negeri'
+    const requiredDocs = getRequiredDocsForStatus(status, schoolStatus)
     const schoolName = row.school_name || npsnToSchool.get(row.sekolah_id) || row.sekolah_id
 
     const realDocNames = new Map<string, EmployeeDocumentRow>()
@@ -162,6 +163,7 @@ const employees: Employee[] = []
       nipNik: row.nip || row.nik,
       status,
       school: schoolName,
+      schoolStatus,
       position: row.jabatan || '-',
       documents,
     })
@@ -190,6 +192,7 @@ export interface Employee {
   nipNik: string;
   status: 'PNS' | 'PPPK' | 'PPPK_PARUH_WAKTU' | 'Honorer';
   school: string;
+  schoolStatus: 'Negeri' | 'Swasta';
   position: string;
   documents: DocumentItem[];
 }
@@ -206,8 +209,11 @@ export interface GlobalStats {
   schoolCompleteness: { name: string; rate: number; total: number }[];
 }
 
-// Automatically generate required documents for each status
-export function getRequiredDocsForStatus(status: 'PNS' | 'PPPK' | 'PPPK_PARUH_WAKTU' | 'Honorer'): { name: string; category: DocumentItem['category'] }[] {
+// Automatically generate required documents for each status and school type
+export function getRequiredDocsForStatus(
+  status: 'PNS' | 'PPPK' | 'PPPK_PARUH_WAKTU' | 'Honorer',
+  schoolStatus: 'Negeri' | 'Swasta' = 'Negeri'
+): { name: string; category: DocumentItem['category'] }[] {
   const commonDocs: { name: string; category: DocumentItem['category'] }[] = [
     { name: 'KTP', category: 'Identitas' },
     { name: 'Kartu Keluarga (KK)', category: 'Identitas' },
@@ -218,39 +224,51 @@ export function getRequiredDocsForStatus(status: 'PNS' | 'PPPK' | 'PPPK_PARUH_WA
   ];
 
   if (status === 'PNS') {
+    if (schoolStatus === 'Swasta') {
+      return [
+        ...commonDocs,
+        { name: 'SK Pengangkatan CPNS', category: 'Pengangkatan' },
+        { name: 'SK Pengangkatan PNS', category: 'Pengangkatan' },
+        { name: 'SK Penempatan dari Yayasan', category: 'Pengangkatan' },
+        { name: 'Sertifikat Latsar / Prajab', category: 'Pengangkatan' },
+        { name: 'SK Jabatan Fungsional', category: 'Kepangkatan' },
+        { name: 'SK Kenaikan Jabatan', category: 'Kepangkatan' },
+        { name: 'Sasaran Kinerja Pegawai (SKP)', category: 'Kinerja' },
+        { name: 'Penilaian Kinerja', category: 'Kinerja' },
+        { name: 'Kenaikan Gaji Berkala (KGB)', category: 'Keuangan' },
+        { name: 'Dokumen TPG / Sertifikasi', category: 'Keuangan' },
+      ];
+    }
     return [
       ...commonDocs,
-      // Pengangkatan
       { name: 'SK CPNS', category: 'Pengangkatan' },
       { name: 'SK PNS', category: 'Pengangkatan' },
       { name: 'Surat Pernyataan Melaksanakan Tugas (SPMT)', category: 'Pengangkatan' },
       { name: 'Sertifikat Latsar / Prajab', category: 'Pengangkatan' },
-      // Kepangkatan
       { name: 'SK Pangkat Terakhir', category: 'Kepangkatan' },
       { name: 'SK Kenaikan Pangkat', category: 'Kepangkatan' },
       { name: 'SK Jabatan', category: 'Kepangkatan' },
-      // Kinerja
       { name: 'Sasaran Kinerja Pegawai (SKP)', category: 'Kinerja' },
       { name: 'Penilaian Kinerja', category: 'Kinerja' },
-      // Keuangan
       { name: 'Kenaikan Gaji Berkala (KGB)', category: 'Keuangan' },
-      { name: 'Dokumen TPG / Sertifikasi', category: 'Keuangan' }
+      { name: 'Dokumen TPG / Sertifikasi', category: 'Keuangan' },
     ];
-  } else if (status === 'PPPK') {
+  }
+
+  if (status === 'PPPK') {
     return [
       ...commonDocs,
-      // Pengangkatan
       { name: 'SK PPPK', category: 'Pengangkatan' },
       { name: 'Surat Perjanjian Kerja / Kontrak', category: 'Pengangkatan' },
       { name: 'Surat Pernyataan Melaksanakan Tugas (SPMT)', category: 'Pengangkatan' },
-      // Kinerja
       { name: 'Sasaran Kinerja Pegawai (SKP)', category: 'Kinerja' },
       { name: 'Penilaian Kinerja', category: 'Kinerja' },
-      // Keuangan
       { name: 'Slip Gaji', category: 'Keuangan' },
-      { name: 'Dokumen Tunjangan', category: 'Keuangan' }
+      { name: 'Dokumen Tunjangan', category: 'Keuangan' },
     ];
-  } else if (status === 'PPPK_PARUH_WAKTU') {
+  }
+
+  if (status === 'PPPK_PARUH_WAKTU') {
     return [
       ...commonDocs,
       { name: 'SK PPPK Paruh Waktu', category: 'Pengangkatan' },
@@ -261,21 +279,30 @@ export function getRequiredDocsForStatus(status: 'PNS' | 'PPPK' | 'PPPK_PARUH_WA
       { name: 'Slip Honor', category: 'Keuangan' },
       { name: 'Dokumen Tunjangan', category: 'Keuangan' },
     ];
-  } else {
-    // Honorer
+  }
+
+  // Honorer
+  if (schoolStatus === 'Swasta') {
     return [
       ...commonDocs,
-      // Pengangkatan
       { name: 'Surat Lamaran Kerja', category: 'Pengangkatan' },
-      { name: 'SK Honorer', category: 'Pengangkatan' },
-      { name: 'Surat Tugas Kepala Sekolah', category: 'Pengangkatan' },
-      // Kinerja
+      { name: 'SK Pengangkatan dari Yayasan', category: 'Pengangkatan' },
+      { name: 'SK Penugasan dari Yayasan', category: 'Pengangkatan' },
+      { name: 'Perjanjian Kontrak Kerja', category: 'Pengangkatan' },
       { name: 'Absensi Kehadiran', category: 'Kinerja' },
       { name: 'Penilaian Kinerja', category: 'Kinerja' },
-      // Keuangan
-      { name: 'Slip Honor', category: 'Keuangan' }
+      { name: 'Slip Honor', category: 'Keuangan' },
     ];
   }
+  return [
+    ...commonDocs,
+    { name: 'Surat Lamaran Kerja', category: 'Pengangkatan' },
+    { name: 'SK Honorer', category: 'Pengangkatan' },
+    { name: 'Surat Tugas Kepala Sekolah', category: 'Pengangkatan' },
+    { name: 'Absensi Kehadiran', category: 'Kinerja' },
+    { name: 'Penilaian Kinerja', category: 'Kinerja' },
+    { name: 'Slip Honor', category: 'Keuangan' },
+  ];
 }
 
 // Calculate individual employee document intelligence
