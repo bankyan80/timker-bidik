@@ -286,23 +286,23 @@ function PageStudents({ school }: { school: ReportSchool }) {
       <ReportTable headers={['No', 'Kelas', 'L', 'P', 'Total', 'Mutasi Masuk', 'Mutasi Keluar']}
         footer={
           <tr className="bg-gray-100 font-bold text-xs">
-            <td colSpan={2} className="border border-gray-300 p-2.5 text-right">Total</td>
-            <td className="border border-gray-300 p-2.5 text-right">{school.students.male}</td>
-            <td className="border border-gray-300 p-2.5 text-right">{school.students.female}</td>
-            <td className="border border-gray-300 p-2.5 text-right">{school.students.total}</td>
-            <td className="border border-gray-300 p-2.5 text-right text-green-700">{school.mutations.masuk}</td>
-            <td className="border border-gray-300 p-2.5 text-right text-red-700">{school.mutations.keluar}</td>
+            <td colSpan={2} className="border border-gray-300 p-2.5 text-gray-900 text-right">Total</td>
+            <td className="border border-gray-300 p-2.5 text-gray-900 text-right">{school.students.male}</td>
+            <td className="border border-gray-300 p-2.5 text-gray-900 text-right">{school.students.female}</td>
+            <td className="border border-gray-300 p-2.5 text-gray-900 text-right">{school.students.total}</td>
+            <td className="border border-gray-300 p-2.5 text-gray-900 text-right text-green-700">{school.mutations.masuk}</td>
+            <td className="border border-gray-300 p-2.5 text-gray-900 text-right text-red-700">{school.mutations.keluar}</td>
           </tr>
         }>
         {school.students.byClass.map((c, i) => (
           <tr key={i} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-            <td className="border border-gray-200 p-2.5 text-center w-8">{i + 1}</td>
-            <td className="border border-gray-200 p-2.5">{c.kelas}</td>
-            <td className="border border-gray-200 p-2.5 text-right">{c.male}</td>
-            <td className="border border-gray-200 p-2.5 text-right">{c.female}</td>
-            <td className="border border-gray-200 p-2.5 text-right font-semibold">{c.total}</td>
-            <td className="border border-gray-200 p-2.5 text-right text-green-600">-</td>
-            <td className="border border-gray-200 p-2.5 text-right text-red-600">-</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900 text-center w-8">{i + 1}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{c.kelas}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900 text-right">{c.male}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900 text-right">{c.female}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900 text-right font-semibold">{c.total}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900 text-right text-green-600">-</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900 text-right text-red-600">-</td>
           </tr>
         ))}
       </ReportTable>
@@ -333,11 +333,11 @@ function PageEmployees({ employeeList }: { employeeList: EmployeeRow[] }) {
       <ReportTable headers={['No', 'Nama', 'Jabatan', 'Status', 'Kehadiran']}>
         {employeeList.slice(0, 30).map((e, i) => (
           <tr key={e.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-            <td className="border border-gray-200 p-2.5 text-center w-8">{i + 1}</td>
-            <td className="border border-gray-200 p-2.5">{e.nama}</td>
-            <td className="border border-gray-200 p-2.5">{e.jabatan || '-'}</td>
-            <td className="border border-gray-200 p-2.5">{e.status_pegawai || '-'}</td>
-            <td className="border border-gray-200 p-2.5 text-right">-</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900 text-center w-8">{i + 1}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{e.nama}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{e.jabatan || '-'}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{e.status_pegawai || '-'}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900 text-right">-</td>
           </tr>
         ))}
         {employeeList.length > 30 && (
@@ -389,12 +389,12 @@ function PageInfrastructure({ school }: { school: ReportSchool }) {
       <ReportTable headers={['No', 'Jenis Sarana', 'Jumlah', 'Baik', 'Rusak Ringan', 'Rusak Berat']}>
         {infraItems.map((item, i) => (
           <tr key={i} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-            <td className="border border-gray-200 p-2.5 text-center w-8">{i + 1}</td>
-            <td className="border border-gray-200 p-2.5">{item.name}</td>
-            <td className="border border-gray-200 p-2.5 text-right">{item.total}</td>
-            <td className="border border-gray-200 p-2.5 text-right text-green-700">{item.baik}</td>
-            <td className="border border-gray-200 p-2.5 text-right text-yellow-700">{item.ringan}</td>
-            <td className="border border-gray-200 p-2.5 text-right text-red-700">{item.berat}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900 text-center w-8">{i + 1}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{item.name}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900 text-right">{item.total}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900 text-right text-green-700">{item.baik}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900 text-right text-yellow-700">{item.ringan}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900 text-right text-red-700">{item.berat}</td>
           </tr>
         ))}
       </ReportTable>
@@ -449,12 +449,12 @@ function PageMutationsMasuk({ mutations, period }: { mutations: MutationRow[]; p
           <tr><td colSpan={6} className="border border-gray-200 p-4 text-center text-gray-400">-</td></tr>
         ) : masuk.map((m, i) => (
           <tr key={m.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-            <td className="border border-gray-200 p-2.5 text-center w-8">{i + 1}</td>
-            <td className="border border-gray-200 p-2.5">{m.siswa_nama}</td>
-            <td className="border border-gray-200 p-2.5">{m.siswa_nisn}</td>
-            <td className="border border-gray-200 p-2.5">{m.kelas_kelompok || '-'}</td>
-            <td className="border border-gray-200 p-2.5">{m.alasan || '-'}</td>
-            <td className="border border-gray-200 p-2.5">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900 text-center w-8">{i + 1}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{m.siswa_nama}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{m.siswa_nisn}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{m.kelas_kelompok || '-'}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{m.alasan || '-'}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
           </tr>
         ))}
       </ReportTable>
@@ -478,12 +478,12 @@ function PageMutationsKeluar({ mutations, period }: { mutations: MutationRow[]; 
           <tr><td colSpan={6} className="border border-gray-200 p-4 text-center text-gray-400">-</td></tr>
         ) : keluar.map((m, i) => (
           <tr key={m.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-            <td className="border border-gray-200 p-2.5 text-center w-8">{i + 1}</td>
-            <td className="border border-gray-200 p-2.5">{m.siswa_nama}</td>
-            <td className="border border-gray-200 p-2.5">{m.siswa_nisn}</td>
-            <td className="border border-gray-200 p-2.5">{m.kelas_kelompok || '-'}</td>
-            <td className="border border-gray-200 p-2.5">{m.alasan || '-'}</td>
-            <td className="border border-gray-200 p-2.5">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900 text-center w-8">{i + 1}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{m.siswa_nama}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{m.siswa_nisn}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{m.kelas_kelompok || '-'}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{m.alasan || '-'}</td>
+            <td className="border border-gray-200 p-2.5 text-gray-900">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
           </tr>
         ))}
       </ReportTable>
@@ -678,7 +678,10 @@ function PageKesimpulan({ school }: { school: ReportSchool }) {
   );
 }
 
-function PagePenutup({ school, period }: { school: ReportSchool; period: string }) {
+function PagePenutup({ school, period, kepalaSekolah, operator }: {
+  school: ReportSchool; period: string;
+  kepalaSekolah?: EmployeeRow; operator?: EmployeeRow;
+}) {
   return (
     <div className="p-10 font-serif text-xs leading-relaxed flex flex-col min-h-[calc(100%-2.5rem)]">
       <BABTitle label="Penutup" />
@@ -696,16 +699,16 @@ function PagePenutup({ school, period }: { school: ReportSchool; period: string 
           <p className="text-xs font-semibold text-gray-700 mb-10">Mengetahui,<br />Kepala Sekolah</p>
           <div className="h-14" />
           <div className="border-t-2 border-gray-600 w-44 mx-auto pt-1.5">
-            <p className="text-xs font-bold text-gray-800">( ___________________ )</p>
-            <p className="text-[10px] text-gray-500 mt-0.5">NIP. ________________</p>
+            <p className="text-xs font-bold text-gray-800">{kepalaSekolah ? kepalaSekolah.nama : '( ___________________ )'}</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">{kepalaSekolah?.nip ? `NIP. ${kepalaSekolah.nip}` : 'NIP. ________________'}</p>
           </div>
         </div>
         <div className="text-center">
           <p className="text-xs font-semibold text-gray-700 mb-10">Penyusun Laporan,<br />Operator Sekolah</p>
           <div className="h-14" />
           <div className="border-t-2 border-gray-600 w-44 mx-auto pt-1.5">
-            <p className="text-xs font-bold text-gray-800">( ___________________ )</p>
-            <p className="text-[10px] text-gray-500 mt-0.5">NIP/NIK. ___________</p>
+            <p className="text-xs font-bold text-gray-800">{operator ? operator.nama : '( ___________________ )'}</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">{operator?.nik ? `NIK. ${operator.nik}` : 'NIP/NIK. ___________'}</p>
           </div>
         </div>
       </div>
@@ -788,6 +791,13 @@ export default function LaporanPreview({ onClose }: LaporanPreviewProps) {
 
   const school = schools.find(s => s.npsn === selectedNpsn);
 
+  const kepalaSekolah = employeeList.find(e =>
+    (e.jabatan || '').toLowerCase().includes('kepala sekolah')
+  );
+  const operator = employeeList.find(e =>
+    (e.jabatan || '').toLowerCase().includes('operator')
+  );
+
   const handlePrint = () => window.print();
 
   const changeZoom = (delta: number) => setZoom(z => Math.max(25, Math.min(200, z + delta)));
@@ -827,7 +837,8 @@ export default function LaporanPreview({ onClose }: LaporanPreviewProps) {
     <PageAnalisis key="analisis" school={school} employeeList={employeeList} />,
     <PageGrafik key="grafik" school={school} employeeList={employeeList} />,
     <PageKesimpulan key="kesimpulan" school={school} />,
-    <PagePenutup key="penutup" school={school} period={period} />,
+    <PagePenutup key="penutup" school={school} period={period}
+      kepalaSekolah={kepalaSekolah} operator={operator} />,
   ] : [];
 
   if (loading) {
