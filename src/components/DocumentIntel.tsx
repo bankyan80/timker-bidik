@@ -50,12 +50,14 @@ function extractDriveFileId(url: string): string | null {
 function mapCategoryToDBKategori(category: string, docName: string): string {
   const lower = docName.toLowerCase();
   if (lower.includes('foto') || lower.includes('pass')) return 'PASS FOTO';
-  if (lower.includes('ijazah') || lower.includes('transkrip')) return 'IJAZAH';
+  if (lower.includes('ijazah')) return 'IJAZAH';
+  if (lower.includes('transkrip') || lower.includes('transkip')) return 'TRANSKIP NILAI';
   if (lower.includes('ktp')) return 'IDENTITAS DIRI';
   if (lower.includes('kk') || lower.includes('kartu keluarga')) return 'DATA KELUARGA';
   if (lower.includes('npwp')) return 'IDENTITAS DIRI';
   if (lower.includes('karis') || lower.includes('karsu') || lower.includes('karpeg')) return 'IDENTITAS DIRI';
   if (lower.includes('sk ') || lower.includes('sk p3k') || lower.includes('sk pppk') || lower.includes('spmt')) return 'SK JABATAN';
+  if (lower.includes('skbm')) return 'SKBM';
   if (lower.includes('sertifikat') || lower.includes('sertif')) return 'SERTIFIKAT';
   if (lower.includes('bpjs')) return 'IDENTITAS DIRI';
   if (category === 'Identitas') return 'IDENTITAS DIRI';
@@ -241,35 +243,78 @@ export default function DocumentIntel() {
   }, [searchQuery, filterSchool, filterStatus, filterCompleteness, filterCategory, pageSize]);
 
   // Operations: Delete Document
-  const handleDeleteDocument = (empId: string, docId: string) => {
-    setEmployees(prev => prev.map(emp => {
-      if (emp.id !== empId) return emp;
-      return {
-        ...emp,
-        documents: emp.documents.map(doc => {
-          if (doc.id !== docId) return doc;
-          return {
-            id: doc.id,
-            name: doc.name.split('_')[0], // Reset back to default template name
-            category: doc.category,
-            status: 'missing'
-          };
-        })
-      };
-    }));
-    
-    // Sync with selected employee drawer state
-    if (selectedEmployee?.id === empId) {
-      setSelectedEmployee(prev => {
-        if (!prev) return null;
+  const handleDeleteDocument = async (empId: string, docId: string) => {
+    // Find the document to get the real DB ID
+    const emp = employees.find(e => e.id === empId);
+    const doc = emp?.documents.find(d => d.id === docId);
+    if (!doc || !doc.dbId) {
+      // For documents without a real DB ID, just do local state update
+      setEmployees(prev => prev.map(emp => {
+        if (emp.id !== empId) return emp;
         return {
-          ...prev,
-          documents: prev.documents.map(doc => {
-            if (doc.id !== docId) return doc;
-            return { id: doc.id, name: doc.name.split('_')[0], category: doc.category, status: 'missing' };
+          ...emp,
+          documents: emp.documents.map(d => {
+            if (d.id !== docId) return d;
+            return { id: d.id, name: d.name.split('_')[0], category: d.category, status: 'missing' };
           })
         };
-      });
+      }));
+      if (selectedEmployee?.id === empId) {
+        setSelectedEmployee(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            documents: prev.documents.map(d => {
+              if (d.id !== docId) return d;
+              return { id: d.id, name: d.name.split('_')[0], category: d.category, status: 'missing' };
+            })
+          };
+        });
+      }
+      return;
+    }
+    
+    if (!confirm(`Hapus dokumen "${doc.name}"?`)) return;
+    
+    try {
+      const res = await api(`/api/documents/${doc.dbId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json();
+        alert('Gagal menghapus: ' + (err.error || res.statusText));
+        return;
+      }
+      
+      // Update local state
+      setEmployees(prev => prev.map(emp => {
+        if (emp.id !== empId) return emp;
+        return {
+          ...emp,
+          documents: emp.documents.map(d => {
+            if (d.id !== docId) return d;
+            return {
+              id: d.id,
+              name: d.name.split('_')[0],
+              category: d.category,
+              status: 'missing'
+            };
+          })
+        };
+      }));
+      
+      if (selectedEmployee?.id === empId) {
+        setSelectedEmployee(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            documents: prev.documents.map(d => {
+              if (d.id !== docId) return d;
+              return { id: d.id, name: d.name.split('_')[0], category: d.category, status: 'missing' };
+            })
+          };
+        });
+      }
+    } catch {
+      alert('Gagal menghapus dokumen. Coba lagi.');
     }
   };
 

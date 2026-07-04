@@ -65,9 +65,10 @@ function mapDocToCategory(jenisDokumen: string, kategori: string): DocumentItem[
   const j = jenisDokumen.toLowerCase()
   if (j.includes('pak') || k.includes('pak') || j.includes('angka kredit') || j.includes('penetapan') && j.includes('kredit')) return 'PAK'
   if (k.includes('identitas') || j.includes('ktp') || j.includes('kk') || j.includes('npwp') || j.includes('foto') || j.includes('ijazah') || j.includes('rekening')) return 'Identitas'
-  if (k.includes('pengangkatan') || j.includes('sk') || j.includes('sertifikat') || j.includes('spmt') || j.includes('kontrak') || j.includes('lamaran')) return 'Pengangkatan'
+  if (k.includes('pengangkatan') || j.includes('sk') || j.includes('sertifikat') || j.includes('spmt') || j.includes('skbm') || j.includes('kontrak') || j.includes('lamaran')) return 'Pengangkatan'
   if (k.includes('kepangkatan') || j.includes('pangkat') || j.includes('jabatan') || j.includes('golongan')) return 'Kepangkatan'
   if (k.includes('kinerja') || j.includes('skp') || j.includes('penilaian') || j.includes('absensi') || j.includes('kehadiran')) return 'Kinerja'
+  if (k.includes('transkip') || k.includes('transkrip') || j.includes('transkip') || j.includes('transkrip')) return 'Identitas'
   return 'Keuangan'
 }
 
@@ -119,6 +120,8 @@ export async function loadEmployees(): Promise<Employee[]> {
             fileType: matched.mime_type.includes('pdf') ? 'PDF' : matched.mime_type.includes('png') ? 'PNG' : matched.mime_type.includes('jpg') || matched.mime_type.includes('jpeg') ? 'JPG' : 'PDF',
             issue: hasIssue ? (matched.catatan_revisi || 'Menunggu verifikasi') : undefined,
             driveUrl: matched.drive_url || undefined,
+            dbId: matched.id,
+            driveFileId: matched.drive_file_id || undefined,
           }
         }
 
@@ -149,6 +152,8 @@ export async function loadEmployees(): Promise<Employee[]> {
             fileType: doc.mime_type.includes('pdf') ? 'PDF' : doc.mime_type.includes('png') ? 'PNG' : 'PDF',
             issue: doc.catatan_revisi || undefined,
             driveUrl: doc.drive_url || undefined,
+            dbId: doc.id,
+            driveFileId: doc.drive_file_id || undefined,
           })
         }
       }
@@ -180,6 +185,8 @@ export interface DocumentItem {
   fileType?: 'PDF' | 'JPG' | 'JPEG' | 'PNG';
   issue?: string; // Reason for warning (corrupt, empty, invalid format, outdated, etc.)
   driveUrl?: string; // Google Drive URL to the actual uploaded file
+  dbId?: string; // Real database ID from employee_documents table
+  driveFileId?: string; // Google Drive file ID for deletion
 }
 
 export interface Employee {

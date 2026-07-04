@@ -652,6 +652,41 @@ app.post('/api/documents', authenticateToken, async (req, res) => {
   res.status(201).json({ success: true });
 });
 
+app.delete('/api/documents/:id', authenticateToken, async (req, res) => {
+  const { getDb } = await import('./db');
+  const db = getDb();
+  if (!db) return res.status(500).json({ error: 'DB not available' });
+
+  // Find document + its school for scope check
+  const doc = await db.execute({
+    sql: `SELECT ed.*, e.sekolah_id FROM employee_documents ed LEFT JOIN employees e ON e.id = ed.employee_id WHERE ed.id = ?`,
+    args: [req.params.id]
+  });
+  if (doc.rows.length === 0) return res.status(404).json({ error: 'Document not found' });
+
+  const row = doc.rows[0] as any;
+  const schoolScope = getSchoolScope(req);
+  if (schoolScope && row.sekolah_id !== schoolScope) {
+    return res.status(403).json({ error: 'Forbidden: you can only delete documents from your own school' });
+  }
+
+  // Delete from Google Drive
+  try {
+    const { google } = await import('googleapis');
+    const auth = (await import('./drive')).getAuth();
+    await google.drive({ version: 'v3', auth }).files.delete({ fileId: row.drive_file_id });
+  } catch (driveErr: any) {
+    if (driveErr.code !== 404) {
+      console.error('Drive delete error:', driveErr.message);
+    }
+  }
+
+  const { deleteEmployeeDocument } = await import('./db');
+  const result = await deleteEmployeeDocument(req.params.id);
+  if (!result.ok) return res.status(500).json({ error: 'Failed to delete document' });
+  res.json({ success: true });
+});
+
 app.post('/api/documents/:id/verify', authenticateToken, async (req, res) => {
   const { getDb } = await import('./db');
   const db = getDb();
@@ -895,6 +930,47 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
   const ok = await updateStudent(req.params.id, req.body);
   if (!ok) return res.status(400).json({ error: 'Gagal mengupdate siswa' });
   res.json({ success: true });
+});
+
+// Student detail endpoints (parents, address, health)
+app.get('/api/students/:id/detail', authenticateToken, async (req, res) => {
+  const { getDb, getStudentDetail } = await import('./db');
+  const db = getDb();
+  if (!db) return res.status(500).json({ error: 'DB not available' });
+  // Find student to get NISN
+  const stu = await db.execute('SELECT id, nisn, school_npsn FROM students WHERE id = ?', [req.params.id]);
+  if (stu.rows.length === 0) return res.status(404).json({ error: 'Student not found' });
+  const row = stu.rows[0] as any;
+  const schoolScope = getSchoolScope(req);
+  if (schoolScope && row.school_npsn !== schoolScope) {
+    return res.status(403).json({ error: 'Forbidden: you can only view students in your own school' });
+  }
+  if (!row.nisn) return res.json({ parents: null, address: null, health: null });
+  const detail = await getStudentDetail(row.nisn);
+  res.json(detail);
+});
+
+app.put('/api/students/:id/detail', authenticateToken, async (req, res) => {
+  const { getDb, getStudentDetail, upsertStudentParents, upsertStudentAddress, upsertStudentHealth } = await import('./db');
+  const db = getDb();
+  if (!db) return res.status(500).json({ error: 'DB not available' });
+  const stu = await db.execute('SELECT id, nisn, school_npsn FROM students WHERE id = ?', [req.params.id]);
+  if (stu.rows.length === 0) return res.status(404).json({ error: 'Student not found' });
+  const row = stu.rows[0] as any;
+  const schoolScope = getSchoolScope(req);
+  if (schoolScope && row.school_npsn !== schoolScope) {
+    return res.status(403).json({ error: 'Forbidden: you can only update students in your own school' });
+  }
+  if (!row.nisn) return res.status(400).json({ error: 'Student has no NISN' });
+  const { parents, address, health } = req.body;
+  const results = await Promise.all([
+    parents ? upsertStudentParents(row.nisn, parents) : Promise.resolve(true),
+    address ? upsertStudentAddress(row.nisn, address) : Promise.resolve(true),
+    health ? upsertStudentHealth(row.nisn, health) : Promise.resolve(true),
+  ]);
+  if (results.some(r => !r)) return res.status(500).json({ error: 'Failed to save student detail' });
+  const detail = await getStudentDetail(row.nisn);
+  res.json(detail);
 });
 
 app.delete('/api/students/:id', authenticateToken, async (req, res) => {

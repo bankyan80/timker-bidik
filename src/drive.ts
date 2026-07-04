@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
 
-function getAuth() {
+export function getAuth() {
   const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
   if (keyJson) {
     return new google.auth.GoogleAuth({

@@ -263,6 +263,32 @@ export async function initSchema() {
       updated_at INTEGER NOT NULL
     )
   `);
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS student_parents (
+      siswa_nisn TEXT PRIMARY KEY,
+      nama_ayah TEXT, nik_ayah TEXT, pendidikan_ayah TEXT, pekerjaan_ayah TEXT, penghasilan_ayah TEXT, no_hp_ayah TEXT, status_ayah TEXT,
+      nama_ibu TEXT, nik_ibu TEXT, pendidikan_ibu TEXT, pekerjaan_ibu TEXT, penghasilan_ibu TEXT, no_hp_ibu TEXT, status_ibu TEXT,
+      nama_wali TEXT, nik_wali TEXT, hubungan_wali TEXT, pendidikan_wali TEXT, pekerjaan_wali TEXT, penghasilan_wali TEXT, no_hp_wali TEXT
+    )
+  `);
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS student_addresses (
+      siswa_nisn TEXT PRIMARY KEY,
+      provinsi TEXT, kabupaten TEXT, kecamatan TEXT, desa TEXT, dusun TEXT,
+      alamat TEXT, rt TEXT, rw TEXT, kode_pos TEXT,
+      lat TEXT, lng TEXT, jarak_sekolah TEXT, transportasi TEXT, waktu_tempuh TEXT
+    )
+  `);
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS student_health (
+      siswa_nisn TEXT PRIMARY KEY,
+      golongan_darah TEXT, tinggi_badan TEXT, berat_badan TEXT,
+      riwayat_penyakit TEXT, kebutuhan_khusus TEXT, catatan TEXT
+    )
+  `);
 }
 
 export async function seedData() {
@@ -846,6 +872,23 @@ export async function upsertEmployeeDocument(data: {
   }
 }
 
+export async function deleteEmployeeDocument(id: string): Promise<{ ok: boolean; driveFileId?: string }> {
+  const client = getDb();
+  if (!client) return { ok: false };
+  try {
+    const doc = await client.execute({
+      sql: 'SELECT drive_file_id FROM employee_documents WHERE id = ?',
+      args: [id]
+    });
+    if (doc.rows.length === 0) return { ok: false };
+    const driveFileId = (doc.rows[0] as any).drive_file_id as string;
+    await client.execute({ sql: 'DELETE FROM employee_documents WHERE id = ?', args: [id] });
+    return { ok: true, driveFileId };
+  } catch {
+    return { ok: false };
+  }
+}
+
 export async function verifyEmployeeDocument(id: string, status: 'verified' | 'rejected', catatan?: string): Promise<boolean> {
   const client = getDb();
   if (!client) return false;
@@ -978,6 +1021,81 @@ export async function deleteStudent(id: string): Promise<boolean> {
     await client.execute({ sql: 'DELETE FROM students WHERE id = ?', args: [id] });
     return true;
   } catch { return false; }
+}
+
+// ── Student Detail CRUD (parents, addresses, health) ──
+
+export async function getStudentDetail(nisn: string): Promise<{
+  parents: Record<string, any> | null;
+  address: Record<string, any> | null;
+  health: Record<string, any> | null;
+}> {
+  const client = getDb();
+  if (!client) return { parents: null, address: null, health: null };
+  const [parents, address, health] = await Promise.all([
+    client.execute({ sql: 'SELECT * FROM student_parents WHERE siswa_nisn = ?', args: [nisn] }),
+    client.execute({ sql: 'SELECT * FROM student_addresses WHERE siswa_nisn = ?', args: [nisn] }),
+    client.execute({ sql: 'SELECT * FROM student_health WHERE siswa_nisn = ?', args: [nisn] }),
+  ]);
+  return {
+    parents: parents.rows[0] as any || null,
+    address: address.rows[0] as any || null,
+    health: health.rows[0] as any || null,
+  };
+}
+
+export async function upsertStudentParents(nisn: string, data: Record<string, any>): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  const cols = Object.keys(data).filter(k => data[k] !== undefined);
+  const vals = cols.map(c => data[c]);
+  if (cols.length === 0) return true;
+  const placeholders = cols.map(() => '?').join(',');
+  const assignments = cols.map(c => `${c} = ?`).join(',');
+  try {
+    await client.execute({
+      sql: `INSERT INTO student_parents (siswa_nisn,${cols.join(',')}) VALUES (?${',' + placeholders})
+            ON CONFLICT(siswa_nisn) DO UPDATE SET ${assignments}`,
+      args: [nisn, ...vals, ...vals]
+    });
+    return true;
+  } catch (e) { console.error('upsertStudentParents error', e); return false; }
+}
+
+export async function upsertStudentAddress(nisn: string, data: Record<string, any>): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  const cols = Object.keys(data).filter(k => data[k] !== undefined);
+  if (cols.length === 0) return true;
+  const vals = cols.map(c => data[c]);
+  const placeholders = cols.map(() => '?').join(',');
+  const assignments = cols.map(c => `${c} = ?`).join(',');
+  try {
+    await client.execute({
+      sql: `INSERT INTO student_addresses (siswa_nisn,${cols.join(',')}) VALUES (?${',' + placeholders})
+            ON CONFLICT(siswa_nisn) DO UPDATE SET ${assignments}`,
+      args: [nisn, ...vals, ...vals]
+    });
+    return true;
+  } catch (e) { console.error('upsertStudentAddress error', e); return false; }
+}
+
+export async function upsertStudentHealth(nisn: string, data: Record<string, any>): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  const cols = Object.keys(data).filter(k => data[k] !== undefined);
+  if (cols.length === 0) return true;
+  const vals = cols.map(c => data[c]);
+  const placeholders = cols.map(() => '?').join(',');
+  const assignments = cols.map(c => `${c} = ?`).join(',');
+  try {
+    await client.execute({
+      sql: `INSERT INTO student_health (siswa_nisn,${cols.join(',')}) VALUES (?${',' + placeholders})
+            ON CONFLICT(siswa_nisn) DO UPDATE SET ${assignments}`,
+      args: [nisn, ...vals, ...vals]
+    });
+    return true;
+  } catch (e) { console.error('upsertStudentHealth error', e); return false; }
 }
 
 export { ALL_SCHOOLS as FALLBACK_SCHOOLS };

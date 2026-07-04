@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
-import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight, Trash, ArrowUp } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight, Trash, ArrowUp, Eye, X, Loader2 } from 'lucide-react';
 import { ALL_SCHOOLS } from '../data/mockData';
 import { useAuth } from './AuthContext';
 
@@ -39,6 +39,13 @@ export default function StudentManagement() {
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [formOpen, setFormOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailStudent, setDetailStudent] = useState<Student | null>(null);
+  const [detailTab, setDetailTab] = useState<'parents' | 'address' | 'health'>('parents');
+  const [detailData, setDetailData] = useState<Record<string, any>>({ parents: null, address: null, health: null });
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailSaving, setDetailSaving] = useState(false);
+  const [detailForm, setDetailForm] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     school_npsn: isOperator ? operatorNpsn : '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki',
     tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: 'Kelas 1',
@@ -143,7 +150,64 @@ export default function StudentManagement() {
 
   function resetForm() { setForm({ school_npsn: '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki', tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: 'Kelas 1', rombel: '', tahun_pelajaran: '2025/2026' }); }
 
-  function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempuan' {
+    async function openDetail(s: Student) {
+    setDetailStudent(s);
+    setDetailTab('parents');
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setDetailForm({});
+    try {
+      const r = await api(`/api/students/${s.id}/detail`);
+      if (r.ok) {
+        const data = await r.json();
+        setDetailData(data);
+        // Initialize form from whichever tab has data
+        const source = data.parents || data.address || data.health || {};
+        const flat: Record<string, string> = {};
+        for (const [k, v] of Object.entries(data.parents || {})) if (v) flat[k] = String(v);
+        for (const [k, v] of Object.entries(data.address || {})) if (v) flat[k] = String(v);
+        for (const [k, v] of Object.entries(data.health || {})) if (v) flat[k] = String(v);
+        setDetailForm(flat);
+      }
+    } catch {}
+    setDetailLoading(false);
+  }
+
+  function detailField(key: string): string {
+    return detailForm[key] || '';
+  }
+
+  function setDetailField(key: string, val: string) {
+    setDetailForm(prev => ({ ...prev, [key]: val }));
+  }
+
+  async function saveDetail() {
+    if (!detailStudent) return;
+    setDetailSaving(true);
+    try {
+      // Build section data from form keys
+      const pKeys = ['nama_ayah','nik_ayah','pendidikan_ayah','pekerjaan_ayah','penghasilan_ayah','no_hp_ayah','status_ayah','nama_ibu','nik_ibu','pendidikan_ibu','pekerjaan_ibu','penghasilan_ibu','no_hp_ibu','status_ibu','nama_wali','nik_wali','hubungan_wali','pendidikan_wali','pekerjaan_wali','penghasilan_wali','no_hp_wali'];
+      const aKeys = ['provinsi','kabupaten','kecamatan','desa','dusun','alamat','rt','rw','kode_pos','lat','lng','jarak_sekolah','transportasi','waktu_tempuh'];
+      const hKeys = ['golongan_darah','tinggi_badan','berat_badan','riwayat_penyakit','kebutuhan_khusus','catatan'];
+
+      const parents: Record<string, string> = {};
+      const address: Record<string, string> = {};
+      const health: Record<string, string> = {};
+      for (const k of pKeys) if (detailForm[k]) parents[k] = detailForm[k];
+      for (const k of aKeys) if (detailForm[k]) address[k] = detailForm[k];
+      for (const k of hKeys) if (detailForm[k]) health[k] = detailForm[k];
+
+      const r = await api(`/api/students/${detailStudent.id}/detail`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parents, address, health }),
+      });
+      if (r.ok) setDetailData(await r.json());
+    } catch {}
+    setDetailSaving(false);
+  }
+
+function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempuan' {
     if (!val) return 'Laki-laki';
     const low = val.toLowerCase();
     if (low.includes('perempuan') || low.includes('p')) return 'Perempuan';
@@ -311,6 +375,7 @@ export default function StudentManagement() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => openDetail(s)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-emerald-400" title="Detail Siswa"><Eye className="h-3.5 w-3.5" /></button>
                       <button onClick={() => openEdit(s)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-cyan-400"><Edit3 className="h-3.5 w-3.5" /></button>
                       <button onClick={() => remove(s.id)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
@@ -424,6 +489,120 @@ export default function StudentManagement() {
           </div>
         </div>
       )}
+
+      {/* Detail Modal */}
+      {detailOpen && detailStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setDetailOpen(false)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-2xl space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">Detail Siswa</h2>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">{detailStudent.nama} — {detailStudent.nisn || 'Tanpa NISN'}</p>
+              </div>
+              <button onClick={() => setDetailOpen(false)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-white transition-colors cursor-pointer">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-1 bg-slate-800/60 border border-slate-700/50 rounded-lg p-1 w-fit">
+              {(['parents', 'address', 'health'] as const).map(tab => (
+                <button key={tab} onClick={() => setDetailTab(tab)}
+                  className={`px-3 py-1.5 rounded text-xs font-mono font-bold transition-all cursor-pointer ${
+                    detailTab === tab ? 'bg-cyan-900/40 text-cyan-300 border border-cyan-800' : 'text-slate-400 hover:text-slate-200'
+                  }`}>
+                  {tab === 'parents' ? 'Orang Tua' : tab === 'address' ? 'Alamat' : 'Kesehatan'}
+                </button>
+              ))}
+            </div>
+
+            {/* Content */}
+            {detailLoading ? (
+              <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {detailTab === 'parents' && <>
+                  <Field label="Nama Ayah" value={detailField('nama_ayah')} onChange={v => setDetailField('nama_ayah', v)} />
+                  <Field label="NIK Ayah" value={detailField('nik_ayah')} onChange={v => setDetailField('nik_ayah', v)} />
+                  <Field label="Pendidikan Ayah" value={detailField('pendidikan_ayah')} onChange={v => setDetailField('pendidikan_ayah', v)} />
+                  <Field label="Pekerjaan Ayah" value={detailField('pekerjaan_ayah')} onChange={v => setDetailField('pekerjaan_ayah', v)} />
+                  <Field label="Penghasilan Ayah" value={detailField('penghasilan_ayah')} onChange={v => setDetailField('penghasilan_ayah', v)} />
+                  <Field label="No HP Ayah" value={detailField('no_hp_ayah')} onChange={v => setDetailField('no_hp_ayah', v)} />
+                  <Field label="Status Ayah" value={detailField('status_ayah')} onChange={v => setDetailField('status_ayah', v)} />
+                  <Field label="Nama Ibu" value={detailField('nama_ibu')} onChange={v => setDetailField('nama_ibu', v)} />
+                  <Field label="NIK Ibu" value={detailField('nik_ibu')} onChange={v => setDetailField('nik_ibu', v)} />
+                  <Field label="Pendidikan Ibu" value={detailField('pendidikan_ibu')} onChange={v => setDetailField('pendidikan_ibu', v)} />
+                  <Field label="Pekerjaan Ibu" value={detailField('pekerjaan_ibu')} onChange={v => setDetailField('pekerjaan_ibu', v)} />
+                  <Field label="Penghasilan Ibu" value={detailField('penghasilan_ibu')} onChange={v => setDetailField('penghasilan_ibu', v)} />
+                  <Field label="No HP Ibu" value={detailField('no_hp_ibu')} onChange={v => setDetailField('no_hp_ibu', v)} />
+                  <Field label="Status Ibu" value={detailField('status_ibu')} onChange={v => setDetailField('status_ibu', v)} />
+                  <div className="col-span-2 border-t border-slate-700/50 pt-3 mt-1">
+                    <p className="text-[10px] font-mono text-slate-500 uppercase mb-2">Wali</p>
+                  </div>
+                  <Field label="Nama Wali" value={detailField('nama_wali')} onChange={v => setDetailField('nama_wali', v)} />
+                  <Field label="NIK Wali" value={detailField('nik_wali')} onChange={v => setDetailField('nik_wali', v)} />
+                  <Field label="Hubungan Wali" value={detailField('hubungan_wali')} onChange={v => setDetailField('hubungan_wali', v)} />
+                  <Field label="Pendidikan Wali" value={detailField('pendidikan_wali')} onChange={v => setDetailField('pendidikan_wali', v)} />
+                  <Field label="Pekerjaan Wali" value={detailField('pekerjaan_wali')} onChange={v => setDetailField('pekerjaan_wali', v)} />
+                  <Field label="Penghasilan Wali" value={detailField('penghasilan_wali')} onChange={v => setDetailField('penghasilan_wali', v)} />
+                  <Field label="No HP Wali" value={detailField('no_hp_wali')} onChange={v => setDetailField('no_hp_wali', v)} />
+                </>}
+                {detailTab === 'address' && <>
+                  <Field label="Provinsi" value={detailField('provinsi')} onChange={v => setDetailField('provinsi', v)} />
+                  <Field label="Kabupaten" value={detailField('kabupaten')} onChange={v => setDetailField('kabupaten', v)} />
+                  <Field label="Kecamatan" value={detailField('kecamatan')} onChange={v => setDetailField('kecamatan', v)} />
+                  <Field label="Desa" value={detailField('desa')} onChange={v => setDetailField('desa', v)} />
+                  <Field label="Dusun" value={detailField('dusun')} onChange={v => setDetailField('dusun', v)} />
+                  <div className="col-span-2">
+                    <Field label="Alamat" value={detailField('alamat')} onChange={v => setDetailField('alamat', v)} />
+                  </div>
+                  <Field label="RT" value={detailField('rt')} onChange={v => setDetailField('rt', v)} />
+                  <Field label="RW" value={detailField('rw')} onChange={v => setDetailField('rw', v)} />
+                  <Field label="Kode Pos" value={detailField('kode_pos')} onChange={v => setDetailField('kode_pos', v)} />
+                  <Field label="Jarak Sekolah" value={detailField('jarak_sekolah')} onChange={v => setDetailField('jarak_sekolah', v)} />
+                  <Field label="Transportasi" value={detailField('transportasi')} onChange={v => setDetailField('transportasi', v)} />
+                  <Field label="Waktu Tempuh" value={detailField('waktu_tempuh')} onChange={v => setDetailField('waktu_tempuh', v)} />
+                </>}
+                {detailTab === 'health' && <>
+                  <Field label="Golongan Darah" value={detailField('golongan_darah')} onChange={v => setDetailField('golongan_darah', v)} />
+                  <Field label="Tinggi Badan" value={detailField('tinggi_badan')} onChange={v => setDetailField('tinggi_badan', v)} />
+                  <Field label="Berat Badan" value={detailField('berat_badan')} onChange={v => setDetailField('berat_badan', v)} />
+                  <div className="col-span-2">
+                    <Field label="Riwayat Penyakit" value={detailField('riwayat_penyakit')} onChange={v => setDetailField('riwayat_penyakit', v)} />
+                  </div>
+                  <div className="col-span-2">
+                    <Field label="Kebutuhan Khusus" value={detailField('kebutuhan_khusus')} onChange={v => setDetailField('kebutuhan_khusus', v)} />
+                  </div>
+                  <div className="col-span-2">
+                    <Field label="Catatan" value={detailField('catatan')} onChange={v => setDetailField('catatan', v)} />
+                  </div>
+                </>}
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+              <button onClick={() => setDetailOpen(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Tutup</button>
+              <button onClick={saveDetail} disabled={detailSaving || detailLoading}
+                className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg transition-colors flex items-center gap-2">
+                {detailSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+                Simpan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <label className="text-[10px] font-mono text-slate-400 uppercase">{label}</label>
+      <input value={value} onChange={e => onChange(e.target.value)}
+        className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700" />
     </div>
   );
 }
