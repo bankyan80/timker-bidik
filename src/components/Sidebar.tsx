@@ -17,7 +17,6 @@ import {
   Briefcase,
   Calendar,
   Target,
-  FileText,
 } from 'lucide-react';
 import { useAuth } from './AuthContext';
 
@@ -43,7 +42,7 @@ const ROLE_MENU_ACCESS: Record<string, string[]> = {
     'hr', 'advanced-hr', 'infrastructure', 'school-profile', 'school-comparison',
     'academic-calendar', 'kpi',
     'simulator',
-    'documents', 'monthly-report', 'laporan-preview', 'reports',
+    'documents', 'monthly-report', 'reports',
   ],
   staff_kecamatan: [
     'dashboard', 'monitor', 'console', 'gis',
@@ -51,14 +50,14 @@ const ROLE_MENU_ACCESS: Record<string, string[]> = {
     'hr', 'advanced-hr', 'infrastructure', 'school-profile', 'school-comparison',
     'academic-calendar', 'kpi',
     'simulator',
-    'documents', 'monthly-report', 'laporan-preview', 'reports',
+    'documents', 'monthly-report', 'reports',
   ],
   operator_sekolah: [
     'dashboard', 'monitor',
     'pegawai', 'students', 'rombels',
     'school-profile',
     'academic-calendar',
-    'documents', 'monthly-report', 'laporan-preview', 'reports',
+    'documents', 'monthly-report', 'reports',
   ],
 };
 
@@ -125,7 +124,6 @@ export default function Sidebar({ currentModule, setCurrentModule, theme, isOpen
       items: [
         { id: 'documents', label: 'Intelijen Dokumen', icon: FileSearch },
         { id: 'monthly-report', label: 'Laporan Bulanan', icon: FileSpreadsheet },
-        { id: 'laporan-preview', label: 'Preview Laporan (PDF)', icon: FileText },
         { id: 'reports', label: 'Pusat Laporan Pintar', icon: FileSpreadsheet }
       ]
     }

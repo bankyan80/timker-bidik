@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { api } from '../api';
-import { FileText, Download, Loader2, Printer, AlertTriangle, Building2, Users, GraduationCap, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { FileText, Download, Loader2, Printer, AlertTriangle, Building2, Users, GraduationCap, ArrowUpRight, ArrowDownRight, Eye } from 'lucide-react';
+import LaporanPreview from './LaporanPreview';
 
 interface ReportSchool {
   npsn: string; name: string; level: string; status: string; village: string;
@@ -37,6 +38,7 @@ export default function MonthlyReport() {
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [previewMode, setPreviewMode] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -67,6 +69,8 @@ export default function MonthlyReport() {
     return <div className="p-8 text-red-400">Error: {error}</div>;
   }
 
+  if (previewMode) return <LaporanPreview onClose={() => setPreviewMode(false)} />;
+
   if (!data) return null;
 
   const summaryCards = [
@@ -88,10 +92,16 @@ export default function MonthlyReport() {
             Periode: {data.period} — Generated: {new Date(data.generatedAt).toLocaleString('id-ID')}
           </p>
         </div>
-        <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-white transition-colors">
-          <Printer className="w-4 h-4" />
-          Cetak / PDF
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setPreviewMode(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-sm transition-colors">
+            <Eye className="w-4 h-4" />
+            Preview PDF
+          </button>
+          <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-white text-sm transition-colors">
+            <Printer className="w-4 h-4" />
+            Cetak / PDF
+          </button>
+        </div>
       </div>
 
       {/* Print-only header */}

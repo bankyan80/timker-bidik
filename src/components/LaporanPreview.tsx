@@ -739,7 +739,11 @@ function PagePenutup({ school, period }: { school: ReportSchool; period: string 
 
 // ── Main Viewer ──
 
-export default function LaporanPreview() {
+interface LaporanPreviewProps {
+  onClose?: () => void;
+}
+
+export default function LaporanPreview({ onClose }: LaporanPreviewProps) {
   const { user, isRole } = useAuth();
   const [schools, setSchools] = useState<ReportSchool[]>([]);
   const [selectedNpsn, setSelectedNpsn] = useState('');
@@ -904,7 +908,7 @@ export default function LaporanPreview() {
           <button onClick={handlePrint} className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded flex items-center gap-1.5">
             <Download className="w-3.5 h-3.5" /> Export PDF
           </button>
-          <button className="p-1.5 hover:bg-gray-100 rounded text-gray-500" title="Tutup">
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded text-gray-500" title="Tutup">
             <X className="w-4 h-4" />
           </button>
         </div>
