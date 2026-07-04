@@ -30,6 +30,8 @@ interface EmployeePeriod {
 }
 
 interface EditData {
+  gelar_depan: string;
+  gelar_belakang: string;
   nama: string;
   nik: string;
   nip: string;
@@ -168,6 +170,8 @@ export default function ManajemenPegawai() {
     setEditModal({
       emp,
       data: {
+        gelar_depan: r.gelar_depan || '',
+        gelar_belakang: r.gelar_belakang || '',
         nama: r.nama || '',
         nik: r.nik || '',
         nip: r.nip || '',
@@ -335,7 +339,9 @@ export default function ManajemenPegawai() {
               <tbody>
                 {filtered.map(emp => (
                   <tr key={emp.id} className="border-t border-[#1f2937] hover:bg-[#1a1f2c] transition-all">
-                    <td className="p-3 pl-4 text-slate-200 font-bold whitespace-nowrap">{emp.nama}</td>
+                    <td className="p-3 pl-4 text-slate-200 font-bold whitespace-nowrap">
+                      {[emp._raw?.gelar_depan, emp.nama, emp._raw?.gelar_belakang ? `, ${emp._raw.gelar_belakang}` : ''].filter(Boolean).join(' ')}
+                    </td>
                     <td className="p-3 text-slate-300 whitespace-nowrap">{emp.nipNik}</td>
                     <td className="p-3 whitespace-nowrap">
                       <span className={`px-1.5 py-0.5 rounded text-[10px] ${
@@ -459,6 +465,8 @@ export default function ManajemenPegawai() {
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Nama" value={editModal.data.nama} onChange={v => updateEditField('nama', v)} />
+                <Field label="Gelar Depan" value={editModal.data.gelar_depan} onChange={v => updateEditField('gelar_depan', v)} />
+                <Field label="Gelar Belakang" value={editModal.data.gelar_belakang} onChange={v => updateEditField('gelar_belakang', v)} />
                 <Field label="NIK" value={editModal.data.nik} onChange={v => updateEditField('nik', v)} />
                 <Field label="NIP" value={editModal.data.nip} onChange={v => updateEditField('nip', v)} />
                 <Field label="NUPTK" value={editModal.data.nuptk} onChange={v => updateEditField('nuptk', v)} />

@@ -182,6 +182,10 @@ export async function initSchema() {
     )
   `);
 
+  // Add gelar columns if not exist (safe migration)
+  try { await client.execute('ALTER TABLE employees ADD COLUMN gelar_depan TEXT'); } catch {}
+  try { await client.execute('ALTER TABLE employees ADD COLUMN gelar_belakang TEXT'); } catch {}
+
   await client.execute(`
     CREATE TABLE IF NOT EXISTS employee_documents (
       id TEXT PRIMARY KEY,
@@ -748,7 +752,7 @@ export async function updateEmployee(id: string, data: Partial<{
   nama: string; nik: string; nip: string | null; email: string | null;
   no_hp: string | null; jabatan: string | null; status_pegawai: string | null;
   pangkat_golongan: string | null; pendidikan_terakhir: string | null;
-  sertifikasi: string | null; is_active: number;
+  sertifikasi: string | null; is_active: number; gelar_depan: string | null; gelar_belakang: string | null;
 }>): Promise<boolean> {
   const client = getDb();
   if (!client) return false;
