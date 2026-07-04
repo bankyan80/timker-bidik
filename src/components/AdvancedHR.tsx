@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from '../api';
 import { Users, Search, Filter, Briefcase, ArrowRight, History, FileText, Download } from 'lucide-react';
 import { ALL_SCHOOLS } from '../data/mockData';
 
@@ -24,7 +25,7 @@ export default function AdvancedHR() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch('/api/employees');
+        const r = await api('/api/employees');
         if (r.ok) setEmployees(await r.json());
       } catch {}
       setLoading(false);

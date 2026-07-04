@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from '../api';
 import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight, Trash, ArrowUp } from 'lucide-react';
 import { ALL_SCHOOLS } from '../data/mockData';
 
@@ -52,7 +53,7 @@ export default function StudentManagement() {
   async function load() {
     setLoading(true);
     try {
-      const r = await fetch('/api/students');
+      const r = await api('/api/students');
       if (r.ok) setStudents(await r.json());
     } catch {}
     setLoading(false);
@@ -61,14 +62,14 @@ export default function StudentManagement() {
   async function save() {
     const selectedLevel = form.school_npsn ? (schoolLevel.get(form.school_npsn) || 'SD') : levelTab;
     if (editId) {
-      await fetch(`/api/students/${editId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      await api(`/api/students/${editId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         nama: form.nama, nisn: form.nisn || null, nik: form.nik || null,
         jenis_kelamin: form.jenis_kelamin, tempat_lahir: form.tempat_lahir || null,
         tanggal_lahir: form.tanggal_lahir || null, kelas_kelompok: form.kelas_kelompok,
         rombel: form.rombel || null
       })});
     } else {
-      await fetch('/api/students', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      await api('/api/students', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         ...form, nisn: form.nisn || null, nik: form.nik || null,
         jenjang: selectedLevel, status_siswa: 'aktif'
       })});
@@ -78,7 +79,7 @@ export default function StudentManagement() {
 
   async function remove(id: string) {
     if (!confirm('Hapus siswa ini?')) return;
-    await fetch(`/api/students/${id}`, { method: 'DELETE' });
+    await api(`/api/students/${id}`, { method: 'DELETE' });
     load();
   }
 
@@ -103,7 +104,7 @@ export default function StudentManagement() {
     if (checkedIds.size === 0) return;
     if (!confirm(`Hapus ${checkedIds.size} siswa yang dipilih?`)) return;
     for (const id of checkedIds) {
-      await fetch(`/api/students/${id}`, { method: 'DELETE' });
+      await api(`/api/students/${id}`, { method: 'DELETE' });
     }
     setCheckedIds(new Set());
     load();
@@ -123,7 +124,7 @@ export default function StudentManagement() {
     for (const s of selected) {
       const next = GRADE_NEXT[s.kelas_kelompok];
       if (!next) continue;
-      await fetch(`/api/students/${s.id}`, {
+      await api(`/api/students/${s.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kelas_kelompok: next, rombel: null }),

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from '../api';
 import { SimulationResult } from '../types';
 import {
   Cpu,
@@ -24,7 +25,7 @@ export default function ScenarioSimulator() {
   const runSimulation = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/simulate', {
+      const response = await api('/api/simulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

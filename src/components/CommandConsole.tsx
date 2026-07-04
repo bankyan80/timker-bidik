@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { api } from '../api';
 import {
   Terminal,
   Send,
@@ -57,7 +58,7 @@ export default function CommandConsole() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await api('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text })

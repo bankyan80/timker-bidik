@@ -1,10 +1,11 @@
 import { School, VillageStats, AlertMessage, Recommendation } from '../types';
+import { api } from '../api';
 
 let cachedSchools: School[] | null = null;
 
 async function fetchJson<T>(url: string): Promise<T | null> {
   try {
-    const res = await fetch(url);
+    const res = await api(url);
     if (!res.ok) return null;
     return await res.json() as T;
   } catch {

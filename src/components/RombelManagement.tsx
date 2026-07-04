@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from '../api';
 import { School, BookOpen, AlertTriangle } from 'lucide-react';
 
 interface SchoolData {
@@ -27,8 +28,8 @@ export default function RombelManagement() {
     (async () => {
       try {
         const [rSchools, rRombel] = await Promise.all([
-          fetch('/api/schools').then(r => { if (!r.ok) throw new Error('Gagal memuat sekolah'); return r.json(); }),
-          fetch('/api/students/rombels').then(r => { if (!r.ok) throw new Error('Gagal memuat rombel'); return r.json(); }),
+          api('/api/schools').then(r => { if (!r.ok) throw new Error('Gagal memuat sekolah'); return r.json(); }),
+          api('/api/students/rombels').then(r => { if (!r.ok) throw new Error('Gagal memuat rombel'); return r.json(); }),
         ]);
         setSchools(rSchools);
 

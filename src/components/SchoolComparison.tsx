@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from '../api';
 import { BarChart3, Users, GraduationCap, Building2, Award, Wifi, BookOpen, Plus, X, MapPin } from 'lucide-react';
 import { ALL_SCHOOLS } from '../data/mockData';
 
@@ -18,7 +19,7 @@ export default function SchoolComparison() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch('/api/schools/stats');
+        const r = await api('/api/schools/stats');
         if (r.ok) setSchools(await r.json());
       } catch {}
       setLoading(false);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from '../api';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Search,
@@ -382,7 +383,7 @@ export default function DocumentIntel() {
         }));
       }, 300);
 
-      const res = await fetch('/api/upload-file', {
+      const res = await api('/api/upload-file', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

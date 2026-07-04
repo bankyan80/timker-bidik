@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from '../api';
 import { MapPin, Users, Wifi, Building2, Award, ChevronLeft, AlertTriangle, GraduationCap, Search, School as SchoolIcon } from 'lucide-react';
 import { ALL_SCHOOLS } from '../data/mockData';
 
@@ -70,7 +71,7 @@ export default function SchoolProfile({ selectedNpsn, onBack }: { selectedNpsn?:
     if (!npsn) return;
     (async () => {
       try {
-        const r = await fetch(`/api/schools/${npsn}`);
+        const r = await api(`/api/schools/${npsn}`);
         if (r.ok) setData(await r.json());
       } catch {}
     })();

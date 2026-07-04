@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { api } from '../api';
 import {
   Calendar, ChevronLeft, ChevronRight, List, BarChart3, X, Plus, Edit3, Trash2,
   BookOpen, Sun, AlertTriangle, Users, GraduationCap, FileText, Flag, CheckCircle,
@@ -80,7 +81,7 @@ export default function AcademicCalendar() {
         if (filterSemester) params.set('semester', String(filterSemester));
         if (filterCategory) params.set('category', filterCategory);
         if (filterLevel !== 'ALL') params.set('level', filterLevel);
-        const r = await fetch(`/api/calendar?${params}`);
+        const r = await api(`/api/calendar?${params}`);
         if (r.ok) { const data = await r.json(); setEvents(data); }
       } catch { /* use fallback */ }
       setLoading(false);
@@ -145,9 +146,9 @@ export default function AcademicCalendar() {
       try {
         const payload = { title, category, semester, start_date: startDate, end_date: endDate, description, education_level: educationLevel, created_by: role };
         if (event) {
-          await fetch(`/api/calendar/${event.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          await api(`/api/calendar/${event.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         } else {
-          const res = await fetch('/api/calendar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          const res = await api('/api/calendar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
           if (res.ok) {
             const created = await res.json();
             setLocalEvents(prev => [...prev, created]);
@@ -156,7 +157,7 @@ export default function AcademicCalendar() {
         setShowAddModal(false);
         setEditingEvent(null);
         // Reload
-        const r = await fetch('/api/calendar');
+        const r = await api('/api/calendar');
         if (r.ok) setEvents(await r.json());
       } catch {}
       setSaving(false);
@@ -260,7 +261,7 @@ export default function AcademicCalendar() {
               <button onClick={onEdit} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg flex items-center gap-1.5"><Edit3 className="h-3.5 w-3.5" /> Edit</button>
               <button onClick={onDelete} className="px-3 py-1.5 bg-red-950/40 hover:bg-red-900/40 text-red-400 text-xs rounded-lg flex items-center gap-1.5"><Trash2 className="h-3.5 w-3.5" /> Hapus</button>
               <button onClick={async () => {
-                await fetch(`/api/calendar/${event.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ completed: event.completed ? 0 : 1 }) });
+                await api(`/api/calendar/${event.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ completed: event.completed ? 0 : 1 }) });
                 setEvents(prev => prev.map(e => e.id === event.id ? { ...e, completed: e.completed ? 0 : 1 } : e));
                 onClose();
               }} className="px-3 py-1.5 bg-emerald-950/40 hover:bg-emerald-900/40 text-emerald-400 text-xs rounded-lg flex items-center gap-1.5">
@@ -284,7 +285,7 @@ export default function AcademicCalendar() {
   }
 
   const handleDeleteEvent = async (id: string) => {
-    await fetch(`/api/calendar/${id}`, { method: 'DELETE' });
+    await api(`/api/calendar/${id}`, { method: 'DELETE' });
     setEvents(prev => prev.filter(e => e.id !== id));
     setSelectedEvent(null);
   };

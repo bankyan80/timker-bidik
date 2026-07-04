@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from '../api';
 import { School, AlertMessage, Recommendation } from '../types';
 import { loadSchools, loadAlerts, loadRecommendations } from '../data/dataService';
 import {
@@ -42,7 +43,7 @@ export default function LiveMonitor({ onSelectSchool, recs, setRecs }: LiveMonit
 
   const handleApplyAction = async (recId: string) => {
     try {
-      await fetch(`/api/recommendations/${recId}/apply`, { method: 'POST' });
+      await api(`/api/recommendations/${recId}/apply`, { method: 'POST' });
     } catch {}
     setRecs(prev => prev.map(r => r.id === recId ? { ...r, applied: true } : r));
     const targetRec = recs.find(r => r.id === recId);

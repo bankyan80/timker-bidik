@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { api } from '../api';
 import {
   Search, Users, Building2, School, ChevronDown, ChevronUp,
   Filter, Loader2, AlertCircle, CheckCircle, X, FileText, Calendar, Plus, Trash2
@@ -40,7 +41,7 @@ export default function ManajemenPegawai() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/employees-with-docs');
+        const res = await api('/api/employees-with-docs');
         if (!res.ok) throw new Error('API unavailable');
         const rows: any[] = await res.json();
         const mapped: Pegawai[] = rows.map(r => ({
@@ -64,7 +65,7 @@ export default function ManajemenPegawai() {
   const openPeriodModal = async (emp: Pegawai) => {
     setPeriodModal({ emp, periods: [], loading: true });
     try {
-      const res = await fetch(`/api/employees/${emp.id}/periods`);
+      const res = await api(`/api/employees/${emp.id}/periods`);
       const periods = res.ok ? await res.json() : [];
       setPeriodModal({ emp, periods, loading: false });
     } catch {
@@ -83,7 +84,7 @@ export default function ManajemenPegawai() {
     const endDate = end.toISOString().slice(0, 10);
     setAddingPeriod(true);
     try {
-      const res = await fetch(`/api/employees/${emp.id}/periods`, {
+      const res = await api(`/api/employees/${emp.id}/periods`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tanggal_mulai: today, tanggal_selesai: endDate }),
@@ -110,7 +111,7 @@ export default function ManajemenPegawai() {
   const endPeriod = async (period: EmployeePeriod) => {
     if (!periodModal) return;
     try {
-      const res = await fetch(`/api/employees/${periodModal.emp.id}/periods/${period.id}`, {
+      const res = await api(`/api/employees/${periodModal.emp.id}/periods/${period.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'selesai' }),
@@ -126,7 +127,7 @@ export default function ManajemenPegawai() {
   const deletePeriod = async (period: EmployeePeriod) => {
     if (!periodModal) return;
     try {
-      const res = await fetch(`/api/employees/${periodModal.emp.id}/periods/${period.id}`, { method: 'DELETE' });
+      const res = await api(`/api/employees/${periodModal.emp.id}/periods/${period.id}`, { method: 'DELETE' });
       if (!res.ok) return;
       setPeriodModal({
         ...periodModal,

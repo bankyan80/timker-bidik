@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from '../api';
 import { TrendingUp, Target, BarChart3, Users, School, Award, ChevronDown } from 'lucide-react';
 import { ALL_SCHOOLS, GET_VILLAGE_STATS } from '../data/mockData';
 
@@ -18,7 +19,7 @@ export default function TargetKPI() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch('/api/schools/stats');
+        const r = await api('/api/schools/stats');
         if (r.ok) setSchools(await r.json());
       } catch {}
     })();
