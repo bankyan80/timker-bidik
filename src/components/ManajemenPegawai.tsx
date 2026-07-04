@@ -63,6 +63,7 @@ export default function ManajemenPegawai() {
   const [levelTab, setLevelTab] = useState<string>('SD');
   const [periodModal, setPeriodModal] = useState<{ emp: Pegawai; periods: EmployeePeriod[]; loading: boolean } | null>(null);
   const [addingPeriod, setAddingPeriod] = useState(false);
+  const [newPeriodStart, setNewPeriodStart] = useState('');
   const [editModal, setEditModal] = useState<{ emp: Pegawai; data: EditData; saving: boolean } | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -93,6 +94,7 @@ export default function ManajemenPegawai() {
 
   const openPeriodModal = async (emp: Pegawai) => {
     setPeriodModal({ emp, periods: [], loading: true });
+    setNewPeriodStart('');
     try {
       const res = await api(`/api/employees/${emp.id}/periods`);
       const periods = res.ok ? await res.json() : [];
@@ -103,12 +105,12 @@ export default function ManajemenPegawai() {
   };
 
   const addPeriod = async () => {
-    if (!periodModal) return;
+    if (!periodModal || !newPeriodStart) return;
     const { emp, periods } = periodModal;
     const isPppkPw = emp.status_pegawai === 'PPPK PW' || emp.status_pegawai?.toLowerCase().includes('paruh');
     const tahun = isPppkPw ? 1 : 5;
-    const today = new Date().toISOString().slice(0, 10);
-    const end = new Date();
+    const startDate = new Date(newPeriodStart);
+    const end = new Date(startDate);
     end.setFullYear(end.getFullYear() + tahun);
     const endDate = end.toISOString().slice(0, 10);
     setAddingPeriod(true);
@@ -116,7 +118,7 @@ export default function ManajemenPegawai() {
       const res = await api(`/api/employees/${emp.id}/periods`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tanggal_mulai: today, tanggal_selesai: endDate }),
+        body: JSON.stringify({ tanggal_mulai: newPeriodStart, tanggal_selesai: endDate }),
       });
       if (!res.ok) return;
       const result = await res.json();
@@ -125,7 +127,7 @@ export default function ManajemenPegawai() {
         periods: [...periods, {
           id: result.id,
           employee_id: emp.id,
-          tanggal_mulai: today,
+          tanggal_mulai: newPeriodStart,
           tanggal_selesai: endDate,
           status: 'aktif',
           created_at: Date.now(),
@@ -133,6 +135,7 @@ export default function ManajemenPegawai() {
         }],
         loading: false,
       });
+      setNewPeriodStart('');
     } catch {}
     setAddingPeriod(false);
   };
@@ -442,11 +445,18 @@ export default function ManajemenPegawai() {
                 </div>
               )}
 
-              <button onClick={addPeriod} disabled={addingPeriod}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-mono font-bold bg-indigo-950/40 text-indigo-300 border border-dashed border-indigo-800 hover:bg-indigo-900/40 disabled:opacity-40 transition-all cursor-pointer">
-                {addingPeriod ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                {periodModal.emp.status_pegawai === 'PPPK PW' || periodModal.emp.status_pegawai?.toLowerCase().includes('paruh') ? 'Tambah Periode (1 tahun)' : 'Tambah Periode (5 tahun)'}
-              </button>
+              <div className="border-t border-[#1f2937] pt-3 space-y-2">
+                <label className="text-[10px] font-mono text-slate-400 uppercase">TMT Mulai Kontrak</label>
+                <div className="flex items-center gap-2">
+                  <input type="date" value={newPeriodStart} onChange={e => setNewPeriodStart(e.target.value)}
+                    className="flex-1 px-3 py-2 bg-[#0c0e12] border border-[#1f2937] rounded-lg text-xs font-mono text-slate-200" />
+                  <button onClick={addPeriod} disabled={addingPeriod || !newPeriodStart}
+                    className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-mono font-bold bg-indigo-950/40 text-indigo-300 border border-dashed border-indigo-800 hover:bg-indigo-900/40 disabled:opacity-40 transition-all cursor-pointer shrink-0">
+                    {addingPeriod ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                    {periodModal.emp.status_pegawai === 'PPPK PW' || periodModal.emp.status_pegawai?.toLowerCase().includes('paruh') ? 'Tambah (1 tahun)' : 'Tambah (5 tahun)'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
