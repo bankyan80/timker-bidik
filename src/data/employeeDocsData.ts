@@ -1,4 +1,5 @@
 import { ALL_SCHOOLS } from './mockData';
+import { api } from '../api';
 
 // ── Types matching the DB rows from API ──
 interface EmployeeRow {
@@ -77,7 +78,7 @@ function mapDocToCategory(jenisDokumen: string, kategori: string): DocumentItem[
 
 export async function loadEmployees(): Promise<Employee[]> {
   try {
-    const res = await fetch('/api/employees-with-docs')
+    const res = await api('/api/employees-with-docs')
     if (!res.ok) return []
     const rows: any[] = await res.json()
     const employees: Employee[] = []
