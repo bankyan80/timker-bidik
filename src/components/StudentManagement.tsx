@@ -58,7 +58,7 @@ export default function StudentManagement() {
     let f = students.filter(s => s.jenjang === levelTab);
     if (search) { const q = search.toLowerCase(); f = f.filter(s => s.nama.toLowerCase().includes(q) || (s.nisn && s.nisn.includes(q))); }
     if (filterSchool !== 'ALL') f = f.filter(s => s.school_npsn === filterSchool);
-    if (filterKelas !== 'ALL') f = f.filter(s => (s.rombel || s.kelas_kelompok) === filterKelas);
+    if (filterKelas !== 'ALL') f = f.filter(s => (s.rombel && s.rombel.toLowerCase() !== s.kelas_kelompok.toLowerCase() ? s.rombel : '-') === filterKelas);
     setFiltered(f);
     setCurrentPage(1);
   }, [search, filterSchool, filterKelas, levelTab, students]);
@@ -303,7 +303,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
         ) : (
           <select value={filterKelas} onChange={e => setFilterKelas(e.target.value)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
             <option value="ALL">Semua Rombel</option>
-            {[...new Set(filteredByLevel.map(s => s.rombel || s.kelas_kelompok).filter(Boolean))].map(r => <option key={r} value={r}>{r}</option>)}
+            {[...new Set(filteredByLevel.map(s => s.rombel && s.rombel.toLowerCase() !== s.kelas_kelompok.toLowerCase() ? s.rombel : '-').filter(Boolean))].map(r => <option key={r} value={r}>{r}</option>)}
           </select>
         )}
       </div>
@@ -364,7 +364,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                   {levelTab === 'SD' ? (
                     <>
                       <td className="px-4 py-3 text-slate-300">{s.kelas_kelompok}</td>
-                      <td className="px-4 py-3 text-slate-400 text-[11px]">{s.rombel || '-'}</td>
+                      <td className="px-4 py-3 text-slate-400 text-[11px]">{s.rombel && s.rombel.toLowerCase() !== s.kelas_kelompok.toLowerCase() ? s.rombel : '-'}</td>
                     </>
                   ) : (
                     <td className="px-4 py-3 text-slate-300">{s.rombel || s.kelas_kelompok}</td>
