@@ -444,34 +444,34 @@ function PageMutationsMasuk({ mutations, period }: { mutations: MutationRow[]; p
       <h2 className="text-base font-bold uppercase text-center border-b border-gray-300 pb-2 mb-4">Bab IV — Siswa Masuk</h2>
       <p className="text-[9px] text-gray-500 mb-3">Periode: {period}</p>
 
-      {masuk.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 text-sm">Tidak ada data mutasi masuk untuk periode ini.</div>
-      ) : (
-        <table className="w-full text-[9px] border-collapse mb-4">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-gray-300 p-1.5 text-left w-8">No</th>
-              <th className="border border-gray-300 p-1.5 text-left">Nama</th>
-              <th className="border border-gray-300 p-1.5 text-left">NISN</th>
-              <th className="border border-gray-300 p-1.5 text-left">Kelas Tujuan</th>
-              <th className="border border-gray-300 p-1.5 text-left">Asal Sekolah</th>
-              <th className="border border-gray-300 p-1.5 text-left">Tanggal</th>
+      <table className="w-full text-[9px] border-collapse mb-4">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="border border-gray-300 p-1.5 text-left w-8">No</th>
+            <th className="border border-gray-300 p-1.5 text-left">Nama</th>
+            <th className="border border-gray-300 p-1.5 text-left">NISN</th>
+            <th className="border border-gray-300 p-1.5 text-left">Kelas Tujuan</th>
+            <th className="border border-gray-300 p-1.5 text-left">Asal Sekolah</th>
+            <th className="border border-gray-300 p-1.5 text-left">Tanggal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {masuk.length === 0 ? (
+            <tr>
+              <td colSpan={6} className="border border-gray-300 p-3 text-center text-gray-400">-</td>
             </tr>
-          </thead>
-          <tbody>
-            {masuk.map((m, i) => (
-              <tr key={m.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-                <td className="border border-gray-300 p-1.5 text-center">{i + 1}</td>
-                <td className="border border-gray-300 p-1.5">{m.siswa_nama}</td>
-                <td className="border border-gray-300 p-1.5">{m.siswa_nisn}</td>
-                <td className="border border-gray-300 p-1.5">{m.kelas_kelompok || '-'}</td>
-                <td className="border border-gray-300 p-1.5">{m.alasan || '-'}</td>
-                <td className="border border-gray-300 p-1.5">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+          ) : masuk.map((m, i) => (
+            <tr key={m.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
+              <td className="border border-gray-300 p-1.5 text-center">{i + 1}</td>
+              <td className="border border-gray-300 p-1.5">{m.siswa_nama}</td>
+              <td className="border border-gray-300 p-1.5">{m.siswa_nisn}</td>
+              <td className="border border-gray-300 p-1.5">{m.kelas_kelompok || '-'}</td>
+              <td className="border border-gray-300 p-1.5">{m.alasan || '-'}</td>
+              <td className="border border-gray-300 p-1.5">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       <div className="border border-gray-300 p-3 rounded bg-green-50 mt-2">
         <p className="text-[10px]"><strong>Ringkasan:</strong> Total {masuk.length} siswa masuk pada periode {period}.</p>
@@ -487,34 +487,34 @@ function PageMutationsKeluar({ mutations, period }: { mutations: MutationRow[]; 
       <h2 className="text-base font-bold uppercase text-center border-b border-gray-300 pb-2 mb-4">Bab V — Siswa Keluar</h2>
       <p className="text-[9px] text-gray-500 mb-3">Periode: {period}</p>
 
-      {keluar.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 text-sm">Tidak ada data mutasi keluar untuk periode ini.</div>
-      ) : (
-        <table className="w-full text-[9px] border-collapse mb-4">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-gray-300 p-1.5 text-left w-8">No</th>
-              <th className="border border-gray-300 p-1.5 text-left">Nama</th>
-              <th className="border border-gray-300 p-1.5 text-left">NISN</th>
-              <th className="border border-gray-300 p-1.5 text-left">Kelas</th>
-              <th className="border border-gray-300 p-1.5 text-left">Sekolah Tujuan</th>
-              <th className="border border-gray-300 p-1.5 text-left">Tanggal</th>
+      <table className="w-full text-[9px] border-collapse mb-4">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="border border-gray-300 p-1.5 text-left w-8">No</th>
+            <th className="border border-gray-300 p-1.5 text-left">Nama</th>
+            <th className="border border-gray-300 p-1.5 text-left">NISN</th>
+            <th className="border border-gray-300 p-1.5 text-left">Kelas</th>
+            <th className="border border-gray-300 p-1.5 text-left">Sekolah Tujuan</th>
+            <th className="border border-gray-300 p-1.5 text-left">Tanggal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {keluar.length === 0 ? (
+            <tr>
+              <td colSpan={6} className="border border-gray-300 p-3 text-center text-gray-400">-</td>
             </tr>
-          </thead>
-          <tbody>
-            {keluar.map((m, i) => (
-              <tr key={m.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
-                <td className="border border-gray-300 p-1.5 text-center">{i + 1}</td>
-                <td className="border border-gray-300 p-1.5">{m.siswa_nama}</td>
-                <td className="border border-gray-300 p-1.5">{m.siswa_nisn}</td>
-                <td className="border border-gray-300 p-1.5">{m.kelas_kelompok || '-'}</td>
-                <td className="border border-gray-300 p-1.5">{m.alasan || '-'}</td>
-                <td className="border border-gray-300 p-1.5">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+          ) : keluar.map((m, i) => (
+            <tr key={m.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
+              <td className="border border-gray-300 p-1.5 text-center">{i + 1}</td>
+              <td className="border border-gray-300 p-1.5">{m.siswa_nama}</td>
+              <td className="border border-gray-300 p-1.5">{m.siswa_nisn}</td>
+              <td className="border border-gray-300 p-1.5">{m.kelas_kelompok || '-'}</td>
+              <td className="border border-gray-300 p-1.5">{m.alasan || '-'}</td>
+              <td className="border border-gray-300 p-1.5">{m.tanggal ? formatDate(m.tanggal) : '-'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       <div className="border border-gray-300 p-3 rounded bg-red-50 mt-2">
         <p className="text-[10px]"><strong>Ringkasan:</strong> Total {keluar.length} siswa keluar pada periode {period}.</p>
