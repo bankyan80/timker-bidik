@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
+import { useAuth } from './AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Search,
@@ -64,6 +65,11 @@ function mapCategoryToDBKategori(category: string, docName: string): string {
 }
 
 export default function DocumentIntel() {
+  const { user } = useAuth();
+  const isOperator = user?.role === 'operator_sekolah';
+  const operatorSchoolName = user?.schoolName || '';
+  const operatorNpsn = user?.schoolNpsn || '';
+
   // Theme Detection State
   const [theme, setTheme] = useState<'light' | 'dark' | 'command' | 'emerald'>('dark');
 
@@ -105,7 +111,7 @@ export default function DocumentIntel() {
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterSchool, setFilterSchool] = useState('ALL');
+  const [filterSchool, setFilterSchool] = useState(isOperator ? operatorSchoolName : 'ALL');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [filterCompleteness, setFilterCompleteness] = useState('ALL');
   const [filterCategory, setFilterCategory] = useState('ALL');
@@ -126,7 +132,7 @@ export default function DocumentIntel() {
     name: '',
     nipNik: '',
     status: 'PNS' as 'PNS' | 'PPPK' | 'Honorer',
-    school: ALL_SCHOOLS[0]?.name || '',
+    school: isOperator ? operatorSchoolName : (ALL_SCHOOLS[0]?.name || ''),
     position: ''
   });
 
@@ -296,13 +302,31 @@ export default function DocumentIntel() {
       name: '',
       nipNik: '',
       status: 'PNS',
-      school: ALL_SCHOOLS[0]?.name || '',
+      school: isOperator ? operatorSchoolName : (ALL_SCHOOLS[0]?.name || ''),
       position: ''
     });
 
     // Flash loading
     setLoading(true);
     setTimeout(() => setLoading(false), 300);
+
+    // Persist to API
+    (async () => {
+      try {
+        const npsnMap = new Map(ALL_SCHOOLS.map(s => [s.name, s.npsn]));
+        await api('/api/employees', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nama: newEmpForm.name,
+            nip: newEmpForm.nipNik,
+            status_pegawai: newEmpForm.status,
+            jabatan: newEmpForm.position,
+            sekolah_id: npsnMap.get(newEmpForm.school) || operatorNpsn || '',
+          })
+        });
+      } catch {}
+    })();
   };
 
   // Upload Engine Actions

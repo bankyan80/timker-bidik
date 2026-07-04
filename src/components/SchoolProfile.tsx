@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
-import { MapPin, Users, Wifi, Building2, Award, ChevronLeft, AlertTriangle, GraduationCap, Search, School as SchoolIcon } from 'lucide-react';
+import { MapPin, Users, Wifi, Building2, Award, ChevronLeft, AlertTriangle, GraduationCap, Search, School as SchoolIcon, Pencil, Save, X, Loader2 } from 'lucide-react';
 import { ALL_SCHOOLS } from '../data/mockData';
+import { useAuth } from './AuthContext';
 
 interface SchoolDetail {
   npsn: string; name: string; level: string; status: string; village: string;
@@ -56,7 +57,11 @@ function SchoolCard({ school, onClick }: { school: any; onClick: () => void }) {
 }
 
 export default function SchoolProfile({ selectedNpsn, onBack }: { selectedNpsn?: string; onBack?: () => void }) {
-  const [npsn, setNpsn] = useState(selectedNpsn || null);
+  const { user } = useAuth();
+  const isOperator = user?.role === 'operator_sekolah';
+  const operatorNpsn = user?.schoolNpsn;
+  const initialNpsn = selectedNpsn || (isOperator ? operatorNpsn : null);
+  const [npsn, setNpsn] = useState<string | null>(initialNpsn || null);
   const [data, setData] = useState<SchoolDetail | null>(null);
   const [tab, setTab] = useState<'siswa' | 'guru' | 'fasilitas'>('siswa');
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,8 +84,8 @@ export default function SchoolProfile({ selectedNpsn, onBack }: { selectedNpsn?:
 
   // List view (no school selected)
   if (!npsn) {
-    let filtered = [...ALL_SCHOOLS];
-    if (searchQuery) {
+    let filtered = isOperator ? ALL_SCHOOLS.filter(s => s.npsn === operatorNpsn) : [...ALL_SCHOOLS];
+    if (!isOperator && searchQuery) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(s => s.name.toLowerCase().includes(q) || s.npsn.includes(q) || s.village.toLowerCase().includes(q));
     }
@@ -88,7 +93,7 @@ export default function SchoolProfile({ selectedNpsn, onBack }: { selectedNpsn?:
     else if (sortBy === 'students') filtered.sort((a, b) => b.students.total - a.students.total);
     else filtered.sort((a, b) => a.name.localeCompare(b.name));
 
-    const avgHealth = Math.round(filtered.reduce((s, sc) => s + sc.healthScore, 0) / filtered.length);
+    const avgHealth = Math.round(filtered.reduce((s, sc) => s + sc.healthScore, 0) / (filtered.length || 1));
     const totalStudents = filtered.reduce((s, sc) => s + sc.students.total, 0);
     const totalTeachers = filtered.reduce((s, sc) => s + sc.teachers.total, 0);
     const critical = filtered.filter(s => s.healthScore < 40).length;
@@ -98,7 +103,7 @@ export default function SchoolProfile({ selectedNpsn, onBack }: { selectedNpsn?:
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white tracking-tight">Profil Sekolah</h1>
-            <p className="text-sm text-slate-400 mt-1">{ALL_SCHOOLS.length} sekolah di Kecamatan Lemahabang</p>
+            <p className="text-sm text-slate-400 mt-1">{filtered.length} sekolah{isOperator ? '' : ' di Kecamatan Lemahabang'}</p>
           </div>
         </div>
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight, Trash, ArrowUp } from 'lucide-react';
 import { ALL_SCHOOLS } from '../data/mockData';
+import { useAuth } from './AuthContext';
 
 interface Student {
   id: string; school_npsn: string; nama: string; nisn: string | null;
@@ -21,10 +22,15 @@ const kelasByLevel: Record<string, string[]> = {
 };
 
 export default function StudentManagement() {
+  const { user } = useAuth();
+  const isOperator = user?.role === 'operator_sekolah';
+  const operatorNpsn = user?.schoolNpsn || '';
+  const operatorName = user?.schoolName || '';
+
   const [students, setStudents] = useState<Student[]>([]);
   const [filtered, setFiltered] = useState<Student[]>([]);
   const [search, setSearch] = useState('');
-  const [filterSchool, setFilterSchool] = useState('ALL');
+  const [filterSchool, setFilterSchool] = useState(isOperator ? operatorNpsn : 'ALL');
   const [filterKelas, setFilterKelas] = useState('ALL');
   const [levelTab, setLevelTab] = useState<string>('SD');
   const [loading, setLoading] = useState(true);
@@ -34,7 +40,7 @@ export default function StudentManagement() {
   const [formOpen, setFormOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({
-    school_npsn: '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki',
+    school_npsn: isOperator ? operatorNpsn : '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki',
     tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: 'Kelas 1',
     rombel: '', tahun_pelajaran: '2025/2026'
   });
@@ -219,10 +225,12 @@ export default function StudentManagement() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama atau NISN..." className="w-full pl-9 pr-4 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-700"/>
         </div>
-        <select value={filterSchool} onChange={e => setFilterSchool(e.target.value)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
-          <option value="ALL">Semua Sekolah</option>
-          {ALL_SCHOOLS.filter(s => s.level === levelTab).map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
-        </select>
+        {!isOperator && (
+          <select value={filterSchool} onChange={e => setFilterSchool(e.target.value)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
+            <option value="ALL">Semua Sekolah</option>
+            {ALL_SCHOOLS.filter(s => s.level === levelTab).map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
+          </select>
+        )}
         {levelTab === 'SD' ? (
           <select value={filterKelas} onChange={e => setFilterKelas(e.target.value)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
             <option value="ALL">Semua Kelas</option>
@@ -346,13 +354,19 @@ export default function StudentManagement() {
                 <label className="text-[10px] font-mono text-slate-400 uppercase">Nama Lengkap</label>
                 <input value={form.nama} onChange={e => setForm({...form, nama: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
               </div>
-              {!editId && (
+              {!editId && !isOperator && (
                 <div className="col-span-2">
                   <label className="text-[10px] font-mono text-slate-400 uppercase">Sekolah</label>
                   <select value={form.school_npsn} onChange={e => handleSchoolChange(e.target.value)} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
                     <option value="">Pilih Sekolah</option>
                     {ALL_SCHOOLS.map(s => <option key={s.npsn} value={s.npsn}>{s.name} ({s.level})</option>)}
                   </select>
+                </div>
+              )}
+              {!editId && isOperator && (
+                <div className="col-span-2">
+                  <label className="text-[10px] font-mono text-slate-400 uppercase">Sekolah</label>
+                  <div className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-slate-300 mt-1">{operatorName}</div>
                 </div>
               )}
               <div>

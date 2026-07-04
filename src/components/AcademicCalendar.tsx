@@ -6,6 +6,7 @@ import {
   Printer, Download, Search, Filter, Clock, MapPin, User, Save, Bell
 } from 'lucide-react';
 import type { CalendarEvent } from '../types';
+import { useAuth } from './AuthContext';
 
 // ── PDF-sourced event data (fallback when API unavailable) ──
 const FALLBACK_EVENTS: CalendarEvent[] = [
@@ -68,7 +69,8 @@ export default function AcademicCalendar() {
   const [filterLevel, setFilterLevel] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [role, setRole] = useState<string>(() => localStorage.getItem('kaldik-role') || 'operator');
+  const { user } = useAuth();
+  const role = user?.role === 'admin' ? 'admin' : user?.role === 'staff_kecamatan' ? 'staff' : 'operator';
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [localEvents, setLocalEvents] = useState<CalendarEvent[]>([]);
@@ -144,7 +146,7 @@ export default function AcademicCalendar() {
       e.preventDefault();
       setSaving(true);
       try {
-        const payload = { title, category, semester, start_date: startDate, end_date: endDate, description, education_level: educationLevel, created_by: role };
+        const payload = { title, category, semester, start_date: startDate, end_date: endDate, description, education_level: educationLevel, created_by: user?.username || role };
         if (event) {
           await api(`/api/calendar/${event.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         } else {
@@ -304,20 +306,15 @@ export default function AcademicCalendar() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Role selector */}
-          <div className="flex bg-slate-900 rounded-lg border border-slate-700 p-0.5">
-            {['admin','staff','operator'].map(r => (
-              <button key={r} onClick={() => saveRole(r)} className={`px-2.5 py-1.5 text-[10px] font-mono rounded transition-colors ${role === r ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white'}`}>
-                {r === 'admin' ? 'Admin' : r === 'staff' ? 'Staf Kec.' : 'Operator'}
-              </button>
-            ))}
-          </div>
-          {role === 'admin' && (
-            <button onClick={() => { setEditingEvent(null); setShowAddModal(true); }} className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium rounded-lg flex items-center gap-1.5">
-              <Plus className="h-3.5 w-3.5" /> Tambah Event
-            </button>
-          )}
-          {role === 'staff' && (
+          {/* Role badge (read-only from auth) */}
+          <span className={`px-2.5 py-1.5 text-[10px] font-mono rounded-lg border ${
+            role === 'admin' ? 'bg-cyan-950/40 text-cyan-300 border-cyan-800' :
+            role === 'staff' ? 'bg-indigo-950/40 text-indigo-300 border-indigo-800' :
+            'bg-slate-800 text-slate-400 border-slate-700'
+          }`}>
+            {role === 'admin' ? '🔑 Admin' : role === 'staff' ? '📋 Staf Kecamatan' : '🏫 ' + (user?.schoolName || 'Operator')}
+          </span>
+          {(role === 'admin' || role === 'staff') && (
             <button onClick={() => setShowSchoolPrep(true)} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg flex items-center gap-1.5">
               <Bell className="h-3.5 w-3.5" /> Kirim Notifikasi
             </button>

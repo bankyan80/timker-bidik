@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import { School, BookOpen, AlertTriangle } from 'lucide-react';
+import { useAuth } from './AuthContext';
 
 interface SchoolData {
   npsn: string;
@@ -18,6 +19,8 @@ interface RombelEntry {
 }
 
 export default function RombelManagement() {
+  const { user } = useAuth();
+  const operatorNpsn = user?.schoolNpsn;
   const [levelTab, setLevelTab] = useState('SD');
   const [schools, setSchools] = useState<SchoolData[]>([]);
   const [stats, setStats] = useState<Record<string, { rombels: number; siswa: number }>>({});
