@@ -220,7 +220,26 @@ export default function ManajemenPegawai() {
   };
 
   const updateEditField = (key: keyof EditData, value: string) => {
-    setEditModal(prev => prev ? { ...prev, data: { ...prev.data, [key]: value } } : null);
+    setEditModal(prev => {
+      if (!prev) return null;
+      const data = { ...prev.data, [key]: value };
+      // Auto-calculate BUP when tanggal_lahir or status_pegawai changes
+      if ((key === 'tanggal_lahir' || key === 'status_pegawai') && data.tanggal_lahir) {
+        const parts = data.tanggal_lahir.split('-');
+        if (parts.length === 3) {
+          const year = parseInt(parts[0]);
+          const month = parseInt(parts[1]); // 1-12
+          const retirementAge = 60;
+          const retYear = year + retirementAge;
+          // BUP = 1st day of month following retirement month
+          const bupMonth = month + 1;
+          const bupYear = bupMonth > 12 ? retYear + 1 : retYear;
+          const bupMonthNormalized = bupMonth > 12 ? bupMonth - 12 : bupMonth;
+          data.tanggal_bup = `${bupYear}-${String(bupMonthNormalized).padStart(2, '0')}-01`;
+        }
+      }
+      return { ...prev, data };
+    });
   };
 
   const levels = ['SD', 'TK', 'KB'];
@@ -453,7 +472,11 @@ export default function ManajemenPegawai() {
                 <Field label="Jurusan" value={editModal.data.jurusan} onChange={v => updateEditField('jurusan', v)} />
                 <Field label="Sertifikasi" value={editModal.data.sertifikasi} onChange={v => updateEditField('sertifikasi', v)} />
                 <Field label="TMT Kerja" value={editModal.data.tmt_kerja} onChange={v => updateEditField('tmt_kerja', v)} />
-                <Field label="Tanggal BUP" value={editModal.data.tanggal_bup} onChange={v => updateEditField('tanggal_bup', v)} />
+                <div>
+                  <label className="text-[10px] font-mono text-slate-400 uppercase">Tanggal BUP <span className="text-cyan-500">(otomatis)</span></label>
+                  <input value={editModal.data.tanggal_bup} disabled
+                    className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-slate-400 mt-1 opacity-70 cursor-not-allowed" />
+                </div>
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-[#1f2937]">
