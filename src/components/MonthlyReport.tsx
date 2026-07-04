@@ -94,6 +94,14 @@ export default function MonthlyReport() {
         </button>
       </div>
 
+      {/* Print-only header */}
+      <div id="print-header-wrap" className="hidden print:block text-center mb-6 pb-3 border-b-2 border-black">
+        <h1 className="text-xl font-bold m-0">LAPORAN BULANAN</h1>
+        <p className="text-sm m-0">TIM KERJA BIDIK 360 KECAMATAN LEMAHABANG</p>
+        <p className="text-sm m-0 text-gray-500">Periode: {data.period}</p>
+        <p className="text-xs m-0 text-gray-500">Dicetak: {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+      </div>
+
       {/* Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         {summaryCards.map(c => (
@@ -311,15 +319,80 @@ export default function MonthlyReport() {
 
       <style>{`
         @media print {
-          body { background: white !important; color: black !important; }
-          @page { size: A4 portrait; margin: 15mm; }
+          @page { size: A4 portrait; margin: 20mm 15mm; }
+          body { background: white !important; color: #000 !important; font-size: 10pt; line-height: 1.5; font-family: 'Times New Roman', Times, serif; }
+
           .print\\:hidden { display: none !important; }
-          .bg-\\[\\#0c0e12\\] { background: white !important; border-color: #ddd !important; }
-          .bg-\\[\\#08090b\\] { background: #f9fafb !important; }
-          .text-gray-400 { color: #666 !important; }
-          .text-cyan-400 { color: #0891b2 !important; }
-          .border-\\[\\#1f2937\\] { border-color: #ddd !important; }
-          .text-2xl { font-size: 1.5rem !important; }
+
+          .bg-\\[\\#0c0e12\\] { background: white !important; border-color: #999 !important; }
+          .bg-\\[\\#08090b\\] { background: #f5f5f5 !important; }
+          .text-gray-400, .text-gray-500 { color: #444 !important; }
+          .text-cyan-400 { color: #0369a1 !important; }
+          .text-blue-400 { color: #1d4ed8 !important; }
+          .text-pink-400 { color: #be185d !important; }
+          .text-green-400 { color: #15803d !important; }
+          .text-yellow-400 { color: #a16207 !important; }
+          .text-red-400 { color: #b91c1c !important; }
+          .text-purple-400 { color: #7c3aed !important; }
+
+          .rounded-xl, .rounded-lg, .rounded-md { border-radius: 0 !important; }
+
+          .border-\\[\\#1f2937\\] { border-color: #999 !important; }
+          .border-\\[\\#1f2937\\]\\/50 { border-color: #ccc !important; }
+
+          .gap-4, .gap-3, .gap-2 { gap: 6pt !important; }
+          .p-5 { padding: 8pt 10pt !important; }
+          .p-3 { padding: 4pt 8pt !important; }
+          .p-6 { padding: 0 !important; }
+          .py-8 { padding-top: 10pt !important; padding-bottom: 10pt !important; }
+          .py-2 { padding-top: 3pt !important; padding-bottom: 3pt !important; }
+          .px-4 { padding-left: 8pt !important; padding-right: 8pt !important; }
+          .mb-8 { margin-bottom: 12pt !important; }
+          .mb-6 { margin-bottom: 10pt !important; }
+          .mb-3 { margin-bottom: 4pt !important; }
+
+          .text-2xl { font-size: 14pt !important; }
+          .text-xl { font-size: 12pt !important; }
+          .text-lg { font-size: 11pt !important; }
+          .text-sm { font-size: 9pt !important; }
+          .text-xs { font-size: 8pt !important; }
+
+          .break-inside-avoid { page-break-inside: avoid; }
+
+          .grid { display: block !important; }
+          .grid > div { display: inline-block !important; width: 30% !important; vertical-align: top !important; margin: 2pt !important; }
+
+          .md\\:grid-cols-3 > div { width: 30% !important; }
+          .md\\:grid-cols-4 > div { width: 22% !important; }
+          .grid-cols-2 > div { width: 45% !important; }
+          .grid-cols-3 > div { width: 30% !important; }
+
+          table { border-collapse: collapse !important; width: 100% !important; }
+          table th, table td { border: 1px solid #999 !important; padding: 3pt 5pt !important; text-align: left !important; }
+          table th { background: #e5e7eb !important; font-weight: bold !important; }
+          table td.text-right { text-align: right !important; }
+
+          .flex { display: flex !important; }
+          .items-center { align-items: center !important; }
+          .justify-between { justify-content: space-between !important; }
+
+          h1, h2, h3, h4 { font-family: 'Times New Roman', Times, serif !important; }
+
+          .break-before { page-break-before: always; }
+
+          .print-header { display: block !important; text-align: center; margin-bottom: 16pt; padding-bottom: 8pt; border-bottom: 2px solid #000; }
+          .print-header h1 { font-size: 16pt; font-weight: bold; margin: 0 0 4pt; }
+          .print-header p { font-size: 10pt; margin: 0; color: #333; }
+          :not(.print-header) { display: revert; }
+          #print-header-wrap { display: block !important; }
+
+          .print-summary { display: flex !important; justify-content: space-around !important; margin-bottom: 12pt; }
+          .print-summary > div { text-align: center; }
+          .print-summary .num { font-size: 14pt; font-weight: bold; }
+          .print-summary .lbl { font-size: 8pt; color: #555; }
+
+          .section-title { font-size: 10pt; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #666; padding-bottom: 2pt; margin-bottom: 4pt; }
+          .print-alert { border: 1px solid #ccc; padding: 3pt 5pt; margin-top: 3pt; font-size: 8pt; }
         }
       `}</style>
     </div>
