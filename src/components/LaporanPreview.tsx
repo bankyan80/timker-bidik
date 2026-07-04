@@ -339,7 +339,7 @@ function PageEmployees({ employeeList }: { employeeList: EmployeeRow[] }) {
     <div className="p-10 font-serif text-xs leading-relaxed">
       <BABTitle label="Bab II — Data Pegawai" />
 
-      <ReportTable headers={['No', 'Nama', 'Status', 'Jenis Tugas']}>
+      <ReportTable headers={['No', 'Nama', 'Status', 'Jabatan']}>
         {sorted.slice(0, 30).map((e, i) => (
           <tr key={e.id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
             <td className="border border-gray-200 p-2.5 text-gray-900 text-center w-8">{i + 1}</td>
