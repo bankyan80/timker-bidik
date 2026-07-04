@@ -864,30 +864,32 @@ app.get('/api/document-search', authenticateToken, async (req, res) => {
   const { q = '' } = req.query;
   const query = q.toString();
 
-  if (!query) {
-    return res.json(await getDocuments());
-  }
-
   // Search both main documents table and employee_documents
-  const docs = await searchDocuments(query);
+  const docs = query ? await searchDocuments(query) : [];
 
-  // Also search employee_documents
   const { getDb } = await import('./db');
   const db = getDb();
   if (db) {
-    const q = query.toLowerCase();
+    const searchQ = query.toLowerCase();
     const schoolScope = getSchoolScope(req);
     let empDocs;
-    if (schoolScope) {
+    const whereClause = query
+      ? `WHERE (LOWER(ed.nama_file) LIKE ? OR LOWER(ed.jenis_dokumen) LIKE ? OR LOWER(ed.kategori) LIKE ? OR LOWER(e.nama) LIKE ?)`
+      : '';
+    const scopeClause = schoolScope ? (whereClause ? ' AND' : 'WHERE') + ' e.sekolah_id = ?' : '';
+    const params: any[] = query
+      ? [`%${searchQ}%`, `%${searchQ}%`, `%${searchQ}%`, `%${searchQ}%`]
+      : [];
+    if (schoolScope) params.push(schoolScope);
+
+    if (!query && !schoolScope) {
+      // No query, no scope — return all docs (limit 200)
       empDocs = await db.execute({
         sql: `SELECT ed.*, e.nama as employee_name, e.sekolah_id, sk.name as school_name
               FROM employee_documents ed
               LEFT JOIN employees e ON e.id = ed.employee_id
               LEFT JOIN schools sk ON sk.npsn = e.sekolah_id
-              WHERE (LOWER(ed.nama_file) LIKE ? OR LOWER(ed.jenis_dokumen) LIKE ? OR LOWER(ed.kategori) LIKE ? OR LOWER(e.nama) LIKE ?)
-                AND e.sekolah_id = ?
-              LIMIT 50`,
-        args: [`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, schoolScope]
+              LIMIT 200`,
       });
     } else {
       empDocs = await db.execute({
@@ -895,9 +897,9 @@ app.get('/api/document-search', authenticateToken, async (req, res) => {
               FROM employee_documents ed
               LEFT JOIN employees e ON e.id = ed.employee_id
               LEFT JOIN schools sk ON sk.npsn = e.sekolah_id
-              WHERE LOWER(ed.nama_file) LIKE ? OR LOWER(ed.jenis_dokumen) LIKE ? OR LOWER(ed.kategori) LIKE ? OR LOWER(e.nama) LIKE ?
-              LIMIT 50`,
-        args: [`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`]
+              ${whereClause}${scopeClause}
+              LIMIT 200`,
+        args: params,
       });
     }
     const mapped = empDocs.rows.map((row: any) => ({
@@ -915,7 +917,7 @@ app.get('/api/document-search', authenticateToken, async (req, res) => {
     return res.json([...docs, ...mapped]);
   }
 
-  res.json(docs);
+  res.json(query ? docs : []);
 });
 
 // 7. Student API
