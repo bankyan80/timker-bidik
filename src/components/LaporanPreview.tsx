@@ -190,7 +190,7 @@ function PageCover({ school, period, employeeList }: { school: ReportSchool; per
           <p className="text-xs text-gray-600">Dinas Pendidikan</p>
           <p className="text-base font-bold mt-1.5 text-gray-900">{school.name}</p>
           <p className="text-[11px] text-gray-500 mt-0.5">
-            Desa {school.village}, Kec. Lemahabang, Kab. Cirebon — Jawa Barat
+            {school.village ? school.village.charAt(0).toUpperCase() + school.village.slice(1).toLowerCase() : ''}, Kec. Lemahabang, Kab. Cirebon — Jawa Barat
           </p>
           <p className="text-[11px] text-gray-400">NPSN: {school.npsn}</p>
         </div>
