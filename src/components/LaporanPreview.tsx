@@ -692,9 +692,10 @@ function PagePenutup({ school, period, kepalaSekolah, operator }: {
       <div className="mt-auto pt-6 border-t border-gray-200">
         <div className="grid grid-cols-3 gap-6">
           {/* Mengetahui — Ketua Tim Kerja */}
-          <div className="text-center">
-            <p className="text-xs font-semibold text-gray-700 mb-6">Mengetahui,<br />a.n Kepala Dinas Pendidikan<br />Kabupaten Cirebon,<br />Ketua Tim Kerja Bidang Pendidikan Dasar<br />Kecamatan Lemahabang</p>
-            <div className="h-12" />
+          <div className="text-center flex flex-col">
+            <div className="flex flex-col justify-end" style={{ minHeight: '110px' }}>
+              <p className="text-[10px] leading-snug font-semibold text-gray-700 mb-5">Mengetahui,<br />a.n Kepala Dinas Pendidikan<br />Kabupaten Cirebon,<br />Ketua Tim Kerja Bidang Pendidikan Dasar<br />Kecamatan Lemahabang</p>
+            </div>
             <div className="w-44 mx-auto">
               <p className="text-xs font-bold text-gray-800">( ___________________ )</p>
               <div className="border-t-2 border-gray-600 mt-1 mb-1" />
@@ -703,9 +704,10 @@ function PagePenutup({ school, period, kepalaSekolah, operator }: {
           </div>
 
           {/* Kepala Sekolah */}
-          <div className="text-center">
-            <p className="text-xs font-semibold text-gray-700 mb-6">Mengetahui,<br />Kepala Sekolah</p>
-            <div className="h-14" />
+          <div className="text-center flex flex-col">
+            <div className="flex flex-col justify-end" style={{ minHeight: '110px' }}>
+              <p className="text-xs leading-snug font-semibold text-gray-700 mb-5">Mengetahui,<br />Kepala Sekolah</p>
+            </div>
             <div className="w-44 mx-auto">
               <p className="text-xs font-bold text-gray-800">{kepalaSekolah ? kepalaSekolah.nama : '( ___________________ )'}</p>
               <div className="border-t-2 border-gray-600 mt-1 mb-1" />
@@ -714,9 +716,10 @@ function PagePenutup({ school, period, kepalaSekolah, operator }: {
           </div>
 
           {/* Operator Sekolah */}
-          <div className="text-center">
-            <p className="text-xs font-semibold text-gray-700 mb-6">Penyusun Laporan,<br />Operator Sekolah</p>
-            <div className="h-14" />
+          <div className="text-center flex flex-col">
+            <div className="flex flex-col justify-end" style={{ minHeight: '110px' }}>
+              <p className="text-xs leading-snug font-semibold text-gray-700 mb-5">Penyusun Laporan,<br />Operator Sekolah</p>
+            </div>
             <div className="w-44 mx-auto">
               <p className="text-xs font-bold text-gray-800">{operator ? operator.nama : '( ___________________ )'}</p>
               <div className="border-t-2 border-gray-600 mt-1 mb-1" />
