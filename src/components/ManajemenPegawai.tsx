@@ -51,6 +51,7 @@ interface EditData {
 
 const STATUS_OPTIONS = ['PNS', 'PPPK', 'PPPK PW', 'Honorer', 'Lainnya'];
 const GENDER_OPTIONS = ['Laki-laki', 'Perempuan'];
+const JABATAN_OPTIONS = ['Kepala Sekolah', 'Guru Kelas', 'Guru Agama', 'Guru PJOK', 'Guru Muatan Lokal', 'Kepala Tata Usaha', 'Staf Administrasi', 'Operator Sekolah', 'Pustakawan', 'Penjaga Sekolah', 'Petugas Kebersihan'];
 
 export default function ManajemenPegawai() {
   const [pegawai, setPegawai] = useState<Pegawai[]>([]);
@@ -229,7 +230,8 @@ export default function ManajemenPegawai() {
         if (parts.length === 3) {
           const year = parseInt(parts[0]);
           const month = parseInt(parts[1]); // 1-12
-          const retirementAge = data.jabatan === 'Tenaga Kependidikan' ? 58 : 60;
+          const nonGuru = ['Kepala Tata Usaha', 'Staf Administrasi', 'Operator Sekolah', 'Pustakawan', 'Penjaga Sekolah', 'Petugas Kebersihan'];
+          const retirementAge = nonGuru.includes(data.jabatan) ? 58 : 60;
           const retYear = year + retirementAge;
           // BUP = 1st day of month following retirement month
           const bupMonth = month + 1;
@@ -465,7 +467,7 @@ export default function ManajemenPegawai() {
                 <Field label="Tempat Lahir" value={editModal.data.tempat_lahir} onChange={v => updateEditField('tempat_lahir', v)} />
                 <Field label="Tanggal Lahir" value={editModal.data.tanggal_lahir} onChange={v => updateEditField('tanggal_lahir', v)} />
                 <Select label="Jenis Kelamin" value={editModal.data.jenis_kelamin} options={GENDER_OPTIONS} onChange={v => updateEditField('jenis_kelamin', v)} />
-                <Field label="Jabatan" value={editModal.data.jabatan} onChange={v => updateEditField('jabatan', v)} />
+                <Select label="Jabatan" value={editModal.data.jabatan} options={JABATAN_OPTIONS} onChange={v => updateEditField('jabatan', v)} />
                 <Select label="Status Pegawai" value={editModal.data.status_pegawai} options={STATUS_OPTIONS} onChange={v => updateEditField('status_pegawai', v)} />
                 <Field label="Pangkat/Golongan" value={editModal.data.pangkat_golongan} onChange={v => updateEditField('pangkat_golongan', v)} />
                 <Field label="Pendidikan Terakhir" value={editModal.data.pendidikan_terakhir} onChange={v => updateEditField('pendidikan_terakhir', v)} />
