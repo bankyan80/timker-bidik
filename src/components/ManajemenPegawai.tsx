@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
 import {
-  Search, Users, Building2, School, ChevronDown, ChevronUp,
-  Filter, Loader2, AlertCircle, CheckCircle, X, FileText, Calendar, Plus, Trash2
+  Search, Users, Building2, School,
+  Loader2, X, Calendar, Plus, Trash2
 } from 'lucide-react';
 
 interface Pegawai {
@@ -34,7 +34,6 @@ export default function ManajemenPegawai() {
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState<'Negeri' | 'Swasta'>('Negeri');
   const [levelTab, setLevelTab] = useState<string>('SD');
-  const [expandedSchools, setExpandedSchools] = useState<Set<string>>(new Set());
   const [periodModal, setPeriodModal] = useState<{ emp: Pegawai; periods: EmployeePeriod[]; loading: boolean } | null>(null);
   const [addingPeriod, setAddingPeriod] = useState(false);
 
@@ -144,28 +143,8 @@ export default function ManajemenPegawai() {
       (p.nama.toLowerCase().includes(search.toLowerCase()) ||
        p.nipNik.includes(search) ||
        p.sekolah_nama.toLowerCase().includes(search.toLowerCase()))
-    ), [pegawai, statusTab, levelTab, search]);
-
-  const groupedBySchool = useMemo(() => {
-    const map = new Map<string, Pegawai[]>();
-    filtered.forEach(p => {
-      const key = p.sekolah_nama;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(p);
-    });
-    map.forEach((emps, name) => {
-      map.set(name, emps.sort((a, b) => a.nama.localeCompare(b.nama)));
-    });
-    return map;
-  }, [filtered]);
-
-  const toggleSchool = (name: string) => {
-    setExpandedSchools(prev => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name); else next.add(name);
-      return next;
-    });
-  };
+    ).sort((a, b) => a.sekolah_nama.localeCompare(b.sekolah_nama) || a.nama.localeCompare(b.nama)),
+  [pegawai, statusTab, levelTab, search]);
 
   const statusCount = (status: string, level: string) =>
     pegawai.filter(p => p.sekolah_status === status && p.sekolah_level === level).length;
@@ -223,75 +202,59 @@ export default function ManajemenPegawai() {
           <Loader2 className="h-5 w-5 animate-spin mr-2" />
           <span className="text-xs font-mono">Memuat data...</span>
         </div>
-      ) : groupedBySchool.size === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="text-center py-20 text-slate-600">
           <Building2 className="h-10 w-10 mx-auto mb-3 opacity-40" />
           <p className="text-xs font-mono">{search ? 'Pencarian tidak ditemukan' : `Tidak ada pegawai untuk ${statusTab} / ${levelTab}`}</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {[...groupedBySchool.entries()].map(([schoolName, emps]) => (
-            <div key={schoolName} className="bg-[#151922] border border-[#1f2937] rounded-lg overflow-hidden">
-              <button onClick={() => toggleSchool(schoolName)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#1a1f2c] transition-all cursor-pointer">
-                <div className="flex items-center gap-2">
-                  <School className="h-4 w-4 text-slate-400" />
-                  <span className="text-sm font-bold text-slate-200 font-mono">{schoolName}</span>
-                  <span className="text-[10px] text-slate-500 font-mono bg-slate-800 px-2 py-0.5 rounded">{emps.length} pegawai</span>
-                </div>
-                {expandedSchools.has(schoolName) ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
-              </button>
-
-              {expandedSchools.has(schoolName) && (
-                <div className="border-t border-[#1f2937]">
-                  <table className="w-full text-[11px] font-mono">
-                    <thead>
-                      <tr className="bg-[#0c0e12] text-slate-400">
-                        <th className="text-left p-2 pl-4 font-semibold">Nama</th>
-                        <th className="text-left p-2 font-semibold">NIP/NIK</th>
-                        <th className="text-left p-2 font-semibold">Status</th>
-                        <th className="text-left p-2 font-semibold">Jabatan</th>
-                        <th className="text-center p-2 font-semibold">Dokumen</th>
-                        <th className="text-center p-2 pr-4 font-semibold">Periode</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {emps.map(emp => (
-                        <tr key={emp.id} className="border-t border-[#1f2937] hover:bg-[#1a1f2c] transition-all">
-                          <td className="p-2 pl-4 text-slate-200 font-bold">{emp.nama}</td>
-                          <td className="p-2 text-slate-300">{emp.nipNik}</td>
-                          <td className="p-2">
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] ${
-                              emp.status_pegawai?.toLowerCase().includes('pns') ? 'bg-blue-950 text-blue-300 border border-blue-900' :
-                              emp.status_pegawai?.toLowerCase().includes('pppk') ? 'bg-purple-950 text-purple-300 border border-purple-900' :
-                              emp.status_pegawai?.toLowerCase() === 'lainnya' || emp.status_pegawai === '-' ? 'bg-slate-800 text-slate-400 border border-slate-700' :
-                              'bg-amber-950 text-amber-300 border border-amber-900'
-                            }`}>
-                              {emp.status_pegawai || '-'}
-                            </span>
-                          </td>
-                          <td className="p-2 text-slate-400">{emp.jabatan}</td>
-                          <td className="p-2 text-center">
-                            <span className="text-slate-400">{emp.doc_count}</span>
-                          </td>
-                          <td className="p-2 pr-4 text-center">
-                            {emp.status_pegawai?.toLowerCase().includes('pppk') ? (
-                              <button onClick={() => openPeriodModal(emp)}
-                                className="text-[10px] px-2 py-1 rounded bg-indigo-950/40 text-indigo-300 border border-indigo-800 hover:bg-indigo-900/40 transition-all cursor-pointer">
-                                <Calendar className="h-3 w-3 inline mr-1" />Periode
-                              </button>
-                            ) : (
-                              <span className="text-[10px] text-slate-600">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          ))}
+        <div className="bg-[#151922] border border-[#1f2937] rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-[11px] font-mono">
+              <thead>
+                <tr className="bg-[#0c0e12] text-slate-400">
+                  <th className="text-left p-3 pl-4 font-semibold">Nama</th>
+                  <th className="text-left p-3 font-semibold">NIP/NIK</th>
+                  <th className="text-left p-3 font-semibold">Status</th>
+                  <th className="text-left p-3 font-semibold">Jabatan</th>
+                  <th className="text-left p-3 font-semibold">Sekolah</th>
+                  <th className="text-center p-3 font-semibold">Dok</th>
+                  <th className="text-center p-3 pr-4 font-semibold">Periode</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(emp => (
+                  <tr key={emp.id} className="border-t border-[#1f2937] hover:bg-[#1a1f2c] transition-all">
+                    <td className="p-3 pl-4 text-slate-200 font-bold whitespace-nowrap">{emp.nama}</td>
+                    <td className="p-3 text-slate-300 whitespace-nowrap">{emp.nipNik}</td>
+                    <td className="p-3 whitespace-nowrap">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                        emp.status_pegawai?.toLowerCase().includes('pns') ? 'bg-blue-950 text-blue-300 border border-blue-900' :
+                        emp.status_pegawai?.toLowerCase().includes('pppk') ? 'bg-purple-950 text-purple-300 border border-purple-900' :
+                        emp.status_pegawai?.toLowerCase() === 'lainnya' || emp.status_pegawai === '-' ? 'bg-slate-800 text-slate-400 border border-slate-700' :
+                        'bg-amber-950 text-amber-300 border border-amber-900'
+                      }`}>
+                        {emp.status_pegawai || '-'}
+                      </span>
+                    </td>
+                    <td className="p-3 text-slate-400 whitespace-nowrap">{emp.jabatan}</td>
+                    <td className="p-3 text-slate-400 whitespace-nowrap">{emp.sekolah_nama}</td>
+                    <td className="p-3 text-center text-slate-400">{emp.doc_count}</td>
+                    <td className="p-3 pr-4 text-center">
+                      {emp.status_pegawai?.toLowerCase().includes('pppk') ? (
+                        <button onClick={() => openPeriodModal(emp)}
+                          className="text-[10px] px-2 py-1 rounded bg-indigo-950/40 text-indigo-300 border border-indigo-800 hover:bg-indigo-900/40 transition-all cursor-pointer">
+                          <Calendar className="h-3 w-3 inline mr-1" />Periode
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-slate-600">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {/* Period Modal */}
