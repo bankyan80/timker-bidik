@@ -4,7 +4,7 @@ import fs from 'fs';
 import jwt from 'jsonwebtoken';
 import { GoogleGenAI } from '@google/genai';
 import { SimulationScenario, SimulationResult } from './types';
-import { initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod, getMonthlyReport } from './db';
+import { getDb, initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod, getMonthlyReport, getUserByUsername, changePassword, deleteEmployeeDocument, getStudentDetail, upsertStudentParents, upsertStudentAddress, upsertStudentHealth } from './db';
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -73,7 +73,6 @@ app.post('/api/auth/login', async (req, res) => {
 
   // Try DB first
   try {
-    const { getUserByUsername } = await import('./db');
     const dbUser = await getUserByUsername(username);
     if (dbUser && dbUser.password === password) {
       if (dbUser.role === 'operator_sekolah' && dbUser.school_npsn) {
@@ -137,7 +136,6 @@ app.put('/api/auth/change-password', authenticateToken, async (req, res) => {
   }
 
   // Verify current password via DB
-  const { getUserByUsername, changePassword } = await import('./db');
   const dbUser = await getUserByUsername(req.user!.username);
   if (!dbUser || dbUser.password !== currentPassword) {
     return res.status(400).json({ error: 'Password saat ini salah' });
@@ -552,7 +550,6 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
 
 // 🚀 Batch endpoint: returns employees + their documents in 2 queries (not N+1)
 app.get('/api/employees-with-docs', authenticateToken, async (req, res) => {
-  const { getDb } = await import('./db');
   const db = getDb();
   if (!db) return res.json([]);
 
@@ -615,7 +612,6 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
 app.put('/api/employees/:id', authenticateToken, async (req, res) => {
   const schoolScope = getSchoolScope(req);
   if (schoolScope) {
-    const { getDb } = await import('./db');
     const db = getDb();
     if (db) {
       const emp = await db.execute('SELECT sekolah_id FROM employees WHERE id = ?', [req.params.id]);
@@ -632,7 +628,6 @@ app.put('/api/employees/:id', authenticateToken, async (req, res) => {
 app.delete('/api/employees/:id', authenticateToken, async (req, res) => {
   const schoolScope = getSchoolScope(req);
   if (schoolScope) {
-    const { getDb } = await import('./db');
     const db = getDb();
     if (db) {
       const emp = await db.execute('SELECT sekolah_id FROM employees WHERE id = ?', [req.params.id]);
@@ -691,7 +686,6 @@ app.post('/api/documents', authenticateToken, async (req, res) => {
 });
 
 app.delete('/api/documents/:id', authenticateToken, async (req, res) => {
-  const { getDb } = await import('./db');
   const db = getDb();
   if (!db) return res.status(500).json({ error: 'DB not available' });
 
@@ -719,14 +713,12 @@ app.delete('/api/documents/:id', authenticateToken, async (req, res) => {
     }
   }
 
-  const { deleteEmployeeDocument } = await import('./db');
   const result = await deleteEmployeeDocument(req.params.id);
   if (!result.ok) return res.status(500).json({ error: 'Failed to delete document' });
   res.json({ success: true });
 });
 
 app.post('/api/documents/:id/verify', authenticateToken, async (req, res) => {
-  const { getDb } = await import('./db');
   const db = getDb();
   if (db) {
     const schoolScope = getSchoolScope(req);
@@ -754,7 +746,6 @@ app.post('/api/upload-file', authenticateToken, async (req, res) => {
   }
   try {
     const { uploadToDrive } = await import('./drive');
-    const { getDb } = await import('./db');
     const db = getDb();
     if (!db) return res.status(500).json({ error: 'DB not available' });
 
@@ -772,7 +763,6 @@ app.post('/api/upload-file', authenticateToken, async (req, res) => {
     const buffer = Buffer.from(file, 'base64');
     const { fileId, driveUrl } = await uploadToDrive(buffer, fileName, mimeType, schoolName, fileName.split(' - ')[0] || schoolName);
 
-    const { upsertEmployeeDocument } = await import('./db');
     const ok = await upsertEmployeeDocument({
       employee_id: employeeId,
       school_id: sekolahId,
@@ -867,7 +857,6 @@ app.get('/api/document-search', authenticateToken, async (req, res) => {
   // Search both main documents table and employee_documents
   const docs = query ? await searchDocuments(query) : [];
 
-  const { getDb } = await import('./db');
   const db = getDb();
   if (db) {
     const searchQ = query.toLowerCase();
@@ -958,7 +947,6 @@ app.post('/api/students', authenticateToken, async (req, res) => {
 app.put('/api/students/:id', authenticateToken, async (req, res) => {
   const schoolScope = getSchoolScope(req);
   if (schoolScope) {
-    const { getDb } = await import('./db');
     const db = getDb();
     if (db) {
       const stu = await db.execute('SELECT school_npsn FROM students WHERE id = ?', [req.params.id]);
@@ -974,7 +962,6 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
 
 // Student detail endpoints (parents, address, health)
 app.get('/api/students/:id/detail', authenticateToken, async (req, res) => {
-  const { getDb, getStudentDetail } = await import('./db');
   const db = getDb();
   if (!db) return res.status(500).json({ error: 'DB not available' });
   // Find student to get NISN
@@ -991,7 +978,6 @@ app.get('/api/students/:id/detail', authenticateToken, async (req, res) => {
 });
 
 app.put('/api/students/:id/detail', authenticateToken, async (req, res) => {
-  const { getDb, getStudentDetail, upsertStudentParents, upsertStudentAddress, upsertStudentHealth } = await import('./db');
   const db = getDb();
   if (!db) return res.status(500).json({ error: 'DB not available' });
   const stu = await db.execute('SELECT id, nisn, school_npsn FROM students WHERE id = ?', [req.params.id]);
@@ -1016,7 +1002,6 @@ app.put('/api/students/:id/detail', authenticateToken, async (req, res) => {
 app.delete('/api/students/:id', authenticateToken, async (req, res) => {
   const schoolScope = getSchoolScope(req);
   if (schoolScope) {
-    const { getDb } = await import('./db');
     const db = getDb();
     if (db) {
       const stu = await db.execute('SELECT school_npsn FROM students WHERE id = ?', [req.params.id]);
@@ -1096,7 +1081,6 @@ app.get('/api/recommendations', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/recommendations/:id/apply', authenticateToken, async (req, res) => {
-  const { getDb } = await import('./db');
   const db = getDb();
   if (!db) return res.status(503).json({ error: 'Database unavailable' });
   try {
@@ -1112,7 +1096,6 @@ app.post('/api/recommendations/:id/apply', authenticateToken, async (req, res) =
 
 // Monthly report endpoint
 app.get('/api/reports/monthly', authenticateToken, async (req, res) => {
-  const { getMonthlyReport } = await import('./db');
   const schoolScope = getSchoolScope(req);
   const report = await getMonthlyReport(schoolScope || undefined);
   res.json({
@@ -1127,7 +1110,6 @@ app.get('/api/reports/monthly', authenticateToken, async (req, res) => {
 
 // Student mutation details for report preview
 app.get('/api/reports/mutations/:npsn', authenticateToken, async (req, res) => {
-  const { getDb } = await import('./db');
   const db = getDb();
   if (!db) return res.json([]);
   const schoolScope = getSchoolScope(req);
@@ -1145,7 +1127,6 @@ app.get('/api/reports/mutations/:npsn', authenticateToken, async (req, res) => {
 
 // Employees with full detail for report preview
 app.get('/api/reports/employees/:npsn', authenticateToken, async (req, res) => {
-  const { getDb } = await import('./db');
   const db = getDb();
   if (!db) return res.json([]);
   const schoolScope = getSchoolScope(req);
@@ -1161,7 +1142,6 @@ app.get('/api/reports/employees/:npsn', authenticateToken, async (req, res) => {
 
 // Seed missing data (alerts, recommendations)
 app.post('/api/debug/seed', authenticateToken, requireRole('admin'), async (req, res) => {
-  const { getDb } = await import('./db');
   const db = getDb();
   if (!db) return res.json({ db: 'unavailable' });
   try {
