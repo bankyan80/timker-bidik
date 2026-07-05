@@ -556,7 +556,7 @@ Semua data berasal dari:
 // 4. Employee & Document API
 app.get('/api/employees', authenticateToken, async (req, res) => {
   const { limit, offset } = req.query;
-  const pageLimit = Math.min(Math.max(parseInt(limit as string) || 200, 1), 500);
+  const pageLimit = Math.min(Math.max(parseInt(limit as string) || 10000, 1), 50000);
   const pageOffset = Math.max(parseInt(offset as string) || 0, 0);
   const schoolScope = getSchoolScope(req);
   let employees;
@@ -574,7 +574,7 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
   });
 });
 
-// 🚀 Batch endpoint: returns employees + their documents in 2 queries (not N+1)
+// 5. Schools & Dashboard API
 app.get('/api/employees-with-docs', authenticateToken, async (req, res) => {
   const db = getDb();
   if (!db) return res.json([]);
