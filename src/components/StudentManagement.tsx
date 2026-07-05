@@ -26,7 +26,7 @@ export default function StudentManagement() {
   const isOperator = user?.role === 'operator_sekolah';
   const operatorNpsn = user?.schoolNpsn || '';
   const operatorName = user?.schoolName || '';
-  const operatorLevel = isOperator ? (schoolLevel.get(operatorNpsn) || 'SD') : null;
+  const operatorLevel = isOperator ? (user?.schoolLevel || schoolLevel.get(operatorNpsn) || 'SD') : null;
 
   const [students, setStudents] = useState<Student[]>([]);
   const [filtered, setFiltered] = useState<Student[]>([]);

@@ -6,6 +6,7 @@ export interface AuthUser {
   role: 'admin' | 'staff_kecamatan' | 'operator_sekolah';
   schoolNpsn?: string;
   schoolName?: string;
+  schoolLevel?: string;
 }
 
 interface AuthContextType {

@@ -52,6 +52,7 @@ export interface AuthUser {
   role: 'admin' | 'staff_kecamatan' | 'operator_sekolah';
   schoolNpsn?: string;
   schoolName?: string;
+  schoolLevel?: string;
 }
 
 declare global {
@@ -117,7 +118,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
           if (school) {
             const user: AuthUser = {
               id: dbUser.id, username: dbUser.username, role: 'operator_sekolah',
-              schoolNpsn: school.npsn, schoolName: school.name,
+              schoolNpsn: school.npsn, schoolName: school.name, schoolLevel: school.level,
             };
             const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
             return res.json({ token, user });
