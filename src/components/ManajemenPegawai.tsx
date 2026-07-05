@@ -51,7 +51,11 @@ interface EditData {
   tanggal_bup: string;
 }
 
-const STATUS_OPTIONS = ['PNS', 'PPPK', 'PPPK PW', 'Honorer', 'Lainnya'];
+const STATUS_OPTIONS_NEGERI = ['PNS', 'PPPK', 'PPPK Paruh Waktu', 'Honorer Sekolah/Daerah'];
+const STATUS_OPTIONS_SWASTA = ['GTY/PTY', 'GTT/PTT'];
+function getStatusOptions(sekolahStatus: string): string[] {
+  return sekolahStatus === 'Negeri' ? STATUS_OPTIONS_NEGERI : STATUS_OPTIONS_SWASTA;
+}
 const GENDER_OPTIONS = ['Laki-laki', 'Perempuan'];
 const JABATAN_OPTIONS = ['Kepala Sekolah', 'Guru Kelas', 'Guru Agama', 'Guru PJOK', 'Guru Muatan Lokal', 'Kepala Tata Usaha', 'Staf Administrasi', 'Operator Sekolah', 'Pustakawan', 'Penjaga Sekolah', 'Petugas Kebersihan'];
 
@@ -330,6 +334,7 @@ export default function ManajemenPegawai() {
               <thead>
                 <tr className="bg-[#0c0e12] text-slate-400">
                   <th className="text-left p-3 pl-4 font-semibold">Nama</th>
+                  <th className="text-left p-3 font-semibold">NUPTK</th>
                   <th className="text-left p-3 font-semibold">NIP/NIK</th>
                   <th className="text-left p-3 font-semibold">Status</th>
                   <th className="text-left p-3 font-semibold">Jabatan</th>
@@ -345,13 +350,15 @@ export default function ManajemenPegawai() {
                     <td className="p-3 pl-4 text-slate-200 font-bold whitespace-nowrap">
                       {[emp._raw?.gelar_depan, emp.nama, emp._raw?.gelar_belakang ? `, ${emp._raw.gelar_belakang}` : ''].filter(Boolean).join(' ')}
                     </td>
+                    <td className="p-3 text-slate-400 whitespace-nowrap">{emp._raw?.nuptk || '—'}</td>
                     <td className="p-3 text-slate-300 whitespace-nowrap">{emp.nipNik}</td>
                     <td className="p-3 whitespace-nowrap">
                       <span className={`px-1.5 py-0.5 rounded text-[10px] ${
                         emp.status_pegawai?.toLowerCase().includes('pns') ? 'bg-blue-950 text-blue-300 border border-blue-900' :
                         emp.status_pegawai?.toLowerCase().includes('pppk') ? 'bg-purple-950 text-purple-300 border border-purple-900' :
-                        emp.status_pegawai?.toLowerCase() === 'lainnya' || emp.status_pegawai === '-' ? 'bg-slate-800 text-slate-400 border border-slate-700' :
-                        'bg-amber-950 text-amber-300 border border-amber-900'
+                        emp.status_pegawai?.toLowerCase().includes('gty') || emp.status_pegawai?.toLowerCase().includes('pty') ? 'bg-emerald-950 text-emerald-300 border border-emerald-900' :
+                        emp.status_pegawai?.toLowerCase().includes('gtt') || emp.status_pegawai?.toLowerCase().includes('ptt') ? 'bg-amber-950 text-amber-300 border border-amber-900' :
+                        'bg-slate-800 text-slate-400 border border-slate-700'
                       }`}>
                         {emp.status_pegawai || '-'}
                       </span>
@@ -486,7 +493,7 @@ export default function ManajemenPegawai() {
                 <Field label="Tanggal Lahir" value={editModal.data.tanggal_lahir} onChange={v => updateEditField('tanggal_lahir', v)} />
                 <Select label="Jenis Kelamin" value={editModal.data.jenis_kelamin} options={GENDER_OPTIONS} onChange={v => updateEditField('jenis_kelamin', v)} />
                 <Select label="Jabatan" value={editModal.data.jabatan} options={JABATAN_OPTIONS} onChange={v => updateEditField('jabatan', v)} />
-                <Select label="Status Pegawai" value={editModal.data.status_pegawai} options={STATUS_OPTIONS} onChange={v => updateEditField('status_pegawai', v)} />
+                <Select label={`Status Pegawai (${editModal.emp.sekolah_status})`} value={editModal.data.status_pegawai} options={getStatusOptions(editModal.emp.sekolah_status)} onChange={v => updateEditField('status_pegawai', v)} />
                 <Field label="Pangkat/Golongan" value={editModal.data.pangkat_golongan} onChange={v => updateEditField('pangkat_golongan', v)} />
                 <Field label="Pendidikan Terakhir" value={editModal.data.pendidikan_terakhir} onChange={v => updateEditField('pendidikan_terakhir', v)} />
                 <Field label="Jurusan" value={editModal.data.jurusan} onChange={v => updateEditField('jurusan', v)} />
