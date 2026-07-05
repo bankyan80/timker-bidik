@@ -58,7 +58,10 @@ export default function StudentManagement() {
     let f = students.filter(s => s.jenjang === levelTab);
     if (search) { const q = search.toLowerCase(); f = f.filter(s => s.nama.toLowerCase().includes(q) || (s.nisn && s.nisn.includes(q))); }
     if (filterSchool !== 'ALL') f = f.filter(s => s.school_npsn === filterSchool);
-    if (filterKelas !== 'ALL') f = f.filter(s => (s.rombel && s.rombel.toLowerCase() !== s.kelas_kelompok.toLowerCase() ? s.rombel : '-') === filterKelas);
+    if (filterKelas !== 'ALL') {
+      if (levelTab === 'SD') f = f.filter(s => s.kelas_kelompok === filterKelas);
+      else f = f.filter(s => (s.rombel && s.rombel.toLowerCase() !== s.kelas_kelompok.toLowerCase() ? s.rombel : '-') === filterKelas);
+    }
     setFiltered(f);
     setCurrentPage(1);
   }, [search, filterSchool, filterKelas, levelTab, students]);
@@ -67,7 +70,7 @@ export default function StudentManagement() {
     setLoading(true);
     try {
       const r = await api('/api/students');
-      if (r.ok) setStudents(await r.json());
+      if (r.ok) { const body = await r.json(); setStudents(body.data || body); }
     } catch {}
     setLoading(false);
   }
@@ -148,7 +151,7 @@ export default function StudentManagement() {
     if (promoted > 0) load();
   }
 
-  function resetForm() { setForm({ school_npsn: '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki', tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: 'Kelas 1', rombel: '', tahun_pelajaran: '2025/2026' }); }
+  function resetForm() { const y = new Date().getFullYear(); const m = new Date().getMonth(); const tp = m >= 6 ? `${y}/${y+1}` : `${y-1}/${y}`; setForm({ school_npsn: '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki', tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: 'Kelas 1', rombel: '', tahun_pelajaran: tp }); }
 
     async function openDetail(s: Student) {
     setDetailStudent(s);
@@ -303,7 +306,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
         ) : (
           <select value={filterKelas} onChange={e => setFilterKelas(e.target.value)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
             <option value="ALL">Semua Rombel</option>
-            {[...new Set(filteredByLevel.map(s => s.rombel && s.rombel.toLowerCase() !== s.kelas_kelompok.toLowerCase() ? s.rombel : '-').filter(Boolean))].map(r => <option key={r} value={r}>{r}</option>)}
+            {[...new Set(filteredByLevel.map(s => s.rombel && s.rombel.toLowerCase() !== s.kelas_kelompok.toLowerCase() ? s.rombel : '-').filter(Boolean))].map(r => <option key={r} value={r}>{r === '-' ? '— (tanpa rombel)' : r}</option>)}
           </select>
         )}
       </div>
@@ -344,9 +347,9 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
-                <tr><td colSpan={9} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
+                <tr><td colSpan={levelTab === 'SD' ? 9 : 8} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={9} className="text-center py-12 text-slate-500">Tidak ada data siswa untuk jenjang {levelTab}</td></tr>
+                <tr><td colSpan={levelTab === 'SD' ? 9 : 8} className="text-center py-12 text-slate-500">Tidak ada data siswa untuk jenjang {levelTab}</td></tr>
               ) : paginated.map(s => (
                 <tr key={s.id} className={`hover:bg-slate-800/30 transition-colors ${checkedIds.has(s.id) ? 'bg-cyan-950/20' : ''}`}>
                   <td className="w-10 px-2 py-3 text-center">
