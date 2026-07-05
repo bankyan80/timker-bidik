@@ -4,7 +4,7 @@ import { School, VillageStats, Recommendation, AlertMessage, DocumentMeta, Calen
 import { VILLAGES, ALL_SCHOOLS, GET_VILLAGE_STATS } from './data/mockData';
 
 const ALLOWED_COLUMNS_EMPLOYEE = new Set(['nama','nik','nip','nuptk','email','no_hp','tempat_lahir','tanggal_lahir','jenis_kelamin','jabatan','status_pegawai','pangkat_golongan','pendidikan_terakhir','jurusan','sertifikasi','tmt_kerja','tanggal_bup','foto_url','is_active','gelar_depan','gelar_belakang']);
-const ALLOWED_COLUMNS_STUDENT = new Set(['nama','nisn','nik','jenis_kelamin','tempat_lahir','tanggal_lahir','kelas_kelompok','rombel','status_siswa']);
+const ALLOWED_COLUMNS_STUDENT = new Set(['nama','nisn','nik','jenis_kelamin','tempat_lahir','tanggal_lahir','kelas_kelompok','rombel','status_siswa','jenjang']);
 const ALLOWED_COLUMNS_PERIOD = new Set(['tanggal_mulai','tanggal_selesai','status']);
 const ALLOWED_COLUMNS_CALENDAR = new Set(['title','category','semester','start_date','end_date','description','education_level','completed']);
 
@@ -1282,7 +1282,14 @@ export async function deleteStudent(id: string): Promise<boolean> {
   } catch (err) { console.error(err); return false; }
 }
 
-// â”€â”€ Student Detail CRUD (parents, addresses, health) â”€â”€
+export async function getStudentByNik(nik: string): Promise<StudentRow | null> {
+  const client = getDb();
+  if (!client) return null;
+  try {
+    const r = await client.execute({ sql: 'SELECT * FROM students WHERE nik = ? ORDER BY created_at DESC LIMIT 1', args: [nik] });
+    return (r.rows[0] as unknown as StudentRow) || null;
+  } catch (err) { console.error(err); return null; }
+}
 
 // ── Alumni CRUD ──
 

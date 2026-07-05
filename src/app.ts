@@ -8,7 +8,7 @@ import rateLimit from 'express-rate-limit';
 import { google } from 'googleapis';
 import { GoogleGenAI } from '@google/genai';
 import { SimulationScenario, SimulationResult } from './types';
-import { getDb, initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod, getMonthlyReport, getUserByUsername, changePassword, deleteEmployeeDocument, getStudentDetail, upsertStudentParents, upsertStudentAddress, upsertStudentHealth, getAllUsers, getUserById, createUser, updateUser, deleteUser, getAlumni, getAlumniById, insertAlumni, updateAlumni } from './db';
+import { getDb, initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getStudentByNik, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod, getMonthlyReport, getUserByUsername, changePassword, deleteEmployeeDocument, getStudentDetail, upsertStudentParents, upsertStudentAddress, upsertStudentHealth, getAllUsers, getUserById, createUser, updateUser, deleteUser, getAlumni, getAlumniById, insertAlumni, updateAlumni } from './db';
 import { getAuth as getDriveAuth } from './drive';
 
 function sanitizeAPI(val: unknown): string {
@@ -991,6 +991,22 @@ app.post('/api/students', authenticateToken, async (req, res) => {
   const stu = await insertStudent(sanitized);
   if (!stu) return res.status(400).json({ error: 'Gagal menambah siswa' });
   res.status(201).json(stu);
+});
+
+app.get('/api/students/lookup-by-nik/:nik', authenticateToken, async (req, res) => {
+  const { nik } = req.params;
+  if (!nik || nik.length < 5) return res.json(null);
+  const schoolScope = getSchoolScope(req);
+  const student = await getStudentByNik(nik);
+  if (!student) return res.json(null);
+  const db = getDb();
+  if (db) {
+    const schoolR = await db.execute('SELECT name FROM schools WHERE npsn = ?', [student.school_npsn]);
+    const schoolName = (schoolR.rows[0] as any)?.name || '';
+    if (schoolScope && student.school_npsn !== schoolScope) return res.json(null);
+    return res.json({ ...student, school_name: schoolName });
+  }
+  res.json(student);
 });
 
 app.put('/api/students/:id', authenticateToken, async (req, res) => {

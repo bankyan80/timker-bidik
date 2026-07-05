@@ -50,6 +50,8 @@ export default function StudentManagement() {
   const [gradStudents, setGradStudents] = useState<Student[]>([]);
   const [gradData, setGradData] = useState<Record<string, {status_lanjutan: string; tujuan_nama: string; tujuan_jenjang: string; alasan: string; alasan_detail: string}>>({});
   const [gradSaving, setGradSaving] = useState(false);
+  const [nikLookup, setNikLookup] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle');
+  const [foundStudent, setFoundStudent] = useState<any>(null);
 
   const [form, setForm] = useState({
     school_npsn: isOperator ? operatorNpsn : '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki',
@@ -91,6 +93,14 @@ export default function StudentManagement() {
         jenis_kelamin: form.jenis_kelamin, tempat_lahir: form.tempat_lahir || null,
         tanggal_lahir: form.tanggal_lahir || null, kelas_kelompok,
         rombel: form.rombel || null
+      })});
+    } else if (foundStudent) {
+      // TK/KB student found by NIK — update jenjang to SD instead of creating new
+      await api(`/api/students/${foundStudent.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        nama: form.nama, nisn: form.nisn || null, nik: form.nik || null,
+        jenis_kelamin: form.jenis_kelamin, tempat_lahir: form.tempat_lahir || null,
+        tanggal_lahir: form.tanggal_lahir || null, kelas_kelompok,
+        rombel: form.rombel || null, jenjang: 'SD', status_siswa: 'aktif'
       })});
     } else {
       await api('/api/students', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
@@ -187,7 +197,7 @@ export default function StudentManagement() {
     if (promoted > 0) load();
   }
 
-  function resetForm() { const y = new Date().getFullYear(); const m = new Date().getMonth(); const tp = m >= 6 ? `${y}/${y+1}` : `${y-1}/${y}`; setForm({ school_npsn: '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki', tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: 'Kelas 1', rombel: '', tahun_pelajaran: tp }); }
+  function resetForm() { setNikLookup('idle'); setFoundStudent(null); const y = new Date().getFullYear(); const m = new Date().getMonth(); const tp = m >= 6 ? `${y}/${y+1}` : `${y-1}/${y}`; setForm({ school_npsn: '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki', tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: '1', rombel: '', tahun_pelajaran: tp }); }
 
     async function openDetail(s: Student) {
     setDetailStudent(s);
@@ -455,6 +465,50 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
           <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-lg space-y-4" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-bold text-white">{editId ? 'Edit Siswa' : 'Tambah Siswa Baru'}</h2>
             <div className="grid grid-cols-2 gap-3">
+              {/* NIK first for SD new student — auto-lookup */}
+              {formLevel === 'SD' && !editId && (
+                <div className="col-span-2">
+                  <label className="text-[10px] font-mono text-slate-400 uppercase">
+                    NIK <span className="text-cyan-400">(Cari data)</span>
+                  </label>
+                  <div className="flex gap-2 items-center">
+                    <input value={form.nik} onChange={e => { setForm({...form, nik: e.target.value}); if (foundStudent) { setFoundStudent(null); setNikLookup('idle'); } }}
+                      onBlur={async () => {
+                        const nik = form.nik.trim();
+                        if (nik.length < 5) return;
+                        setNikLookup('loading');
+                        try {
+                          const r = await api('/api/students/lookup-by-nik/' + encodeURIComponent(nik));
+                          if (r.ok) {
+                            const data = await r.json();
+                            if (data && data.id && data.jenjang !== 'SD') {
+                              setFoundStudent(data);
+                              setNikLookup('found');
+                              setForm(p => ({
+                                ...p, nama: data.nama || p.nama, nisn: data.nisn || p.nisn,
+                                jenis_kelamin: data.jenis_kelamin?.toLowerCase().includes('laki') || data.jenis_kelamin === 'L' ? 'Laki-laki' : data.jenis_kelamin?.toLowerCase().includes('pere') || data.jenis_kelamin === 'P' ? 'Perempuan' : p.jenis_kelamin,
+                                tempat_lahir: data.tempat_lahir || p.tempat_lahir, tanggal_lahir: data.tanggal_lahir || p.tanggal_lahir,
+                              }));
+                            } else {
+                              setFoundStudent(null);
+                              setNikLookup(data ? 'notfound' : 'notfound');
+                            }
+                          } else { setNikLookup('notfound'); }
+                        } catch { setNikLookup('notfound'); }
+                      }}
+                      className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"
+                      placeholder="Masukkan NIK untuk cari data dari TK/KB" />
+                    {nikLookup === 'loading' && <Loader2 className="h-4 w-4 animate-spin text-cyan-400 mt-1 shrink-0" />}
+                    {nikLookup === 'found' && <span className="text-[10px] text-emerald-400 bg-emerald-950/40 px-2 py-1 rounded mt-1 shrink-0">Ditemukan!</span>}
+                    {nikLookup === 'notfound' && <span className="text-[10px] text-amber-400 bg-amber-950/40 px-2 py-1 rounded mt-1 shrink-0">Isi manual</span>}
+                  </div>
+                  {foundStudent && (
+                    <div className="mt-1 text-[10px] text-emerald-400 bg-emerald-950/30 border border-emerald-900/50 rounded px-2 py-1">
+                      Data ditemukan dari {foundStudent.school_name || npsnToSchool.get(foundStudent.school_npsn) || foundStudent.school_npsn} ({foundStudent.jenjang}) — akan dipindahkan ke SD
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="col-span-2">
                 <label className="text-[10px] font-mono text-slate-400 uppercase">Nama Lengkap</label>
                 <input value={form.nama} onChange={e => setForm({...form, nama: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
