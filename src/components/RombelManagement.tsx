@@ -20,8 +20,9 @@ interface RombelEntry {
 
 export default function RombelManagement() {
   const { user } = useAuth();
-  const operatorNpsn = user?.schoolNpsn;
-  const [levelTab, setLevelTab] = useState('SD');
+  const isOperator = user?.role === 'operator_sekolah';
+  const operatorLevel = user?.schoolLevel || 'SD';
+  const [levelTab, setLevelTab] = useState(operatorLevel);
   const [schools, setSchools] = useState<SchoolData[]>([]);
   const [stats, setStats] = useState<Record<string, { rombels: number; siswa: number }>>({});
   const [loading, setLoading] = useState(true);
@@ -54,7 +55,7 @@ export default function RombelManagement() {
     })();
   }, []);
 
-  const levels = ['SD', 'TK', 'KB'];
+  const levels = isOperator ? [operatorLevel] : ['SD', 'TK', 'KB'];
   const filteredSchools = schools
     .filter(s => s.level === levelTab)
     .sort((a, b) => a.name.localeCompare(b.name));

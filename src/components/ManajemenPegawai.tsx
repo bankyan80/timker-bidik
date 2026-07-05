@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
+import { useAuth } from './AuthContext';
 import {
   Search, Users, Building2, School,
   Loader2, X, Calendar, Plus, Trash2, Pencil, Save, AlertTriangle
@@ -60,11 +61,14 @@ const GENDER_OPTIONS = ['Laki-laki', 'Perempuan'];
 const JABATAN_OPTIONS = ['Kepala Sekolah', 'Guru Kelas', 'Guru Agama', 'Guru PJOK', 'Guru Muatan Lokal', 'Kepala Tata Usaha', 'Staf Administrasi', 'Operator Sekolah', 'Pustakawan', 'Penjaga Sekolah', 'Petugas Kebersihan'];
 
 export default function ManajemenPegawai() {
+  const { user } = useAuth();
+  const isOperator = user?.role === 'operator_sekolah';
+  const operatorLevel = user?.schoolLevel || 'SD';
   const [pegawai, setPegawai] = useState<Pegawai[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState<'Negeri' | 'Swasta'>('Negeri');
-  const [levelTab, setLevelTab] = useState<string>('SD');
+  const [levelTab, setLevelTab] = useState<string>(operatorLevel);
   const [periodModal, setPeriodModal] = useState<{ emp: Pegawai; periods: EmployeePeriod[]; loading: boolean } | null>(null);
   const [addingPeriod, setAddingPeriod] = useState(false);
   const [newPeriodStart, setNewPeriodStart] = useState('');
@@ -255,7 +259,7 @@ export default function ManajemenPegawai() {
     });
   };
 
-  const levels = ['SD', 'TK', 'KB'];
+  const levels = isOperator ? [operatorLevel] : ['SD', 'TK', 'KB'];
   const filtered = useMemo(() =>
     pegawai.filter(p =>
       p.sekolah_status === statusTab &&
