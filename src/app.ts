@@ -954,7 +954,7 @@ app.get('/api/document-search', authenticateToken, async (req, res) => {
 // 7. Student API
 app.get('/api/students', authenticateToken, async (req, res) => {
   const { school, rombel, limit, offset } = req.query;
-  const pageLimit = Math.min(Math.max(parseInt(limit as string) || 100, 1), 500);
+  const pageLimit = Math.min(Math.max(parseInt(limit as string) || 10000, 1), 50000);
   const pageOffset = Math.max(parseInt(offset as string) || 0, 0);
   const schoolScope = getSchoolScope(req);
   const effectiveSchool = schoolScope || (school as string);
