@@ -342,7 +342,7 @@ export default function SchoolProfile({ selectedNpsn, onBack }: { selectedNpsn?:
                 <div className="flex items-center gap-3 py-2">
                   <MapPin className="h-4 w-4 text-cyan-400" />
                   <span className="flex-1 text-slate-400">Koordinat</span>
-                  <span className="text-slate-300 text-[11px] font-mono">{d.lat?.toFixed(4)}, {d.lng?.toFixed(4)}</span>
+                  <span className="text-slate-300 text-[11px] font-mono">{(s.lat ?? s.coordinates?.lat)?.toFixed(4)}, {(s.lng ?? s.coordinates?.lng)?.toFixed(4)}</span>
                 </div>
               </div>
             ) : <p className="text-sm text-slate-500">Data tidak tersedia</p>}

@@ -1,6 +1,23 @@
 import { createClient } from '@libsql/client';
+import bcrypt from 'bcryptjs';
 import { School, VillageStats, Recommendation, AlertMessage, DocumentMeta, CalendarEvent, CalendarNotification } from './types';
 import { VILLAGES, ALL_SCHOOLS, GET_VILLAGE_STATS } from './data/mockData';
+
+const ALLOWED_COLUMNS_EMPLOYEE = new Set(['nama','nik','nip','nuptk','email','no_hp','tempat_lahir','tanggal_lahir','jenis_kelamin','jabatan','status_pegawai','pangkat_golongan','pendidikan_terakhir','jurusan','sertifikasi','tmt_kerja','tanggal_bup','foto_url','is_active','gelar_depan','gelar_belakang']);
+const ALLOWED_COLUMNS_STUDENT = new Set(['nama','nisn','nik','jenis_kelamin','tempat_lahir','tanggal_lahir','kelas_kelompok','rombel','status_siswa']);
+const ALLOWED_COLUMNS_PERIOD = new Set(['tanggal_mulai','tanggal_selesai','status']);
+const ALLOWED_COLUMNS_CALENDAR = new Set(['title','category','semester','start_date','end_date','description','education_level','completed']);
+
+function sanitizeStr(val: unknown): string {
+  if (typeof val !== 'string') return '';
+  return val.replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' })[c] || c);
+}
+
+function validateColumns(keys: string[], allowed: Set<string>): string[] {
+  return keys.filter(k => allowed.has(k));
+}
+
+export const SALT_ROUNDS = 10;
 
 export type StudentRow = {
   id: string;
@@ -153,7 +170,7 @@ export async function initSchema() {
     )
   `);
 
-  // ── Employees (from source project schema) ──
+  // â”€â”€ Employees (from source project schema) â”€â”€
   await client.execute(`
     CREATE TABLE IF NOT EXISTS employees (
       id TEXT PRIMARY KEY,
@@ -317,6 +334,29 @@ export async function initSchema() {
       updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
     )
   `);
+
+  // â”€â”€ Indexes for performance â”€â”€
+  const indexes = [
+    'CREATE INDEX IF NOT EXISTS idx_students_school ON students(school_npsn)',
+    'CREATE INDEX IF NOT EXISTS idx_students_nisn ON students(nisn)',
+    'CREATE INDEX IF NOT EXISTS idx_students_status ON students(status_siswa)',
+    'CREATE INDEX IF NOT EXISTS idx_employees_school ON employees(sekolah_id)',
+    'CREATE INDEX IF NOT EXISTS idx_employees_nik ON employees(nik)',
+    'CREATE INDEX IF NOT EXISTS idx_employees_active ON employees(is_active)',
+    'CREATE INDEX IF NOT EXISTS idx_emp_docs_employee ON employee_documents(employee_id)',
+    'CREATE INDEX IF NOT EXISTS idx_emp_docs_school ON employee_documents(school_id)',
+    'CREATE INDEX IF NOT EXISTS idx_emp_periods_employee ON employee_periods(employee_id)',
+    'CREATE INDEX IF NOT EXISTS idx_student_parents_nisn ON student_parents(siswa_nisn)',
+    'CREATE INDEX IF NOT EXISTS idx_student_addresses_nisn ON student_addresses(siswa_nisn)',
+    'CREATE INDEX IF NOT EXISTS idx_student_health_nisn ON student_health(siswa_nisn)',
+    'CREATE INDEX IF NOT EXISTS idx_student_mutations_school ON student_mutations(school_npsn)',
+    'CREATE INDEX IF NOT EXISTS idx_alerts_school ON alerts(school_name)',
+    'CREATE INDEX IF NOT EXISTS idx_recommendations_school ON recommendations(target_school_npsn)',
+    'CREATE INDEX IF NOT EXISTS idx_calendar_level ON academic_calendar(education_level)',
+  ];
+  for (const sql of indexes) {
+    try { await client.execute(sql); } catch { /* index may already exist */ }
+  }
 }
 
 export async function seedData() {
@@ -374,7 +414,7 @@ export async function seedData() {
       await client.execute({
         sql: `INSERT OR IGNORE INTO alerts (id, timestamp, school_name, severity, message, category)
               VALUES (?, ?, ?, 'CRITICAL', ?, ?)`,
-        args: [`alert-crit-${s.npsn}-${Date.now()}`, t, s.name, `Health Score ${s.healthScore}/100 — butuh intervensi segera`, 'Infrastructure']
+        args: [`alert-crit-${s.npsn}-${Date.now()}`, t, s.name, `Health Score ${s.healthScore}/100 â€” butuh intervensi segera`, 'Infrastructure']
       });
     }
     const warning = ALL_SCHOOLS.filter(s => s.healthScore >= 40 && s.healthScore < 60);
@@ -384,7 +424,7 @@ export async function seedData() {
       await client.execute({
         sql: `INSERT OR IGNORE INTO alerts (id, timestamp, school_name, severity, message, category)
               VALUES (?, ?, ?, 'WARNING', ?, ?)`,
-        args: [`alert-warn-${s.npsn}-${Date.now()}`, t, s.name, `Rasio siswa-guru ${(s.students.total / (s.teachers.total || 1)).toFixed(1)}:1 — perlu penambahan tenaga`, 'Staffing']
+        args: [`alert-warn-${s.npsn}-${Date.now()}`, t, s.name, `Rasio siswa-guru ${(s.students.total / (s.teachers.total || 1)).toFixed(1)}:1 â€” perlu penambahan tenaga`, 'Staffing']
       });
     }
   }
@@ -395,12 +435,16 @@ export async function seedData() {
   // Seed users (run once)
   const existingUsers = await client.execute('SELECT COUNT(*) as count FROM users');
   if (Number(existingUsers.rows[0].count) === 0) {
-    await client.execute({ sql: 'INSERT INTO users (id, username, password, role) VALUES (?, ?, ?, ?)', args: ['u-admin', 'Admin', 'Timker456', 'admin'] });
-    await client.execute({ sql: 'INSERT INTO users (id, username, password, role) VALUES (?, ?, ?, ?)', args: ['u-staff', 'Admin2', 'Timker123', 'staff_kecamatan'] });
+    const adminHash = await bcrypt.hash('Timker456', SALT_ROUNDS);
+    const staffHash = await bcrypt.hash('Timker123', SALT_ROUNDS);
+    await client.execute({ sql: 'INSERT INTO users (id, username, password, role) VALUES (?, ?, ?, ?)', args: ['u-admin', 'Admin', adminHash, 'admin'] });
+    await client.execute({ sql: 'INSERT INTO users (id, username, password, role) VALUES (?, ?, ?, ?)', args: ['u-staff', 'Admin2', staffHash, 'staff_kecamatan'] });
     const schools = await getAllSchools();
     for (const school of schools) {
+      const opPass = 'sp_' + school.npsn;
+      const opHash = await bcrypt.hash(opPass, SALT_ROUNDS);
       await client.execute({ sql: 'INSERT INTO users (id, username, password, role, school_npsn) VALUES (?, ?, ?, ?, ?)',
-        args: [`u-op-${school.npsn}`, school.npsn, 'sp_' + school.npsn, 'operator_sekolah', school.npsn] });
+        args: [`u-op-${school.npsn}`, school.npsn, opHash, 'operator_sekolah', school.npsn] });
     }
   }
 }
@@ -462,6 +506,10 @@ export interface MonthlyReportSchool {
     classrooms: { good: number; lightDamage: number; heavyDamage: number };
     toilets: { good: number; damaged: number };
     hasLibrary: boolean; hasLab: boolean; internetSpeedMbps: number;
+    landArea: number;
+    buildingArea: number;
+    teacherRoom: { exists: boolean; condition: string };
+    principalRoom: { exists: boolean; condition: string };
     alerts: { severity: string; message: string; category: string }[];
   };
   mutations: { masuk: number; keluar: number };
@@ -537,7 +585,7 @@ export async function getMonthlyReport(schoolNpsn?: string): Promise<MonthlyRepo
 
     result.push({
       npsn: school.npsn, name: school.name, level: school.level,
-      status: school.status === 'NEGERI' ? 'Negeri' : 'Swasta',
+      status: (school.status as string) === 'NEGERI' ? 'Negeri' : 'Swasta',
       village: school.village,
       students: {
         total: studentTotal,
@@ -558,10 +606,10 @@ export async function getMonthlyReport(schoolNpsn?: string): Promise<MonthlyRepo
         hasLibrary: school.facilities.hasLibrary,
         hasLab: school.facilities.hasLab,
         internetSpeedMbps: school.facilities.internetSpeedMbps,
-        landArea: school.facilities.landArea ?? 0,
-        buildingArea: school.facilities.buildingArea ?? 0,
-        teacherRoom: school.facilities.teacherRoom ?? { exists: false, condition: 'Tidak Ada' },
-        principalRoom: school.facilities.principalRoom ?? { exists: false, condition: 'Tidak Ada' },
+        landArea: (school.facilities as any).landArea ?? 0,
+        buildingArea: (school.facilities as any).buildingArea ?? 0,
+        teacherRoom: (school.facilities as any).teacherRoom ?? { exists: false, condition: 'Tidak Ada' },
+        principalRoom: (school.facilities as any).principalRoom ?? { exists: false, condition: 'Tidak Ada' },
         alerts: schoolAlerts,
       },
       mutations: { masuk, keluar },
@@ -617,7 +665,7 @@ export async function searchDocuments(query: string): Promise<DocumentMeta[]> {
   );
 }
 
-// ── Employee queries ──
+// â”€â”€ Employee queries â”€â”€
 
 export async function getEmployees(): Promise<EmployeeRow[]> {
   const client = getDb();
@@ -716,7 +764,7 @@ export async function getTeacherAggregates(): Promise<Record<string, SchoolTeach
   return agg;
 }
 
-// ── Employee CRUD ──
+// â”€â”€ Employee CRUD â”€â”€
 
 export async function insertEmployee(data: {
   sekolah_id: string; nama: string; nik: string; nip?: string | null;
@@ -743,7 +791,8 @@ export async function insertEmployee(data: {
     });
     const result = await client.execute({ sql: 'SELECT * FROM employees WHERE id = ?', args: [id] });
     return result.rows[0] as unknown as EmployeeRow;
-  } catch {
+  } catch (err) {
+    console.error('insertEmployee error:', err);
     return null;
   }
 }
@@ -758,10 +807,12 @@ export async function updateEmployee(id: string, data: Partial<{
   if (!client) return false;
   const sets: string[] = [];
   const args: any[] = [];
-  for (const [key, val] of Object.entries(data)) {
+  const allowedKeys = validateColumns(Object.keys(data), ALLOWED_COLUMNS_EMPLOYEE);
+  for (const key of allowedKeys) {
+    const val = data[key as keyof typeof data];
     if (val !== undefined) {
       sets.push(`${key} = ?`);
-      args.push(val);
+      args.push(typeof val === 'string' ? sanitizeStr(val) : val);
     }
   }
   if (sets.length === 0) return false;
@@ -774,7 +825,8 @@ export async function updateEmployee(id: string, data: Partial<{
       args
     });
     return true;
-  } catch {
+  } catch (err) {
+    console.error('updateEmployee error:', err);
     return false;
   }
 }
@@ -788,12 +840,13 @@ export async function deleteEmployee(id: string): Promise<boolean> {
       args: [Date.now(), id]
     });
     return true;
-  } catch {
+  } catch (err) {
+    console.error('deleteEmployee error:', err);
     return false;
   }
 }
 
-// ── Employee Periods CRUD ──
+// â”€â”€ Employee Periods CRUD â”€â”€
 
 export async function getEmployeePeriods(employeeId: string): Promise<{
   id: string; employee_id: string; tanggal_mulai: string; tanggal_selesai: string;
@@ -830,7 +883,10 @@ export async function insertEmployeePeriod(data: {
       args: [id, data.employee_id, data.tanggal_mulai, data.tanggal_selesai, data.status || 'aktif', now, now]
     });
     return { id };
-  } catch { return null; }
+  } catch (err) {
+    console.error('insertEmployeePeriod error:', err);
+    return null;
+  }
 }
 
 export async function updateEmployeePeriod(periodId: string, data: Partial<{
@@ -840,10 +896,12 @@ export async function updateEmployeePeriod(periodId: string, data: Partial<{
   if (!client) return false;
   const sets: string[] = [];
   const args: any[] = [];
-  for (const [key, val] of Object.entries(data)) {
+  const allowedKeys = validateColumns(Object.keys(data), ALLOWED_COLUMNS_PERIOD);
+  for (const key of allowedKeys) {
+    const val = data[key as keyof typeof data];
     if (val !== undefined) {
       sets.push(`${key} = ?`);
-      args.push(val);
+      args.push(typeof val === 'string' ? sanitizeStr(val) : val);
     }
   }
   if (sets.length === 0) return false;
@@ -856,7 +914,10 @@ export async function updateEmployeePeriod(periodId: string, data: Partial<{
       args
     });
     return true;
-  } catch { return false; }
+  } catch (err) {
+    console.error('updateEmployeePeriod error:', err);
+    return false;
+  }
 }
 
 export async function deleteEmployeePeriod(periodId: string): Promise<boolean> {
@@ -865,10 +926,10 @@ export async function deleteEmployeePeriod(periodId: string): Promise<boolean> {
   try {
     await client.execute({ sql: 'DELETE FROM employee_periods WHERE id = ?', args: [periodId] });
     return true;
-  } catch { return false; }
+  } catch (err) { console.error(err); return false; }
 }
 
-// ── Calendar CRUD ──
+// â”€â”€ Calendar CRUD â”€â”€
 
 export async function getCalendarEvents(): Promise<CalendarEvent[]> {
   const client = getDb();
@@ -929,7 +990,10 @@ export async function insertCalendarEvent(data: {
              data.description || '', data.education_level || 'ALL', data.created_by ?? null, now, now]
     });
     return getCalendarEventById(id);
-  } catch { return null; }
+  } catch (err) {
+    console.error('insertEmployeePeriod error:', err);
+    return null;
+  }
 }
 
 export async function updateCalendarEvent(id: string, data: Partial<{
@@ -941,8 +1005,10 @@ export async function updateCalendarEvent(id: string, data: Partial<{
   if (!client) return false;
   const sets: string[] = [];
   const args: any[] = [];
-  for (const [key, val] of Object.entries(data)) {
-    if (val !== undefined) { sets.push(`${key} = ?`); args.push(val); }
+  const allowedKeys = validateColumns(Object.keys(data), ALLOWED_COLUMNS_CALENDAR);
+  for (const key of allowedKeys) {
+    const val = data[key as keyof typeof data];
+    if (val !== undefined) { sets.push(`${key} = ?`); args.push(typeof val === 'string' ? sanitizeStr(val) : val); }
   }
   if (sets.length === 0) return false;
   sets.push('updated_at = ?');
@@ -951,7 +1017,10 @@ export async function updateCalendarEvent(id: string, data: Partial<{
   try {
     await client.execute({ sql: `UPDATE academic_calendar SET ${sets.join(', ')} WHERE id = ?`, args });
     return true;
-  } catch { return false; }
+  } catch (err) {
+    console.error('updateCalendarEvent error:', err);
+    return false;
+  }
 }
 
 export async function deleteCalendarEvent(id: string): Promise<boolean> {
@@ -960,7 +1029,7 @@ export async function deleteCalendarEvent(id: string): Promise<boolean> {
   try {
     await client.execute({ sql: 'DELETE FROM academic_calendar WHERE id = ?', args: [id] });
     return true;
-  } catch { return false; }
+  } catch (err) { console.error(err); return false; }
 }
 
 export async function seedCalendarEvents() {
@@ -969,12 +1038,12 @@ export async function seedCalendarEvents() {
   const existing = await client.execute('SELECT COUNT(*) as count FROM academic_calendar');
   if (Number(existing.rows[0].count) > 0) return;
 
-  const seedData: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at' | 'completed'>[] = [
+  const seedData: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at' | 'completed' | 'created_by'>[] = [
     // Semester 1
     { title: 'Penyelarasan Kurikulum SD', category: 'teacher_event', semester: 1, start_date: '2026-07-14', end_date: '2026-07-14', description: 'Penyelarasan kurikulum untuk satuan pendidikan SD', education_level: 'SD' },
     { title: 'Hari Pertama Masuk Sekolah', category: 'academic', semester: 1, start_date: '2026-07-15', end_date: '2026-07-15', description: 'Hari pertama masuk sekolah Tahun Pelajaran 2026/2027', education_level: 'ALL' },
     { title: 'MPLS SD/MI', category: 'student_event', semester: 1, start_date: '2026-07-15', end_date: '2026-07-21', description: 'Masa Pengenalan Lingkungan Sekolah untuk kelas 1 (15-17 & 20-21 Juli 2026)', education_level: 'SD' },
-    { title: 'Sulingjar', category: 'assessment', semester: 1, start_date: '2026-08-03', end_date: '2026-08-31', description: 'Survei Lingkungan Belajar — pengisian instrumen lingkungan belajar oleh satuan pendidikan', education_level: 'ALL' },
+    { title: 'Sulingjar', category: 'assessment', semester: 1, start_date: '2026-08-03', end_date: '2026-08-31', description: 'Survei Lingkungan Belajar â€” pengisian instrumen lingkungan belajar oleh satuan pendidikan', education_level: 'ALL' },
     { title: 'Asesmen Sumatif Tengah Semester', category: 'assessment', semester: 1, start_date: '2026-10-26', end_date: '2026-11-08', description: 'Pelaksanaan asesmen sumatif tengah semester untuk SD/MI, TK, dan KB', education_level: 'ALL' },
     { title: 'Penetapan Rapor Semester 1', category: 'reports', semester: 1, start_date: '2026-12-23', end_date: '2026-12-23', description: 'Penetapan hasil penilaian rapor semester ganjil', education_level: 'ALL' },
     { title: 'Pembagian Rapor Semester 1', category: 'reports', semester: 1, start_date: '2026-12-23', end_date: '2026-12-23', description: 'Pembagian rapor kepada siswa semester ganjil', education_level: 'ALL' },
@@ -1000,7 +1069,7 @@ export async function seedCalendarEvents() {
   }
 }
 
-// ── Document CRUD ──
+// â”€â”€ Document CRUD â”€â”€
 
 export async function upsertEmployeeDocument(data: {
   id?: string; employee_id: string; school_id: string; kategori: string;
@@ -1034,9 +1103,7 @@ export async function upsertEmployeeDocument(data: {
              data.file_size, data.drive_file_id, data.drive_url, data.catatan_revisi ?? null, now]
     });
     return true;
-  } catch {
-    return false;
-  }
+  } catch (err) { console.error(err); return false; }
 }
 
 export async function deleteEmployeeDocument(id: string): Promise<{ ok: boolean; driveFileId?: string }> {
@@ -1051,9 +1118,7 @@ export async function deleteEmployeeDocument(id: string): Promise<{ ok: boolean;
     const driveFileId = (doc.rows[0] as any).drive_file_id as string;
     await client.execute({ sql: 'DELETE FROM employee_documents WHERE id = ?', args: [id] });
     return { ok: true, driveFileId };
-  } catch {
-    return { ok: false };
-  }
+  } catch (err) { console.error(err); return { ok: false }; }
 }
 
 export async function verifyEmployeeDocument(id: string, status: 'verified' | 'rejected', catatan?: string): Promise<boolean> {
@@ -1068,9 +1133,7 @@ export async function verifyEmployeeDocument(id: string, status: 'verified' | 'r
       args: [statusVerifikasi, statusKelengkapan, catatan ?? null, now, now, id]
     });
     return true;
-  } catch {
-    return false;
-  }
+  } catch (err) { console.error(err); return false; }
 }
 
 export async function upsertSchool(npsn: string, data: Partial<School> & { name: string; level: string; status: string; village: string }) {
@@ -1090,7 +1153,7 @@ export async function upsertSchool(npsn: string, data: Partial<School> & { name:
   });
 }
 
-// ── Student CRUD ──
+// â”€â”€ Student CRUD â”€â”€
 
 export async function getStudents(): Promise<StudentRow[]> {
   const client = getDb();
@@ -1158,7 +1221,10 @@ export async function insertStudent(data: {
     });
     const result = await client.execute({ sql: 'SELECT * FROM students WHERE id = ?', args: [id] });
     return result.rows[0] as unknown as StudentRow;
-  } catch { return null; }
+  } catch (err) {
+    console.error('insertEmployeePeriod error:', err);
+    return null;
+  }
 }
 
 export async function updateStudent(id: string, data: Partial<{
@@ -1170,15 +1236,20 @@ export async function updateStudent(id: string, data: Partial<{
   if (!client) return false;
   const sets: string[] = [];
   const args: any[] = [];
-  for (const [key, val] of Object.entries(data)) {
-    if (val !== undefined) { sets.push(`${key} = ?`); args.push(val); }
+  const allowedKeys = validateColumns(Object.keys(data), ALLOWED_COLUMNS_STUDENT);
+  for (const key of allowedKeys) {
+    const val = data[key as keyof typeof data];
+    if (val !== undefined) { sets.push(`${key} = ?`); args.push(typeof val === 'string' ? sanitizeStr(val) : val); }
   }
   if (sets.length === 0) return false;
   args.push(id);
   try {
     await client.execute({ sql: `UPDATE students SET ${sets.join(', ')} WHERE id = ?`, args });
     return true;
-  } catch { return false; }
+  } catch (err) {
+    console.error('updateStudent error:', err);
+    return false;
+  }
 }
 
 export async function deleteStudent(id: string): Promise<boolean> {
@@ -1187,10 +1258,10 @@ export async function deleteStudent(id: string): Promise<boolean> {
   try {
     await client.execute({ sql: 'DELETE FROM students WHERE id = ?', args: [id] });
     return true;
-  } catch { return false; }
+  } catch (err) { console.error(err); return false; }
 }
 
-// ── Student Detail CRUD (parents, addresses, health) ──
+// â”€â”€ Student Detail CRUD (parents, addresses, health) â”€â”€
 
 export async function getStudentDetail(nisn: string): Promise<{
   parents: Record<string, any> | null;
@@ -1265,7 +1336,7 @@ export async function upsertStudentHealth(nisn: string, data: Record<string, any
   } catch (e) { console.error('upsertStudentHealth error', e); return false; }
 }
 
-// ── User / Auth CRUD ──
+// â”€â”€ User / Auth CRUD â”€â”€
 
 export async function getUserByUsername(username: string): Promise<{ id: string; username: string; password: string; role: string; school_npsn: string | null } | null> {
   const client = getDb();
@@ -1275,16 +1346,97 @@ export async function getUserByUsername(username: string): Promise<{ id: string;
     if (r.rows.length === 0) return null;
     const row = r.rows[0] as any;
     return { id: row.id, username: row.username, password: row.password, role: row.role, school_npsn: row.school_npsn || null };
-  } catch { return null; }
+  } catch (err) {
+    console.error('insertEmployeePeriod error:', err);
+    return null;
+  }
 }
 
 export async function changePassword(username: string, newPassword: string): Promise<boolean> {
   const client = getDb();
   if (!client) return false;
   try {
-    await client.execute({ sql: 'UPDATE users SET password = ? WHERE username = ?', args: [newPassword, username] });
+    const hash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await client.execute({ sql: 'UPDATE users SET password = ? WHERE username = ?', args: [hash, username] });
     return true;
-  } catch { return false; }
+  } catch (err) {
+    console.error('changePassword error:', err);
+    return false;
+  }
+}
+
+export async function getAllUsers(): Promise<{ id: string; username: string; role: string; school_npsn: string | null }[]> {
+  const client = getDb();
+  if (!client) return [];
+  try {
+    const r = await client.execute('SELECT id, username, role, school_npsn FROM users ORDER BY username');
+    return r.rows.map((row: any) => ({ id: row.id, username: row.username, role: row.role, school_npsn: row.school_npsn || null }));
+  } catch (err) {
+    console.error('getAllUsers error:', err);
+    return [];
+  }
+}
+
+export async function getUserById(id: string): Promise<{ id: string; username: string; role: string; school_npsn: string | null } | null> {
+  const client = getDb();
+  if (!client) return null;
+  try {
+    const r = await client.execute({ sql: 'SELECT id, username, role, school_npsn FROM users WHERE id = ?', args: [id] });
+    if (r.rows.length === 0) return null;
+    const row = r.rows[0] as any;
+    return { id: row.id, username: row.username, role: row.role, school_npsn: row.school_npsn || null };
+  } catch (err) {
+    console.error('getUserById error:', err);
+    return null;
+  }
+}
+
+export async function createUser(username: string, password: string, role: string, school_npsn: string | null): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  try {
+    const hash = await bcrypt.hash(password, SALT_ROUNDS);
+    const id = `u-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    if (school_npsn) {
+      await client.execute({ sql: 'INSERT INTO users (id, username, password, role, school_npsn) VALUES (?, ?, ?, ?, ?)', args: [id, username, hash, role, school_npsn] });
+    } else {
+      await client.execute({ sql: 'INSERT INTO users (id, username, password, role) VALUES (?, ?, ?, ?)', args: [id, username, hash, role] });
+    }
+    return true;
+  } catch (err) {
+    console.error('createUser error:', err);
+    return false;
+  }
+}
+
+export async function updateUser(id: string, username: string, role: string, school_npsn: string | null, password?: string): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  try {
+    if (password) {
+      const hash = await bcrypt.hash(password, SALT_ROUNDS);
+      await client.execute({ sql: 'UPDATE users SET username = ?, password = ?, role = ?, school_npsn = ? WHERE id = ?', args: [username, hash, role, school_npsn, id] });
+    } else {
+      await client.execute({ sql: 'UPDATE users SET username = ?, role = ?, school_npsn = ? WHERE id = ?', args: [username, role, school_npsn, id] });
+    }
+    return true;
+  } catch (err) {
+    console.error('updateUser error:', err);
+    return false;
+  }
+}
+
+export async function deleteUser(id: string): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  try {
+    await client.execute({ sql: 'DELETE FROM users WHERE id = ?', args: [id] });
+    return true;
+  } catch (err) {
+    console.error('deleteUser error:', err);
+    return false;
+  }
 }
 
 export { ALL_SCHOOLS as FALLBACK_SCHOOLS };
+

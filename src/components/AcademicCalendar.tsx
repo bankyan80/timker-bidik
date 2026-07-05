@@ -90,7 +90,7 @@ export default function AcademicCalendar() {
     })();
   }, [filterSemester, filterCategory, filterLevel]);
 
-  const saveRole = (r: string) => { setRole(r); localStorage.setItem('kaldik-role', r); };
+  const saveRole = (r: string) => { localStorage.setItem('kaldik-role', r); };
 
   // Filter events
   let visibleEvents = [...events, ...localEvents];
@@ -175,7 +175,7 @@ export default function AcademicCalendar() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-[11px] font-mono text-slate-400 mb-1 block">Kategori</label>
-            <select value={category} onChange={e => setCategory(e.target.value)} className="w-full px-3 py-2 bg-slate-800/60 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
+            <select value={category} onChange={e => setCategory(e.target.value as CalendarEvent['category'])} className="w-full px-3 py-2 bg-slate-800/60 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
               <option value="academic">Akademik</option>
               <option value="holiday">Libur</option>
               <option value="assessment">Asesmen</option>
@@ -186,7 +186,7 @@ export default function AcademicCalendar() {
           </div>
           <div>
             <label className="text-[11px] font-mono text-slate-400 mb-1 block">Semester</label>
-            <select value={semester} onChange={e => setSemester(Number(e.target.value))} className="w-full px-3 py-2 bg-slate-800/60 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
+            <select value={semester} onChange={e => setSemester(Number(e.target.value) as 1 | 2)} className="w-full px-3 py-2 bg-slate-800/60 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
               <option value={1}>Semester 1</option>
               <option value={2}>Semester 2</option>
             </select>

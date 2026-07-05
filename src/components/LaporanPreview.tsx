@@ -6,7 +6,7 @@ import {
   ZoomIn, ZoomOut, RotateCw, Maximize, Minimize,
   FileText, GraduationCap, Users, Building2,
   ArrowUpRight, ArrowDownRight, AlertTriangle,
-  CheckCircle, BookOpen, BarChart3, PieChart,
+  CheckCircle, BookOpen, BarChart3, PieChart as PieChartIcon,
   TrendingUp, FileSpreadsheet
 } from 'lucide-react';
 import { ALL_SCHOOLS } from '../data/mockData';
@@ -637,14 +637,14 @@ function PageKesimpulan({ school }: { school: ReportSchool }) {
       ? `Terjadi mutasi siswa sebanyak ${school.mutations.masuk} masuk dan ${school.mutations.keluar} keluar selama periode ini.`
       : 'Tidak terdapat mutasi siswa pada periode ini.',
     `Kondisi infrastruktur sekolah menunjukkan health score ${school.infrastructure.healthScore}/100 dengan ${school.infrastructure.classrooms.good} ruang kelas dalam kondisi baik, ${school.infrastructure.classrooms.lightDamage} rusak ringan, dan ${school.infrastructure.classrooms.heavyDamage} rusak berat.`,
-    school.infrastructure.heavyDamage > 0
-      ? `Rekomendasi: Perlu dilakukan rehabilitasi pada ${school.infrastructure.heavyDamage} ruang kelas yang mengalami rusak berat.`
+    school.infrastructure.classrooms.heavyDamage > 0
+      ? `Rekomendasi: Perlu dilakukan rehabilitasi pada ${school.infrastructure.classrooms.heavyDamage} ruang kelas yang mengalami rusak berat.`
       : 'Kondisi infrastruktur ruang kelas dalam keadaan baik dan layak pakai.',
   ];
 
   const rekomendasi = [
     'Meningkatkan kualitas pembelajaran melalui pelatihan guru secara berkala.',
-    school.infrastructure.heavyDamage > 0 ? 'Melakukan perbaikan sarana prasarana yang rusak.' : 'Mempertahankan kondisi sarana prasarana yang ada.',
+    school.infrastructure.classrooms.heavyDamage > 0 ? 'Melakukan perbaikan sarana prasarana yang rusak.' : 'Mempertahankan kondisi sarana prasarana yang ada.',
     'Mengoptimalkan partisipasi orang tua dalam kegiatan sekolah.',
     'Melanjutkan program pembiasaan positif dan penguatan karakter siswa.',
   ];

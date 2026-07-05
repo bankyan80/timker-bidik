@@ -337,6 +337,7 @@ export default function DocumentIntel() {
       nipNik: newEmpForm.nipNik,
       status: newEmpForm.status,
       school: newEmpForm.school,
+      schoolStatus: 'Negeri',
       position: newEmpForm.position,
       documents: initialDocs
     };

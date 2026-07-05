@@ -17,6 +17,7 @@ import {
   Briefcase,
   Calendar,
   Target,
+  Shield,
 } from 'lucide-react';
 import { useAuth } from './AuthContext';
 
@@ -43,6 +44,7 @@ const ROLE_MENU_ACCESS: Record<string, string[]> = {
     'academic-calendar', 'kpi',
     'simulator',
     'documents', 'monthly-report', 'reports',
+    'user-management',
   ],
   staff_kecamatan: [
     'dashboard', 'monitor', 'console', 'gis',
@@ -125,6 +127,13 @@ export default function Sidebar({ currentModule, setCurrentModule, theme, isOpen
         { id: 'documents', label: 'Intelijen Dokumen', icon: FileSearch },
         { id: 'monthly-report', label: 'Laporan Bulanan', icon: FileSpreadsheet },
         { id: 'reports', label: 'Pusat Laporan Pintar', icon: FileSpreadsheet }
+      ]
+    },
+    {
+      title: 'SISTEM',
+      roles: ['admin'],
+      items: [
+        { id: 'user-management', label: 'Manajemen Pengguna', icon: Shield }
       ]
     }
   ];

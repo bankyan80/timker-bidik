@@ -49,7 +49,7 @@ export default function StudentManagement() {
   const [form, setForm] = useState({
     school_npsn: isOperator ? operatorNpsn : '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki',
     tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: 'Kelas 1',
-    rombel: '', tahun_pelajaran: getTahunPelajaran()
+    rombel: '', tahun_pelajaran: (() => { const y = new Date().getFullYear(); const m = new Date().getMonth(); return m >= 6 ? `${y}/${y+1}` : `${y-1}/${y}`; })()
   });
 
   useEffect(() => { load(); }, []);
@@ -328,7 +328,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
             <thead>
               <tr className="bg-slate-900/60 text-slate-400 text-[10px] font-mono uppercase tracking-wider">
                 <th className="w-10 px-2 py-3 text-center">
-                  <input type="checkbox" checked={paginated.length > 0 && paginated.filter(s => s.status_siswa === 'aktif').every(id => checkedIds.has(id))}
+                  <input type="checkbox" checked={paginated.length > 0 && paginated.filter(s => s.status_siswa === 'aktif').every(st => checkedIds.has(st.id))}
                     onChange={toggleAllPage}
                     className="accent-cyan-600 cursor-pointer" />
                 </th>

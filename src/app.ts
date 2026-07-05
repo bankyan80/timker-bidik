@@ -2,14 +2,47 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { google } from 'googleapis';
 import { GoogleGenAI } from '@google/genai';
 import { SimulationScenario, SimulationResult } from './types';
-import { getDb, initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod, getMonthlyReport, getUserByUsername, changePassword, deleteEmployeeDocument, getStudentDetail, upsertStudentParents, upsertStudentAddress, upsertStudentHealth } from './db';
+import { getDb, initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod, getMonthlyReport, getUserByUsername, changePassword, deleteEmployeeDocument, getStudentDetail, upsertStudentParents, upsertStudentAddress, upsertStudentHealth, getAllUsers, getUserById, createUser, updateUser, deleteUser } from './db';
+import { getAuth as getDriveAuth } from './drive';
+
+function sanitizeAPI(val: unknown): string {
+  if (typeof val !== 'string') return '';
+  return val.replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' })[c] || c);
+}
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
+app.use(helmet());
 
-const JWT_SECRET = process.env.JWT_SECRET || 'timker-bidik-secret-key-change-in-production';
+// Rate limiters
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Terlalu banyak percobaan login. Coba lagi 15 menit.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  message: { error: 'Terlalu banyak permintaan. Coba lagi nanti.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', apiLimiter);
+
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'timker-bidik-secret-key-change-in-production') {
+  console.error('FATAL: JWT_SECRET environment variable must be set to a secure random value');
+  process.exit(1);
+}
 
 export interface AuthUser {
   id: string;
@@ -65,58 +98,36 @@ function getSchoolScope(req: express.Request): string | null {
 }
 
 // ── Auth endpoints ──
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).json({ error: 'Username dan password wajib diisi' });
   }
 
-  // Try DB first
   try {
     const dbUser = await getUserByUsername(username);
-    if (dbUser && dbUser.password === password) {
-      if (dbUser.role === 'operator_sekolah' && dbUser.school_npsn) {
-        const schools = await getAllSchools();
-        const school = schools.find(s => s.npsn === dbUser.school_npsn);
-        if (school) {
-          const user: AuthUser = {
-            id: dbUser.id, username: dbUser.username, role: 'operator_sekolah',
-            schoolNpsn: school.npsn, schoolName: school.name,
-          };
-          const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
-          return res.json({ token, user });
+    if (dbUser) {
+      const passwordMatch = await bcrypt.compare(password, dbUser.password);
+      if (passwordMatch) {
+        if (dbUser.role === 'operator_sekolah' && dbUser.school_npsn) {
+          const schools = await getAllSchools();
+          const school = schools.find(s => s.npsn === dbUser.school_npsn);
+          if (school) {
+            const user: AuthUser = {
+              id: dbUser.id, username: dbUser.username, role: 'operator_sekolah',
+              schoolNpsn: school.npsn, schoolName: school.name,
+            };
+            const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+            return res.json({ token, user });
+          }
         }
+        const user: AuthUser = { id: dbUser.id, username: dbUser.username, role: dbUser.role as any };
+        const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+        return res.json({ token, user });
       }
-      const user: AuthUser = { id: dbUser.id, username: dbUser.username, role: dbUser.role as any };
-      const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
-      return res.json({ token, user });
     }
-  } catch {}
-
-  // Fallback to hardcoded (for backwards compatibility)
-  if (username === 'Admin' && password === 'Timker456') {
-    const user: AuthUser = { id: '1', username: 'Admin', role: 'admin' };
-    const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
-    return res.json({ token, user });
-  }
-  if (username === 'Admin2' && password === 'Timker123') {
-    const user: AuthUser = { id: '2', username: 'Admin2', role: 'staff_kecamatan' };
-    const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
-    return res.json({ token, user });
-  }
-  const expectedOpPassword = 'sp_' + username;
-  if (password === expectedOpPassword) {
-    const schools = await getAllSchools();
-    const school = schools.find(s => s.npsn === username);
-    if (school) {
-      const user: AuthUser = {
-        id: `op-${username}`, username: username, role: 'operator_sekolah',
-        schoolNpsn: school.npsn, schoolName: school.name,
-      };
-      const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
-      return res.json({ token, user });
-    }
-    return res.status(401).json({ error: 'NPSN tidak ditemukan' });
+  } catch (err) {
+    console.error('Login error:', err);
   }
 
   return res.status(401).json({ error: 'Username atau password salah' });
@@ -135,9 +146,11 @@ app.put('/api/auth/change-password', authenticateToken, async (req, res) => {
     return res.status(400).json({ error: 'Password baru minimal 6 karakter' });
   }
 
-  // Verify current password via DB
   const dbUser = await getUserByUsername(req.user!.username);
-  if (!dbUser || dbUser.password !== currentPassword) {
+  if (!dbUser) return res.status(400).json({ error: 'User tidak ditemukan' });
+
+  const passwordMatch = await bcrypt.compare(currentPassword, dbUser.password);
+  if (!passwordMatch) {
     return res.status(400).json({ error: 'Password saat ini salah' });
   }
 
@@ -539,13 +552,23 @@ Semua data berasal dari:
 
 // 4. Employee & Document API
 app.get('/api/employees', authenticateToken, async (req, res) => {
+  const { limit, offset } = req.query;
+  const pageLimit = Math.min(Math.max(parseInt(limit as string) || 200, 1), 500);
+  const pageOffset = Math.max(parseInt(offset as string) || 0, 0);
   const schoolScope = getSchoolScope(req);
+  let employees;
   if (schoolScope) {
-    const employees = await getEmployeesBySchool(schoolScope);
-    return res.json(employees);
+    employees = await getEmployeesBySchool(schoolScope);
+  } else {
+    employees = await getEmployees();
   }
-  const employees = await getEmployees();
-  res.json(employees);
+  const paginated = employees.slice(pageOffset, pageOffset + pageLimit);
+  res.json({
+    data: paginated,
+    total: employees.length,
+    limit: pageLimit,
+    offset: pageOffset,
+  });
 });
 
 // 🚀 Batch endpoint: returns employees + their documents in 2 queries (not N+1)
@@ -594,6 +617,16 @@ app.get('/api/employees/school/:npsn', authenticateToken, async (req, res) => {
 });
 
 app.get('/api/employees/:id/documents', authenticateToken, async (req, res) => {
+  const schoolScope = getSchoolScope(req);
+  if (schoolScope) {
+    const db = getDb();
+    if (db) {
+      const emp = await db.execute('SELECT sekolah_id FROM employees WHERE id = ?', [req.params.id]);
+      if (emp.rows.length > 0 && (emp.rows[0] as any).sekolah_id !== schoolScope) {
+        return res.status(403).json({ error: 'Forbidden: you can only access employees in your own school' });
+      }
+    }
+  }
   const docs = await getEmployeeDocuments(req.params.id);
   res.json(docs);
 });
@@ -604,7 +637,8 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
   if (schoolScope && req.body.sekolah_id !== schoolScope) {
     return res.status(403).json({ error: 'Forbidden: you can only add employees to your own school' });
   }
-  const emp = await insertEmployee(req.body);
+  const sanitized = { ...req.body, nama: sanitizeAPI(req.body.nama || ''), nik: sanitizeAPI(req.body.nik || '') };
+  const emp = await insertEmployee(sanitized);
   if (!emp) return res.status(400).json({ error: 'Failed to create employee' });
   res.status(201).json(emp);
 });
@@ -704,8 +738,7 @@ app.delete('/api/documents/:id', authenticateToken, async (req, res) => {
 
   // Delete from Google Drive
   try {
-    const { google } = await import('googleapis');
-    const auth = (await import('./drive')).getAuth();
+    const auth = getDriveAuth();
     await google.drive({ version: 'v3', auth }).files.delete({ fileId: row.drive_file_id });
   } catch (driveErr: any) {
     if (driveErr.code !== 404) {
@@ -744,23 +777,29 @@ app.post('/api/upload-file', authenticateToken, async (req, res) => {
   if (!file || !fileName || !employeeId || !schoolName) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
+  const ALLOWED_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+  const buffer = Buffer.from(file, 'base64');
+  if (buffer.length > MAX_FILE_SIZE) {
+    return res.status(400).json({ error: 'File terlalu besar. Maksimal 5MB.' });
+  }
+  if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
+    return res.status(400).json({ error: 'Tipe file tidak diizinkan. Hanya PDF, gambar, dan dokumen Word.' });
+  }
   try {
     const { uploadToDrive } = await import('./drive');
     const db = getDb();
     if (!db) return res.status(500).json({ error: 'DB not available' });
 
-    // Look up employee to get sekolah_id
     const emp = await db.execute('SELECT id, sekolah_id FROM employees WHERE id = ?', [employeeId]);
     if (emp.rows.length === 0) return res.status(404).json({ error: 'Employee not found' });
     const sekolahId = (emp.rows[0] as any).sekolah_id as string;
 
-    // Operator can only upload for employees in their own school
     const schoolScope = getSchoolScope(req);
     if (schoolScope && sekolahId !== schoolScope) {
       return res.status(403).json({ error: 'Forbidden: you can only upload for employees in your own school' });
     }
 
-    const buffer = Buffer.from(file, 'base64');
     const { fileId, driveUrl } = await uploadToDrive(buffer, fileName, mimeType, schoolName, fileName.split(' - ')[0] || schoolName);
 
     const ok = await upsertEmployeeDocument({
@@ -821,7 +860,7 @@ app.get('/api/schools', authenticateToken, async (req, res) => {
     npsn: s.npsn,
     name: s.name,
     level: s.level,
-    status: s.status === 'NEGERI' ? 'Negeri' : s.status === 'SWASTA' ? 'Swasta' : s.status,
+    status: (s.status as string) === 'NEGERI' ? 'Negeri' : (s.status as string) === 'SWASTA' ? 'Swasta' : s.status,
     village: s.village,
   })));
 });
@@ -838,7 +877,7 @@ app.get('/api/schools/stats', authenticateToken, async (req, res) => {
     npsn: s.npsn,
     name: s.name,
     level: s.level,
-    status: s.status === 'NEGERI' ? 'Negeri' : s.status === 'SWASTA' ? 'Swasta' : s.status,
+    status: (s.status as string) === 'NEGERI' ? 'Negeri' : (s.status as string) === 'SWASTA' ? 'Swasta' : s.status,
     village: s.village,
     accreditation: s.accreditation,
     healthScore: s.healthScore,
@@ -911,9 +950,10 @@ app.get('/api/document-search', authenticateToken, async (req, res) => {
 
 // 7. Student API
 app.get('/api/students', authenticateToken, async (req, res) => {
-  const { school, rombel } = req.query;
+  const { school, rombel, limit, offset } = req.query;
+  const pageLimit = Math.min(Math.max(parseInt(limit as string) || 100, 1), 500);
+  const pageOffset = Math.max(parseInt(offset as string) || 0, 0);
   const schoolScope = getSchoolScope(req);
-  // If operator and no school param, force their school
   const effectiveSchool = schoolScope || (school as string);
   if (!effectiveSchool && schoolScope) {
     return res.json([]);
@@ -922,7 +962,13 @@ app.get('/api/students', authenticateToken, async (req, res) => {
   if (rombel && effectiveSchool) students = await getStudentsByRombel(effectiveSchool, rombel as string);
   else if (effectiveSchool) students = await getStudentsBySchool(effectiveSchool);
   else students = await getStudents();
-  res.json(students);
+  const paginated = students.slice(pageOffset, pageOffset + pageLimit);
+  res.json({
+    data: paginated,
+    total: students.length,
+    limit: pageLimit,
+    offset: pageOffset,
+  });
 });
 
 app.get('/api/students/rombels', authenticateToken, async (req, res) => {
@@ -939,7 +985,8 @@ app.post('/api/students', authenticateToken, async (req, res) => {
   if (schoolScope && req.body.school_npsn !== schoolScope) {
     return res.status(403).json({ error: 'Forbidden: you can only add students to your own school' });
   }
-  const stu = await insertStudent(req.body);
+  const sanitized = { ...req.body, nama: sanitizeAPI(req.body.nama || '') };
+  const stu = await insertStudent(sanitized);
   if (!stu) return res.status(400).json({ error: 'Gagal menambah siswa' });
   res.status(201).json(stu);
 });
@@ -1032,7 +1079,8 @@ app.get('/api/calendar/:id', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/calendar', authenticateToken, async (req, res) => {
-  const ev = await insertCalendarEvent(req.body);
+  const sanitized = { ...req.body, title: sanitizeAPI(req.body.title || '') };
+  const ev = await insertCalendarEvent(sanitized);
   if (!ev) return res.status(400).json({ error: 'Gagal menambah event' });
   res.status(201).json(ev);
 });
@@ -1080,7 +1128,7 @@ app.get('/api/recommendations', authenticateToken, async (req, res) => {
   res.json(recs);
 });
 
-app.post('/api/recommendations/:id/apply', authenticateToken, async (req, res) => {
+app.post('/api/recommendations/:id/apply', authenticateToken, requireRole('admin', 'staff_kecamatan'), async (req, res) => {
   const db = getDb();
   if (!db) return res.status(503).json({ error: 'Database unavailable' });
   try {
@@ -1138,6 +1186,84 @@ app.get('/api/reports/employees/:npsn', authenticateToken, async (req, res) => {
     args: [req.params.npsn]
   });
   res.json(result.rows);
+});
+
+// ── User Management CRUD (admin-only) ──
+app.get('/api/users', authenticateToken, requireRole('admin'), async (_req, res) => {
+  try {
+    const users = await getAllUsers();
+    const schools = await getAllSchools();
+    const schoolMap = new Map(schools.map((s: any) => [s.npsn, s.name]));
+    const result = users.map(u => ({
+      ...u,
+      school_name: u.school_npsn ? schoolMap.get(u.school_npsn) || u.school_npsn : null,
+    }));
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/users/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const user = await getUserById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/users', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { username, password, role, school_npsn } = req.body;
+    if (!username || !password || !role) return res.status(400).json({ error: 'username, password, role required' });
+    if (!['admin', 'staff_kecamatan', 'operator_sekolah'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+    if (role === 'operator_sekolah' && !school_npsn) {
+      return res.status(400).json({ error: 'school_npsn required for operator_sekolah' });
+    }
+    const existing = await getUserByUsername(username);
+    if (existing) return res.status(409).json({ error: 'Username already exists' });
+    const ok = await createUser(username, password, role, school_npsn || null);
+    if (!ok) return res.status(500).json({ error: 'Failed to create user' });
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/users/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { username, password, role, school_npsn } = req.body;
+    if (!username || !role) return res.status(400).json({ error: 'username, role required' });
+    if (!['admin', 'staff_kecamatan', 'operator_sekolah'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+    const existing = await getUserById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'User not found' });
+    const ok = await updateUser(req.params.id, username, role, school_npsn || null, password || undefined);
+    if (!ok) return res.status(500).json({ error: 'Failed to update user' });
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/users/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const existing = await getUserById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'User not found' });
+    if (req.params.id === (req as any).user?.id) {
+      return res.status(400).json({ error: 'Cannot delete yourself' });
+    }
+    const ok = await deleteUser(req.params.id);
+    if (!ok) return res.status(500).json({ error: 'Failed to delete user' });
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // Seed missing data (alerts, recommendations)
