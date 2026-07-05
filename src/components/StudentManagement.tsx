@@ -463,13 +463,29 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
       {formOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setFormOpen(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto space-y-4" onClick={e => e.stopPropagation()}>
-            <h2 className="text-lg font-bold text-white">{editId ? 'Edit Siswa' : 'Tambah Siswa Baru'}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-white">{editId ? 'Edit Siswa' : 'Tambah Siswa Baru'}</h2>
+              {!editId && (
+                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold ${
+                  formLevel === 'SD' ? 'text-blue-400 bg-blue-950/40' :
+                  formLevel === 'TK' ? 'text-pink-400 bg-pink-950/40' :
+                  'text-emerald-400 bg-emerald-950/40'
+                }`}>{formLevel}</span>
+              )}
+            </div>
+            {!editId && (
+              <p className="text-[11px] text-slate-400 font-mono -mt-1">
+                {formLevel === 'SD' ? 'Masukkan NIK untuk cari data dari TK/KB, atau isi manual' :
+                 formLevel === 'TK' ? 'Isi data siswa baru untuk jenjang TK' :
+                 'Isi data siswa baru untuk jenjang KB'}
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-3">
-              {/* NIK first for SD new student — auto-lookup */}
+              {/* SD: NIK lookup for auto-fill from TK/KB */}
               {formLevel === 'SD' && !editId && (
                 <div className="col-span-2">
                   <label className="text-[10px] font-mono text-slate-400 uppercase">
-                    NIK <span className="text-cyan-400">(Cari data)</span>
+                    NIK <span className="text-cyan-400">(Cari data dari TK/KB)</span>
                   </label>
                   <div className="flex gap-2 items-center">
                     <input value={form.nik} onChange={e => { setForm({...form, nik: e.target.value}); if (foundStudent) { setFoundStudent(null); setNikLookup('idle'); } }}
@@ -528,14 +544,23 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                   <div className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-slate-300 mt-1">{operatorName}</div>
                 </div>
               )}
-              <div>
-                <label className="text-[10px] font-mono text-slate-400 uppercase">NISN</label>
-                <input value={form.nisn} onChange={e => setForm({...form, nisn: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
-              </div>
-              <div>
-                <label className="text-[10px] font-mono text-slate-400 uppercase">NIK</label>
-                <input value={form.nik} onChange={e => setForm({...form, nik: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
-              </div>
+              {/* NISN: only for SD (TK/KB usually don't have NISN yet) */}
+              {formLevel !== 'KB' && (
+                <div>
+                  <label className="text-[10px] font-mono text-slate-400 uppercase">NISN</label>
+                  <input value={form.nisn} onChange={e => setForm({...form, nisn: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
+                </div>
+              )}
+              {/* NIK: hidden for SD (already input above), shown for TK/KB */}
+              {formLevel !== 'SD' && (
+                <div>
+                  <label className="text-[10px] font-mono text-slate-400 uppercase">NIK</label>
+                  <input value={form.nik} onChange={e => setForm({...form, nik: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
+                </div>
+              )}
+              {formLevel === 'SD' && !editId && (
+                <div><label className="text-[10px] font-mono text-slate-400 uppercase">NIK</label><input value={form.nik} disabled className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-slate-400 mt-1"/></div>
+              )}
               <div>
                 <label className="text-[10px] font-mono text-slate-400 uppercase">Jenis Kelamin</label>
                 <select value={form.jenis_kelamin} onChange={e => setForm({...form, jenis_kelamin: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
