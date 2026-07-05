@@ -533,8 +533,8 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                 <div className="col-span-2">
                   <label className="text-[10px] font-mono text-slate-400 uppercase">Sekolah</label>
                   <select value={form.school_npsn} onChange={e => handleSchoolChange(e.target.value)} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
-                    <option value="">Pilih Sekolah</option>
-                    {ALL_SCHOOLS.map(s => <option key={s.npsn} value={s.npsn}>{s.name} ({s.level})</option>)}
+                    <option value="">Pilih Sekolah {formLevel}</option>
+                    {ALL_SCHOOLS.filter(s => s.level === formLevel).map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
                   </select>
                 </div>
               )}
