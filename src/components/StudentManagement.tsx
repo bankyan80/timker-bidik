@@ -16,9 +16,9 @@ const npsnToSchool = new Map(ALL_SCHOOLS.map(s => [s.npsn, s.name]));
 const schoolLevel = new Map(ALL_SCHOOLS.map(s => [s.npsn, s.level]));
 
 const kelasByLevel: Record<string, string[]> = {
-  SD: ['Kelas 1', 'Kelas 2', 'Kelas 3', 'Kelas 4', 'Kelas 5', 'Kelas 6'],
-  TK: ['Kelompok A', 'Kelompok B'],
-  KB: ['Kelompok Bermain'],
+  SD: ['1', '2', '3', '4', '5', '6'],
+  TK: ['TK A', 'TK B'],
+  KB: ['Kelompok A', 'Kelompok B'],
 };
 
 export default function StudentManagement() {
@@ -59,7 +59,7 @@ export default function StudentManagement() {
     if (search) { const q = search.toLowerCase(); f = f.filter(s => s.nama.toLowerCase().includes(q) || (s.nisn && s.nisn.includes(q))); }
     if (filterSchool !== 'ALL') f = f.filter(s => s.school_npsn === filterSchool);
     if (filterKelas !== 'ALL') {
-      if (levelTab === 'SD') f = f.filter(s => s.kelas_kelompok === filterKelas);
+      if (levelTab === 'SD') f = f.filter(s => s.kelas_kelompok === 'Kelas ' + filterKelas);
       else f = f.filter(s => (s.rombel && s.rombel.toLowerCase() !== s.kelas_kelompok.toLowerCase() ? s.rombel : '-') === filterKelas);
     }
     setFiltered(f);
@@ -77,16 +77,19 @@ export default function StudentManagement() {
 
   async function save() {
     const selectedLevel = form.school_npsn ? (schoolLevel.get(form.school_npsn) || 'SD') : levelTab;
+    // Map form values to DB format
+    const kk = form.kelas_kelompok;
+    const kelas_kelompok = selectedLevel === 'SD' ? (kk.match(/^Kelas /) ? kk : 'Kelas ' + kk) : kk;
     if (editId) {
       await api(`/api/students/${editId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         nama: form.nama, nisn: form.nisn || null, nik: form.nik || null,
         jenis_kelamin: form.jenis_kelamin, tempat_lahir: form.tempat_lahir || null,
-        tanggal_lahir: form.tanggal_lahir || null, kelas_kelompok: form.kelas_kelompok,
+        tanggal_lahir: form.tanggal_lahir || null, kelas_kelompok,
         rombel: form.rombel || null
       })});
     } else {
       await api('/api/students', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-        ...form, nisn: form.nisn || null, nik: form.nik || null,
+        ...form, kelas_kelompok, nisn: form.nisn || null, nik: form.nik || null,
         jenjang: selectedLevel, status_siswa: 'aktif'
       })});
     }
@@ -219,7 +222,8 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
 
   function openEdit(s: Student) {
     setEditId(s.id);
-    setForm({ school_npsn: s.school_npsn, nama: s.nama, nisn: s.nisn || '', nik: s.nik || '', jenis_kelamin: normalizeGender(s.jenis_kelamin), tempat_lahir: s.tempat_lahir || '', tanggal_lahir: s.tanggal_lahir || '', kelas_kelompok: s.kelas_kelompok, rombel: s.rombel || '', tahun_pelajaran: s.tahun_pelajaran });
+    const kk = s.jenjang === 'SD' && s.kelas_kelompok?.startsWith('Kelas ') ? s.kelas_kelompok.slice(6) : s.kelas_kelompok;
+    setForm({ school_npsn: s.school_npsn, nama: s.nama, nisn: s.nisn || '', nik: s.nik || '', jenis_kelamin: normalizeGender(s.jenis_kelamin), tempat_lahir: s.tempat_lahir || '', tanggal_lahir: s.tanggal_lahir || '', kelas_kelompok: kk, rombel: s.rombel || '', tahun_pelajaran: s.tahun_pelajaran });
     setFormOpen(true);
   }
 
@@ -300,8 +304,8 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
         )}
         {levelTab === 'SD' ? (
           <select value={filterKelas} onChange={e => setFilterKelas(e.target.value)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
-            <option value="ALL">Semua Kelas</option>
-            {currentKelasList.map(k => <option key={k} value={k}>{k}</option>)}
+            <option value="ALL">Semua Tingkat</option>
+            {currentKelasList.map(k => <option key={k} value={k}>Kelas {k}</option>)}
           </select>
         ) : (
           <select value={filterKelas} onChange={e => setFilterKelas(e.target.value)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
@@ -338,7 +342,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                 <th className="text-left px-4 py-3">Nama</th>
                 <th className="text-left px-4 py-3">NISN</th>
                 <th className="text-left px-4 py-3">JK</th>
-                <th className="text-left px-4 py-3">{levelTab === 'SD' ? 'Kelas' : 'Kelompok'}</th>
+                <th className="text-left px-4 py-3">{levelTab === 'SD' ? 'Tingkat' : 'Rombel'}</th>
                 {levelTab === 'SD' && <th className="text-left px-4 py-3">Rombel</th>}
                 <th className="text-left px-4 py-3">Sekolah</th>
                 <th className="text-left px-4 py-3">Status</th>
@@ -462,20 +466,29 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
               {formLevel === 'SD' ? (
                 <>
                   <div>
-                    <label className="text-[10px] font-mono text-slate-400 uppercase">Kelas</label>
+                    <label className="text-[10px] font-mono text-slate-400 uppercase">Tingkat</label>
                     <select value={form.kelas_kelompok} onChange={e => setForm({...form, kelas_kelompok: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
-                      {kelasByLevel['SD']?.map(k => <option key={k} value={k}>{k}</option>)}
+                      {kelasByLevel['SD']?.map(k => <option key={k} value={k}>Kelas {k}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-mono text-slate-400 uppercase">Rombel</label>
+                    <label className="text-[10px] font-mono text-slate-400 uppercase">Nama Rombel</label>
                     <input value={form.rombel} onChange={e => setForm({...form, rombel: e.target.value})} placeholder="cth: A, B, C" className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
                   </div>
                 </>
+              ) : formLevel === 'TK' ? (
+                <div className="col-span-2">
+                  <label className="text-[10px] font-mono text-slate-400 uppercase">Tingkat</label>
+                  <select value={form.kelas_kelompok} onChange={e => setForm({...form, kelas_kelompok: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
+                    {kelasByLevel['TK']?.map(k => <option key={k} value={k}>{k}</option>)}
+                  </select>
+                </div>
               ) : (
                 <div className="col-span-2">
-                  <label className="text-[10px] font-mono text-slate-400 uppercase">Kelompok / Rombel</label>
-                  <input value={form.rombel || form.kelas_kelompok} onChange={e => setForm({...form, rombel: e.target.value, kelas_kelompok: e.target.value || form.kelas_kelompok})} placeholder="cth: A, B, Bermain" className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700"/>
+                  <label className="text-[10px] font-mono text-slate-400 uppercase">Nama Rombel</label>
+                  <select value={form.kelas_kelompok} onChange={e => setForm({...form, kelas_kelompok: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
+                    {kelasByLevel['KB']?.map(k => <option key={k} value={k}>{k}</option>)}
+                  </select>
                 </div>
               )}
               <div className="col-span-2">
