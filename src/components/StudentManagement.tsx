@@ -197,7 +197,7 @@ export default function StudentManagement() {
     if (promoted > 0) load();
   }
 
-  function resetForm() { setNikLookup('idle'); setFoundStudent(null); const y = new Date().getFullYear(); const m = new Date().getMonth(); const tp = m >= 6 ? `${y}/${y+1}` : `${y-1}/${y}`; setForm({ school_npsn: '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki', tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: '1', rombel: '', tahun_pelajaran: tp }); }
+  function resetForm() { setNikLookup('idle'); setFoundStudent(null); const y = new Date().getFullYear(); const m = new Date().getMonth(); const tp = m >= 6 ? `${y}/${y+1}` : `${y-1}/${y}`; const defaultKk = levelTab === 'SD' ? '1' : levelTab === 'TK' ? 'TK A' : 'Kelompok A'; setForm({ school_npsn: '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki', tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: defaultKk, rombel: '', tahun_pelajaran: tp }); }
 
     async function openDetail(s: Student) {
     setDetailStudent(s);
@@ -272,8 +272,8 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
 
   function handleSchoolChange(npsn: string) {
     const lv = schoolLevel.get(npsn) || 'SD';
-    const groups = kelasByLevel[lv] || ['Kelas 1'];
-    setForm({ ...form, school_npsn: npsn, kelas_kelompok: lv === 'SD' ? groups[0] : 'Kelompok A', rombel: '' });
+    const groups = kelasByLevel[lv] || ['1'];
+    setForm({ ...form, school_npsn: npsn, kelas_kelompok: groups[0], rombel: '' });
   }
 
   const levels = ['SD', 'TK', 'KB'];
