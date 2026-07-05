@@ -27,6 +27,7 @@ const authLimiter = rateLimit({
   message: { error: 'Terlalu banyak percobaan login. Coba lagi 15 menit.' },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
 });
 
 const apiLimiter = rateLimit({
@@ -35,6 +36,7 @@ const apiLimiter = rateLimit({
   message: { error: 'Terlalu banyak permintaan. Coba lagi nanti.' },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
 });
 app.use('/api/', apiLimiter);
 

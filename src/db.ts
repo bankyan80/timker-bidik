@@ -101,15 +101,11 @@ export type EmployeeDocumentRow = {
   updated_at: number;
 };
 
-let db: ReturnType<typeof createClient> | null = null;
-
 export function getDb() {
-  if (db) return db;
   const url = process.env.TURSO_DB_URL;
   const token = process.env.TURSO_DB_TOKEN;
   if (!url || !token) return null;
-  db = createClient({ url, authToken: token });
-  return db;
+  return createClient({ url, authToken: token });
 }
 
 export async function initSchema() {
