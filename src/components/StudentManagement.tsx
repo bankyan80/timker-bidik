@@ -46,6 +46,11 @@ export default function StudentManagement() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailSaving, setDetailSaving] = useState(false);
   const [detailForm, setDetailForm] = useState<Record<string, string>>({});
+  const [gradModalOpen, setGradModalOpen] = useState(false);
+  const [gradStudents, setGradStudents] = useState<Student[]>([]);
+  const [gradData, setGradData] = useState<Record<string, {status_lanjutan: string; tujuan_nama: string; tujuan_jenjang: string; alasan: string; alasan_detail: string}>>({});
+  const [gradSaving, setGradSaving] = useState(false);
+
   const [form, setForm] = useState({
     school_npsn: isOperator ? operatorNpsn : '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki',
     tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: 'Kelas 1',
@@ -137,10 +142,38 @@ export default function StudentManagement() {
 
   async function naikKelas() {
     if (checkedIds.size === 0) return;
-    if (!confirm(`Naikkan ${checkedIds.size} siswa yang dipilih ke kelas berikutnya?`)) return;
     const selected = students.filter(s => checkedIds.has(s.id));
+    const kelas6 = selected.filter(s => s.kelas_kelompok === 'Kelas 6');
+    const non6 = selected.filter(s => s.kelas_kelompok !== 'Kelas 6');
+    if (kelas6.length > 0 && non6.length === 0) {
+      // Only Kelas 6 selected — show graduation modal directly
+      setGradStudents(kelas6);
+      const init: Record<string, any> = {};
+      kelas6.forEach(s => { init[s.id] = { status_lanjutan: '', tujuan_nama: '', tujuan_jenjang: '', alasan: '', alasan_detail: '' }; });
+      setGradData(init);
+      setGradModalOpen(true);
+      return;
+    }
+    if (kelas6.length > 0 && non6.length > 0) {
+      // Mixed — promote non-6 first
+      if (!confirm(`Naikkan ${non6.length} siswa ke kelas berikutnya? ${kelas6.length} siswa Kelas 6 akan diproses kelulusan.`)) return;
+      for (const s of non6) {
+        const next = GRADE_NEXT[s.kelas_kelompok];
+        if (!next) continue;
+        await api(`/api/students/${s.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kelas_kelompok: next, rombel: null }) });
+      }
+      setGradStudents(kelas6);
+      const init: Record<string, any> = {};
+      kelas6.forEach(s => { init[s.id] = { status_lanjutan: '', tujuan_nama: '', tujuan_jenjang: '', alasan: '', alasan_detail: '' }; });
+      setGradData(init);
+      setGradModalOpen(true);
+      load();
+      return;
+    }
+    // No Kelas 6 — promote normally
+    if (!confirm(`Naikkan ${non6.length} siswa yang dipilih ke kelas berikutnya?`)) return;
     let promoted = 0;
-    for (const s of selected) {
+    for (const s of non6) {
       const next = GRADE_NEXT[s.kelas_kelompok];
       if (!next) continue;
       await api(`/api/students/${s.id}`, {
@@ -604,6 +637,136 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                 className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg transition-colors flex items-center gap-2">
                 {detailSaving && <Loader2 className="h-3 w-3 animate-spin" />}
                 Simpan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Graduation Modal */}
+      {gradModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setGradModalOpen(false)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">Luluskan Siswa Kelas 6</h2>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">{gradStudents.length} siswa akan diluluskan. Lengkapi data kelanjutan.</p>
+              </div>
+              <button onClick={() => setGradModalOpen(false)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-white transition-colors cursor-pointer">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {gradStudents.map(s => {
+                const d = gradData[s.id] || {};
+                return (
+                  <div key={s.id} className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-sm font-medium text-white">{s.nama}</span>
+                        <span className="text-xs text-slate-400 font-mono ml-2">{s.nisn || '-'}</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-mono text-slate-400 uppercase">Status Kelanjutan</label>
+                        <select value={d.status_lanjutan} onChange={e => setGradData(p => ({ ...p, [s.id]: { ...p[s.id], status_lanjutan: e.target.value } }))} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
+                          <option value="">-- Pilih --</option>
+                          <option value="melanjutkan">Melanjutkan</option>
+                          <option value="tidak_melanjutkan">Tidak Melanjutkan</option>
+                        </select>
+                      </div>
+                      {d.status_lanjutan === 'melanjutkan' && (
+                        <>
+                          <div>
+                            <label className="text-[10px] font-mono text-slate-400 uppercase">Jenjang Tujuan</label>
+                            <select value={d.tujuan_jenjang} onChange={e => setGradData(p => ({ ...p, [s.id]: { ...p[s.id], tujuan_jenjang: e.target.value } }))} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
+                              <option value="">-- Pilih --</option>
+                              <option value="formal">Formal (SMP/MTS)</option>
+                              <option value="non_formal">Non-Formal</option>
+                              <option value="pondok">Pondok Pesantren</option>
+                              <option value="lainnya">Lainnya</option>
+                            </select>
+                          </div>
+                          <div className="col-span-2">
+                            <label className="text-[10px] font-mono text-slate-400 uppercase">Nama Sekolah / Lembaga Tujuan</label>
+                            <input value={d.tujuan_nama} onChange={e => setGradData(p => ({ ...p, [s.id]: { ...p[s.id], tujuan_nama: e.target.value } }))} placeholder="cth: SMP NEGERI 1 LEMAHABANG" className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700" />
+                          </div>
+                        </>
+                      )}
+                      {d.status_lanjutan === 'tidak_melanjutkan' && (
+                        <>
+                          <div>
+                            <label className="text-[10px] font-mono text-slate-400 uppercase">Alasan</label>
+                            <select value={d.alasan} onChange={e => setGradData(p => ({ ...p, [s.id]: { ...p[s.id], alasan: e.target.value } }))} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
+                              <option value="">-- Pilih --</option>
+                              <option value="biaya">Biaya</option>
+                              <option value="bekerja">Bekerja</option>
+                              <option value="menikah">Menikah</option>
+                              <option value="lainnya">Lainnya</option>
+                            </select>
+                          </div>
+                          <div className="col-span-2">
+                            <label className="text-[10px] font-mono text-slate-400 uppercase">Keterangan Tambahan</label>
+                            <input value={d.alasan_detail} onChange={e => setGradData(p => ({ ...p, [s.id]: { ...p[s.id], alasan_detail: e.target.value } }))} placeholder="Opsional" className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700" />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+              <button onClick={() => setGradModalOpen(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Batal</button>
+              <button onClick={async () => {
+                setGradSaving(true);
+                try {
+                  const r = await api('/api/graduates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      student_ids: gradStudents.map(s => s.id),
+                      tahun_pelajaran_lulus: (() => { const y = new Date().getFullYear(); const m = new Date().getMonth(); return m >= 6 ? `${y}/${y+1}` : `${y-1}/${y}`; })(),
+                    }),
+                  });
+                  const rData = await r.json();
+                  if (r.ok) {
+                    // Update alumni with continuation data
+                    for (const s of gradStudents) {
+                      const d = gradData[s.id];
+                      if (!d || !d.status_lanjutan) continue;
+                      const alum = (rData.data || []).find((a: any) => a.student_id === s.id);
+                      if (alum) {
+                        await api(`/api/alumni/${alum.id}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            status_lanjutan: d.status_lanjutan,
+                            tujuan_nama: d.tujuan_nama || null,
+                            tujuan_jenjang: d.tujuan_jenjang || null,
+                            alasan_tidak_melanjutkan: d.alasan || null,
+                            alasan_detail: d.alasan_detail || null,
+                          }),
+                        });
+                      }
+                    }
+                    setGradModalOpen(false);
+                    setCheckedIds(new Set());
+                    load();
+                  } else {
+                    alert('Gagal meluluskan: ' + (rData.error || 'Unknown error'));
+                  }
+                } catch (err: any) {
+                  alert('Gagal meluluskan: ' + (err.message || 'Unknown error'));
+                }
+                setGradSaving(false);
+              }} disabled={gradSaving}
+                className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg transition-colors flex items-center gap-2">
+                {gradSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+                Luluskan {gradStudents.length} Siswa
               </button>
             </div>
           </div>

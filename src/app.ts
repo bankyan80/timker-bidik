@@ -8,7 +8,7 @@ import rateLimit from 'express-rate-limit';
 import { google } from 'googleapis';
 import { GoogleGenAI } from '@google/genai';
 import { SimulationScenario, SimulationResult } from './types';
-import { getDb, initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod, getMonthlyReport, getUserByUsername, changePassword, deleteEmployeeDocument, getStudentDetail, upsertStudentParents, upsertStudentAddress, upsertStudentHealth, getAllUsers, getUserById, createUser, updateUser, deleteUser } from './db';
+import { getDb, initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod, getMonthlyReport, getUserByUsername, changePassword, deleteEmployeeDocument, getStudentDetail, upsertStudentParents, upsertStudentAddress, upsertStudentHealth, getAllUsers, getUserById, createUser, updateUser, deleteUser, getAlumni, getAlumniById, insertAlumni, updateAlumni } from './db';
 import { getAuth as getDriveAuth } from './drive';
 
 function sanitizeAPI(val: unknown): string {
@@ -1062,6 +1062,68 @@ app.delete('/api/students/:id', authenticateToken, async (req, res) => {
   const ok = await deleteStudent(req.params.id);
   if (!ok) return res.status(400).json({ error: 'Gagal menghapus siswa' });
   res.json({ success: true });
+});
+
+// ── Alumni / Graduation API ──
+app.post('/api/graduates', authenticateToken, async (req, res) => {
+  const { student_ids, tahun_pelajaran_lulus } = req.body;
+  if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
+    return res.status(400).json({ error: 'student_ids wajib diisi' });
+  }
+  if (!tahun_pelajaran_lulus) return res.status(400).json({ error: 'tahun_pelajaran_lulus wajib diisi' });
+  const schoolScope = getSchoolScope(req);
+  const db = getDb();
+  if (!db) return res.status(500).json({ error: 'DB not available' });
+  try {
+    const result = await db.execute('SELECT * FROM students WHERE id IN (' + student_ids.map(() => '?').join(',') + ')', student_ids);
+    const graduated: any[] = [];
+    for (const row of result.rows) {
+      const s = row as any;
+      if (schoolScope && s.school_npsn !== schoolScope) continue;
+      // Insert into alumni
+      const alum = await insertAlumni({
+        student_id: s.id as string, nama: s.nama as string, nisn: s.nisn as string,
+        nik: s.nik as string, jenis_kelamin: s.jenis_kelamin as string,
+        tempat_lahir: s.tempat_lahir as string, tanggal_lahir: s.tanggal_lahir as string,
+        school_npsn: s.school_npsn as string, tahun_pelajaran_lulus,
+      });
+      if (alum) {
+        // Update student status to lulus
+        await db.execute({ sql: 'UPDATE students SET status_siswa = ? WHERE id = ?', args: ['lulus', s.id] });
+        graduated.push(alum);
+      }
+    }
+    res.json({ success: true, count: graduated.length, data: graduated });
+  } catch (err: any) {
+    console.error('graduates error:', err);
+    res.status(500).json({ error: err.message || 'Gagal meluluskan siswa' });
+  }
+});
+
+app.get('/api/alumni', authenticateToken, async (req, res) => {
+  const { school, tahun_pelajaran_lulus, status_lanjutan } = req.query;
+  const schoolScope = getSchoolScope(req);
+  const filters: any = {};
+  if (schoolScope) filters.school_npsn = schoolScope;
+  else if (school) filters.school_npsn = school as string;
+  if (tahun_pelajaran_lulus) filters.tahun_pelajaran_lulus = tahun_pelajaran_lulus as string;
+  if (status_lanjutan) filters.status_lanjutan = status_lanjutan as string;
+  const list = await getAlumni(filters);
+  res.json(list);
+});
+
+app.put('/api/alumni/:id', authenticateToken, async (req, res) => {
+  const schoolScope = getSchoolScope(req);
+  if (schoolScope) {
+    const existing = await getAlumniById(req.params.id);
+    if (existing && existing.school_npsn !== schoolScope) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+  }
+  const ok = await updateAlumni(req.params.id, req.body);
+  if (!ok) return res.status(400).json({ error: 'Gagal mengupdate alumni' });
+  const updated = await getAlumniById(req.params.id);
+  res.json(updated);
 });
 
 // 8. Calendar API

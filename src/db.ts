@@ -1,4 +1,4 @@
-import { createClient } from '@libsql/client';
+﻿import { createClient } from '@libsql/client';
 import bcrypt from 'bcryptjs';
 import { School, VillageStats, Recommendation, AlertMessage, DocumentMeta, CalendarEvent, CalendarNotification } from './types';
 import { VILLAGES, ALL_SCHOOLS, GET_VILLAGE_STATS } from './data/mockData';
@@ -331,6 +331,29 @@ export async function initSchema() {
     )
   `);
 
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS student_alumni (
+      id TEXT PRIMARY KEY,
+      student_id TEXT,
+      nama TEXT NOT NULL,
+      nisn TEXT,
+      nik TEXT,
+      jenis_kelamin TEXT,
+      tempat_lahir TEXT,
+      tanggal_lahir TEXT,
+      school_npsn TEXT NOT NULL,
+      tahun_pelajaran_lulus TEXT NOT NULL,
+      status_lanjutan TEXT CHECK(status_lanjutan IN ('melanjutkan', 'tidak_melanjutkan')),
+      tujuan_nama TEXT,
+      tujuan_jenjang TEXT CHECK(tujuan_jenjang IN ('formal', 'non_formal', 'pondok', 'lainnya')),
+      tujuan_npsn TEXT,
+      alasan_tidak_melanjutkan TEXT CHECK(alasan_tidak_melanjutkan IN ('biaya', 'bekerja', 'menikah', 'lainnya')),
+      alasan_detail TEXT,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+      updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+    )
+  `);
+
   // â”€â”€ Indexes for performance â”€â”€
   const indexes = [
     'CREATE INDEX IF NOT EXISTS idx_students_school ON students(school_npsn)',
@@ -346,6 +369,8 @@ export async function initSchema() {
     'CREATE INDEX IF NOT EXISTS idx_student_addresses_nisn ON student_addresses(siswa_nisn)',
     'CREATE INDEX IF NOT EXISTS idx_student_health_nisn ON student_health(siswa_nisn)',
     'CREATE INDEX IF NOT EXISTS idx_student_mutations_school ON student_mutations(school_npsn)',
+    'CREATE INDEX IF NOT EXISTS idx_alumni_school ON student_alumni(school_npsn)',
+    'CREATE INDEX IF NOT EXISTS idx_alumni_tahun ON student_alumni(tahun_pelajaran_lulus)',
     'CREATE INDEX IF NOT EXISTS idx_alerts_school ON alerts(school_name)',
     'CREATE INDEX IF NOT EXISTS idx_recommendations_school ON recommendations(target_school_npsn)',
     'CREATE INDEX IF NOT EXISTS idx_calendar_level ON academic_calendar(education_level)',
@@ -1258,6 +1283,93 @@ export async function deleteStudent(id: string): Promise<boolean> {
 }
 
 // â”€â”€ Student Detail CRUD (parents, addresses, health) â”€â”€
+
+// ── Alumni CRUD ──
+
+export interface AlumniRow {
+  id: string; student_id: string | null; nama: string; nisn: string | null;
+  nik: string | null; jenis_kelamin: string | null; tempat_lahir: string | null;
+  tanggal_lahir: string | null; school_npsn: string;
+  tahun_pelajaran_lulus: string; status_lanjutan: string | null;
+  tujuan_nama: string | null; tujuan_jenjang: string | null; tujuan_npsn: string | null;
+  alasan_tidak_melanjutkan: string | null; alasan_detail: string | null;
+  created_at: number; updated_at: number;
+}
+
+export async function getAlumni(filters?: {
+  school_npsn?: string; tahun_pelajaran_lulus?: string; status_lanjutan?: string;
+}): Promise<AlumniRow[]> {
+  const client = getDb();
+  if (!client) return [];
+  let sql = 'SELECT * FROM student_alumni WHERE 1=1';
+  const args: any[] = [];
+  if (filters?.school_npsn) { sql += ' AND school_npsn = ?'; args.push(filters.school_npsn); }
+  if (filters?.tahun_pelajaran_lulus) { sql += ' AND tahun_pelajaran_lulus = ?'; args.push(filters.tahun_pelajaran_lulus); }
+  if (filters?.status_lanjutan) { sql += ' AND status_lanjutan = ?'; args.push(filters.status_lanjutan); }
+  sql += ' ORDER BY created_at DESC';
+  const result = await client.execute({ sql, args });
+  return result.rows as unknown as AlumniRow[];
+}
+
+export async function getAlumniById(id: string): Promise<AlumniRow | null> {
+  const client = getDb();
+  if (!client) return null;
+  const r = await client.execute({ sql: 'SELECT * FROM student_alumni WHERE id = ?', args: [id] });
+  return (r.rows[0] as unknown as AlumniRow) || null;
+}
+
+export async function insertAlumni(data: {
+  student_id?: string | null; nama: string; nisn?: string | null; nik?: string | null;
+  jenis_kelamin?: string | null; tempat_lahir?: string | null; tanggal_lahir?: string | null;
+  school_npsn: string; tahun_pelajaran_lulus: string; status_lanjutan?: string | null;
+  tujuan_nama?: string | null; tujuan_jenjang?: string | null; tujuan_npsn?: string | null;
+  alasan_tidak_melanjutkan?: string | null; alasan_detail?: string | null;
+}): Promise<AlumniRow | null> {
+  const client = getDb();
+  if (!client) return null;
+  const id = `ALM-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  try {
+    await client.execute({
+      sql: `INSERT INTO student_alumni (id, student_id, nama, nisn, nik, jenis_kelamin, tempat_lahir, tanggal_lahir, school_npsn, tahun_pelajaran_lulus, status_lanjutan, tujuan_nama, tujuan_jenjang, tujuan_npsn, alasan_tidak_melanjutkan, alasan_detail)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [id, data.student_id ?? null, data.nama, data.nisn ?? null, data.nik ?? null,
+             data.jenis_kelamin ?? null, data.tempat_lahir ?? null, data.tanggal_lahir ?? null,
+             data.school_npsn, data.tahun_pelajaran_lulus, data.status_lanjutan ?? null,
+             data.tujuan_nama ?? null, data.tujuan_jenjang ?? null, data.tujuan_npsn ?? null,
+             data.alasan_tidak_melanjutkan ?? null, data.alasan_detail ?? null]
+    });
+    return getAlumniById(id);
+  } catch (err) {
+    console.error('insertAlumni error:', err);
+    return null;
+  }
+}
+
+export async function updateAlumni(id: string, data: Partial<{
+  status_lanjutan: string; tujuan_nama: string; tujuan_jenjang: string;
+  tujuan_npsn: string; alasan_tidak_melanjutkan: string; alasan_detail: string;
+}>): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  const sets: string[] = [];
+  const args: any[] = [];
+  const allowed = new Set(['status_lanjutan', 'tujuan_nama', 'tujuan_jenjang', 'tujuan_npsn', 'alasan_tidak_melanjutkan', 'alasan_detail']);
+  for (const key of Object.keys(data)) {
+    if (allowed.has(key) && data[key as keyof typeof data] !== undefined) {
+      sets.push(`${key} = ?`);
+      args.push(data[key as keyof typeof data] ?? null);
+    }
+  }
+  if (sets.length === 0) return false;
+  args.push(id);
+  try {
+    await client.execute({ sql: `UPDATE student_alumni SET ${sets.join(', ')}, updated_at = strftime('%s', 'now') WHERE id = ?`, args });
+    return true;
+  } catch (err) {
+    console.error('updateAlumni error:', err);
+    return false;
+  }
+}
 
 export async function getStudentDetail(nisn: string): Promise<{
   parents: Record<string, any> | null;

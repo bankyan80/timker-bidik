@@ -91,6 +91,7 @@ export default function Sidebar({ currentModule, setCurrentModule, theme, isOpen
         { id: 'warehouse', label: 'Eksplorasi Data', icon: Database, roles: ['admin', 'staff_kecamatan'] },
         { id: 'pegawai', label: 'Manajemen Pegawai', icon: Users },
         { id: 'students', label: 'Manajemen Siswa', icon: GraduationCap },
+        { id: 'alumni', label: 'Data Kelulusan', icon: GraduationCap },
         { id: 'rombels', label: 'Manajemen Rombel', icon: List }
       ]
     },

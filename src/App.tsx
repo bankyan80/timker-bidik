@@ -21,6 +21,7 @@ import AdvancedHR from './components/AdvancedHR';
 import AcademicCalendar from './components/AcademicCalendar';
 import TargetKPI from './components/TargetKPI';
 import UserManagement from './components/UserManagement';
+import DataKelulusan from './components/DataKelulusan';
 import LoginPage from './components/LoginPage';
 import { useAuth } from './components/AuthContext';
 
@@ -141,6 +142,8 @@ export default function App() {
         return <ReportCenter />;
       case 'monthly-report':
         return <MonthlyReport />;
+      case 'alumni':
+        return <DataKelulusan />;
       case 'user-management':
         return <UserManagement />;
       default:
