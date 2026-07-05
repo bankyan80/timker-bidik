@@ -26,13 +26,14 @@ export default function StudentManagement() {
   const isOperator = user?.role === 'operator_sekolah';
   const operatorNpsn = user?.schoolNpsn || '';
   const operatorName = user?.schoolName || '';
+  const operatorLevel = isOperator ? (schoolLevel.get(operatorNpsn) || 'SD') : null;
 
   const [students, setStudents] = useState<Student[]>([]);
   const [filtered, setFiltered] = useState<Student[]>([]);
   const [search, setSearch] = useState('');
   const [filterSchool, setFilterSchool] = useState(isOperator ? operatorNpsn : 'ALL');
   const [filterKelas, setFilterKelas] = useState('ALL');
-  const [levelTab, setLevelTab] = useState<string>('SD');
+  const [levelTab, setLevelTab] = useState<string>(operatorLevel || 'SD');
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
@@ -276,7 +277,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
     setForm({ ...form, school_npsn: npsn, kelas_kelompok: groups[0], rombel: '' });
   }
 
-  const levels = ['SD', 'TK', 'KB'];
+  const levels = isOperator ? [operatorLevel!] : ['SD', 'TK', 'KB'];
   const levelCount = (lv: string) => students.filter(s => s.jenjang === lv).length;
   const currentKelasList = kelasByLevel[levelTab] || ['Kelas 1'];
   const total = students.length;
