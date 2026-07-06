@@ -30,6 +30,13 @@ interface EmployeePeriod {
   updated_at: number;
 }
 
+interface SchoolOption {
+  npsn: string;
+  name: string;
+  level: string;
+  status: string;
+}
+
 interface EditData {
   gelar_depan: string;
   gelar_belakang: string;
@@ -50,6 +57,7 @@ interface EditData {
   sertifikasi: string;
   tmt_kerja: string;
   tanggal_bup: string;
+  sekolah_id: string;
 }
 
 const STATUS_OPTIONS_NEGERI = ['PNS', 'PPPK', 'PPPK Paruh Waktu', 'Honorer Sekolah/Daerah'];
@@ -74,6 +82,7 @@ export default function ManajemenPegawai() {
   const [newPeriodStart, setNewPeriodStart] = useState('');
   const [editModal, setEditModal] = useState<{ emp: Pegawai; data: EditData; saving: boolean } | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [schools, setSchools] = useState<SchoolOption[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -97,6 +106,15 @@ export default function ManajemenPegawai() {
         setPegawai(mapped);
       } catch { /* fallback mock */ }
       setLoading(false);
+    })();
+    (async () => {
+      try {
+        const res = await api('/api/schools');
+        if (res.ok) {
+          const data: any[] = await res.json();
+          setSchools(data.map((s: any) => ({ npsn: s.npsn, name: s.name, level: s.level, status: s.status })));
+        }
+      } catch {}
     })();
   }, []);
 
@@ -200,6 +218,7 @@ export default function ManajemenPegawai() {
         sertifikasi: r.sertifikasi || '',
         tmt_kerja: r.tmt_kerja || '',
         tanggal_bup: r.tanggal_bup || '',
+        sekolah_id: emp.sekolah_id || r.sekolah_id || '',
       },
       saving: false,
     });
@@ -215,9 +234,21 @@ export default function ManajemenPegawai() {
         body: JSON.stringify(editModal.data),
       });
       if (!res.ok) return;
+      const sc = schools.find(s => s.npsn === editModal.data.sekolah_id);
       setPegawai(prev => prev.map(p =>
         p.id === editModal.emp.id
-          ? { ...p, nama: editModal.data.nama, nipNik: editModal.data.nip || editModal.data.nik || '-', status_pegawai: editModal.data.status_pegawai, jabatan: editModal.data.jabatan, _raw: { ...p._raw, ...editModal.data } }
+          ? {
+              ...p,
+              nama: editModal.data.nama,
+              nipNik: editModal.data.nip || editModal.data.nik || '-',
+              status_pegawai: editModal.data.status_pegawai,
+              jabatan: editModal.data.jabatan,
+              sekolah_id: editModal.data.sekolah_id,
+              sekolah_nama: sc ? sc.name : editModal.data.sekolah_id,
+              sekolah_level: sc ? sc.level : p.sekolah_level,
+              sekolah_status: sc ? sc.status : p.sekolah_status,
+              _raw: { ...p._raw, ...editModal.data }
+            }
           : p
       ));
       setEditModal(null);
@@ -497,7 +528,15 @@ export default function ManajemenPegawai() {
                 <Field label="Tanggal Lahir" value={editModal.data.tanggal_lahir} onChange={v => updateEditField('tanggal_lahir', v)} />
                 <Select label="Jenis Kelamin" value={editModal.data.jenis_kelamin} options={GENDER_OPTIONS} onChange={v => updateEditField('jenis_kelamin', v)} />
                 <Select label="Jabatan" value={editModal.data.jabatan} options={JABATAN_OPTIONS} onChange={v => updateEditField('jabatan', v)} />
-                <Select label={`Status Pegawai (${editModal.emp.sekolah_status})`} value={editModal.data.status_pegawai} options={getStatusOptions(editModal.emp.sekolah_status)} onChange={v => updateEditField('status_pegawai', v)} />
+                <div>
+                  <label className="block text-[10px] font-mono font-bold text-slate-500 mb-1 uppercase tracking-wider">Sekolah</label>
+                  <select value={editModal.data.sekolah_id} onChange={e => updateEditField('sekolah_id', e.target.value)}
+                    className="w-full bg-[#0c0e12] border border-[#1f2937] rounded-lg px-3 py-2 text-xs font-mono text-slate-200 outline-none focus:border-cyan-800 transition-all cursor-pointer">
+                    <option value="">—</option>
+                    {schools.map(s => <option key={s.npsn} value={s.npsn}>{s.npsn} — {s.name}</option>)}
+                  </select>
+                </div>
+                <Select label={`Status Pegawai (${(() => { const sc = schools.find(s => s.npsn === editModal.data.sekolah_id); return sc ? sc.status : editModal.emp.sekolah_status; })()})`} value={editModal.data.status_pegawai} options={getStatusOptions((() => { const sc = schools.find(s => s.npsn === editModal.data.sekolah_id); return sc ? sc.status : editModal.emp.sekolah_status; })())} onChange={v => updateEditField('status_pegawai', v)} />
                 <Field label="Pangkat/Golongan" value={editModal.data.pangkat_golongan} onChange={v => updateEditField('pangkat_golongan', v)} />
                 <Field label="Pendidikan Terakhir" value={editModal.data.pendidikan_terakhir} onChange={v => updateEditField('pendidikan_terakhir', v)} />
                 <Field label="Jurusan" value={editModal.data.jurusan} onChange={v => updateEditField('jurusan', v)} />

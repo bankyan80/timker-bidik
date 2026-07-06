@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { School, VillageStats, Recommendation, AlertMessage, DocumentMeta, CalendarEvent, CalendarNotification } from './types';
 import { VILLAGES, ALL_SCHOOLS, GET_VILLAGE_STATS } from './data/mockData';
 
-const ALLOWED_COLUMNS_EMPLOYEE = new Set(['nama','nik','nip','nuptk','email','no_hp','tempat_lahir','tanggal_lahir','jenis_kelamin','jabatan','status_pegawai','pangkat_golongan','pendidikan_terakhir','jurusan','sertifikasi','tmt_kerja','tanggal_bup','foto_url','is_active','gelar_depan','gelar_belakang']);
+const ALLOWED_COLUMNS_EMPLOYEE = new Set(['nama','nik','nip','nuptk','email','no_hp','tempat_lahir','tanggal_lahir','jenis_kelamin','jabatan','status_pegawai','pangkat_golongan','pendidikan_terakhir','jurusan','sertifikasi','tmt_kerja','tanggal_bup','foto_url','is_active','gelar_depan','gelar_belakang','sekolah_id']);
 const ALLOWED_COLUMNS_STUDENT = new Set(['nama','nisn','nik','jenis_kelamin','tempat_lahir','tanggal_lahir','kelas_kelompok','rombel','status_siswa','jenjang']);
 const ALLOWED_COLUMNS_PERIOD = new Set(['tanggal_mulai','tanggal_selesai','status']);
 const ALLOWED_COLUMNS_CALENDAR = new Set(['title','category','semester','start_date','end_date','description','education_level','completed']);
