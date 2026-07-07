@@ -1402,13 +1402,15 @@ app.delete('/api/users/:id', authenticateToken, requireRole('admin'), async (req
 // ── Activity Logs API ──
 app.get('/api/activity-logs', authenticateToken, requireRole('admin', 'staff_kecamatan'), async (req, res) => {
   try {
-    const { limit, offset, action, user_id } = req.query;
+    const { limit, offset, action, user_id, date_from, date_to } = req.query;
     const result = await getActivityLogs({
       limit: parseInt(limit as string) || 100,
       offset: parseInt(offset as string) || 0,
       excludeRole: 'admin',
       action: action as string || undefined,
       user_id: user_id as string || undefined,
+      dateFrom: date_from ? parseInt(date_from as string) : undefined,
+      dateTo: date_to ? parseInt(date_to as string) : undefined,
     });
     res.json(result);
   } catch (e: any) {

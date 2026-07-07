@@ -1497,6 +1497,7 @@ export async function insertActivityLog(data: {
 export async function getActivityLogs(opts: {
   limit?: number; offset?: number;
   excludeRole?: string; action?: string; user_id?: string;
+  dateFrom?: number; dateTo?: number;
 }): Promise<{ rows: any[]; total: number }> {
   const client = getDb();
   if (!client) return { rows: [], total: 0 };
@@ -1507,6 +1508,8 @@ export async function getActivityLogs(opts: {
   if (opts.excludeRole) { conditions.push('user_role != ?'); args.push(opts.excludeRole); }
   if (opts.action) { conditions.push('action = ?'); args.push(opts.action); }
   if (opts.user_id) { conditions.push('user_id = ?'); args.push(opts.user_id); }
+  if (opts.dateFrom) { conditions.push('created_at >= ?'); args.push(opts.dateFrom); }
+  if (opts.dateTo) { conditions.push('created_at <= ?'); args.push(opts.dateTo); }
   const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
   try {
     const countR = await client.execute(`SELECT COUNT(*) as cnt FROM activity_logs ${where}`, args);

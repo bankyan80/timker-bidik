@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
-import { Search, Loader2, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { Search, Loader2, ChevronLeft, ChevronRight, Filter, Calendar } from 'lucide-react';
 
 interface LogRow {
   id: string;
@@ -50,6 +50,26 @@ const ENTITY_LABELS: Record<string, string> = {
   recommendation: 'Rekomendasi',
 };
 
+const DATE_PRESETS = [
+  { label: 'Hari Ini', days: 0 },
+  { label: 'Kemarin', days: 1 },
+  { label: '7 Hari', days: 7 },
+  { label: '30 Hari', days: 30 },
+  { label: 'Semua', days: -1 },
+];
+
+function getDateRange(days: number): { dateFrom?: number; dateTo?: number } {
+  if (days === -1) return {};
+  const now = new Date();
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+  if (days === 0) {
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
+    return { dateFrom: startOfDay, dateTo: endOfDay };
+  }
+  const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days, 0, 0, 0, 0).getTime();
+  return { dateFrom: from, dateTo: endOfDay };
+}
+
 export default function ActivityLog() {
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -57,6 +77,7 @@ export default function ActivityLog() {
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('');
+  const [datePreset, setDatePreset] = useState<string>('Semua');
   const pageSize = 50;
 
   const load = useCallback(async () => {
@@ -66,6 +87,11 @@ export default function ActivityLog() {
       params.set('limit', String(pageSize));
       params.set('offset', String(page * pageSize));
       if (actionFilter) params.set('action', actionFilter);
+      const range = getDateRange(
+        DATE_PRESETS.find(p => p.label === datePreset)?.days ?? -1
+      );
+      if (range.dateFrom) params.set('date_from', String(range.dateFrom));
+      if (range.dateTo) params.set('date_to', String(range.dateTo));
       const res = await api(`/api/activity-logs?${params}`);
       if (res.ok) {
         const data = await res.json();
@@ -75,7 +101,7 @@ export default function ActivityLog() {
     } finally {
       setLoading(false);
     }
-  }, [page, actionFilter]);
+  }, [page, actionFilter, datePreset]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -97,6 +123,11 @@ export default function ActivityLog() {
     return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
+  const handlePresetChange = (label: string) => {
+    setDatePreset(label);
+    setPage(0);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -114,7 +145,7 @@ export default function ActivityLog() {
               placeholder="Cari aktivitas..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-56 pl-8 pr-3 py-1.5 text-xs bg-slate-800/60 border border-slate-700 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-700"
+              className="w-48 pl-8 pr-3 py-1.5 text-xs bg-slate-800/60 border border-slate-700 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-700"
             />
           </div>
           <div className="relative">
@@ -131,6 +162,23 @@ export default function ActivityLog() {
             </select>
           </div>
         </div>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <Calendar className="h-3.5 w-3.5 text-slate-500 mr-1" />
+        {DATE_PRESETS.map(p => (
+          <button
+            key={p.label}
+            onClick={() => handlePresetChange(p.label)}
+            className={`px-3 py-1 text-xs rounded-lg border transition-colors ${
+              datePreset === p.label
+                ? 'bg-cyan-950/40 border-cyan-700 text-cyan-400 font-semibold'
+                : 'bg-slate-800/40 border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600'
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
       </div>
 
       {loading ? (
