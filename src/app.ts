@@ -8,7 +8,7 @@ import rateLimit from 'express-rate-limit';
 import { google } from 'googleapis';
 import { GoogleGenAI } from '@google/genai';
 import { SimulationScenario, SimulationResult } from './types';
-import { getDb, initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getStudentByNik, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod, getMonthlyReport, getUserByUsername, changePassword, deleteEmployeeDocument, getStudentDetail, upsertStudentParents, upsertStudentAddress, upsertStudentHealth, getAllUsers, getUserById, createUser, updateUser, deleteUser, getAlumni, getAlumniById, insertAlumni, updateAlumni, insertActivityLog, getActivityLogs } from './db';
+import { getDb, initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getStudentByNik, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod, getMonthlyReport, getUserByUsername, changePassword, deleteEmployeeDocument, getStudentDetail, upsertStudentParents, upsertStudentAddress, upsertStudentHealth, getAllUsers, getUserById, createUser, updateUser, deleteUser, getAlumni, getAlumniById, insertAlumni, updateAlumni, insertActivityLog, getActivityLogs, getMonthlySubmissions, submitMonthlyReport } from './db';
 import { getAuth as getDriveAuth } from './drive';
 
 function sanitizeAPI(val: unknown): string {
@@ -1297,6 +1297,52 @@ app.get('/api/reports/monthly', authenticateToken, async (req, res) => {
     totalEmployees: report.reduce((s: number, r: any) => s + r.employees.total, 0),
     schools: report,
   });
+});
+
+// Monthly report submissions (progress table for super admin)
+app.get('/api/reports/submissions', authenticateToken, async (req, res) => {
+  const schoolScope = getSchoolScope(req);
+  const schools = await getAllSchools();
+  const submissions = await getMonthlySubmissions();
+  const period = new Date().toISOString().slice(0, 7);
+  const filteredSchools = schoolScope ? schools.filter(s => s.npsn === schoolScope) : schools;
+
+  const result = filteredSchools.map(s => {
+    const sub = submissions.find(x => x.school_npsn === s.npsn && x.period === period);
+    return {
+      npsn: s.npsn,
+      name: s.name,
+      level: s.level,
+      status: s.status,
+      village: s.village,
+      submitted: !!sub,
+      submittedAt: sub ? sub.submitted_at : null,
+      statusLabel: sub ? 'Sudah Lapor' : 'Belum Lapor',
+    };
+  });
+
+  res.json({
+    period,
+    total: result.length,
+    submitted: result.filter(r => r.submitted).length,
+    pending: result.filter(r => !r.submitted).length,
+    schools: result,
+  });
+});
+
+// Operator submits monthly report for their school
+app.post('/api/reports/submit', authenticateToken, requireRole(['operator_sekolah']), async (req, res) => {
+  const schoolScope = getSchoolScope(req);
+  if (!schoolScope) return res.status(403).json({ error: 'Anda tidak memiliki akses sekolah' });
+
+  const period = new Date().toISOString().slice(0, 7);
+  const success = await submitMonthlyReport(schoolScope, period, (req.user as any).id);
+  if (success) {
+    await logActivity(req, 'submit', 'monthly_report', schoolScope, { period });
+    res.json({ success: true, message: 'Laporan bulanan berhasil dikirim' });
+  } else {
+    res.status(500).json({ error: 'Gagal mengirim laporan' });
+  }
 });
 
 // Student mutation details for report preview

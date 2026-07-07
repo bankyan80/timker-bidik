@@ -332,6 +332,19 @@ export async function initSchema() {
   `);
 
   await client.execute(`
+    CREATE TABLE IF NOT EXISTS monthly_submissions (
+      id TEXT PRIMARY KEY,
+      school_npsn TEXT NOT NULL,
+      period TEXT NOT NULL,
+      submitted_at INTEGER NOT NULL,
+      submitted_by INTEGER,
+      status TEXT NOT NULL DEFAULT 'submitted',
+      notes TEXT,
+      UNIQUE(school_npsn, period)
+    )
+  `);
+
+  await client.execute(`
     CREATE TABLE IF NOT EXISTS activity_logs (
       id TEXT PRIMARY KEY,
       user_id TEXT,
@@ -391,6 +404,8 @@ export async function initSchema() {
     'CREATE INDEX IF NOT EXISTS idx_calendar_level ON academic_calendar(education_level)',
     'CREATE INDEX IF NOT EXISTS idx_activity_logs_created ON activity_logs(created_at DESC)',
     'CREATE INDEX IF NOT EXISTS idx_activity_logs_role ON activity_logs(user_role)',
+    'CREATE INDEX IF NOT EXISTS idx_submissions_school ON monthly_submissions(school_npsn)',
+    'CREATE INDEX IF NOT EXISTS idx_submissions_period ON monthly_submissions(period)',
   ];
   for (const sql of indexes) {
     try { await client.execute(sql); } catch { /* index may already exist */ }
@@ -668,6 +683,47 @@ export async function getMonthlyReport(schoolNpsn?: string): Promise<MonthlyRepo
   }
 
   return result;
+}
+
+export interface MonthlySubmission {
+  id: string;
+  school_npsn: string;
+  period: string;
+  submitted_at: number;
+  submitted_by: number | null;
+  status: string;
+  notes: string | null;
+}
+
+export async function getMonthlySubmissions(): Promise<MonthlySubmission[]> {
+  const client = getDb();
+  if (!client) return [];
+  const result = await client.execute(
+    'SELECT * FROM monthly_submissions ORDER BY period DESC, school_npsn ASC'
+  );
+  return result.rows as any as MonthlySubmission[];
+}
+
+export async function submitMonthlyReport(
+  schoolNpsn: string,
+  period: string,
+  userId: number
+): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  const id = `sub-${schoolNpsn}-${period}`;
+  const now = Math.floor(Date.now() / 1000);
+  try {
+    await client.execute({
+      sql: `INSERT OR REPLACE INTO monthly_submissions (id, school_npsn, period, submitted_at, submitted_by, status)
+            VALUES (?, ?, ?, ?, ?, 'submitted')`,
+      args: [id, schoolNpsn, period, now, userId],
+    });
+    return true;
+  } catch (e) {
+    console.error('Error submitting monthly report:', e);
+    return false;
+  }
 }
 
 export async function getRecommendations(): Promise<Recommendation[]> {
