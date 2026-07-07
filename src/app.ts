@@ -360,42 +360,55 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     return res.status(400).json({ error: 'Message is required' });
   }
 
-  const schools = await getAllSchools();
+  const schoolScope = getSchoolScope(req);
+  const allSchoolsRaw = await getAllSchools();
+  const schools = schoolScope
+    ? allSchoolsRaw.filter(s => s.npsn === schoolScope)
+    : allSchoolsRaw;
   const totalSchools = schools.length;
   const criticalSchools = schools.filter(s => s.healthScore < 40);
   const warningSchools = schools.filter(s => s.healthScore >= 40 && s.healthScore < 60);
   const totalStudents = schools.reduce((sum, s) => sum + s.students.total, 0);
   const totalTeachers = schools.reduce((sum, s) => sum + s.teachers.total, 0);
-  const averageHealth = Math.round(schools.reduce((sum, s) => sum + s.healthScore, 0) / totalSchools);
+  const averageHealth = totalSchools > 0
+    ? Math.round(schools.reduce((sum, s) => sum + s.healthScore, 0) / totalSchools)
+    : 0;
+
+  const scopeInfo = schoolScope
+    ? `Anda hanya memiliki akses ke SATU sekolah: ${schools[0]?.name} (NPSN: ${schoolScope}). Semua data dan analisis hanya terbatas pada sekolah ini.`
+    : 'Anda memiliki akses ke SELURUH data Kecamatan Lemahabang.';
+
+  const villages = [...new Set(allSchoolsRaw.map(s => s.village))].join(', ');
 
   const systemInstruction = `Kamu adalah asisten TIMKER BIDIK 360 untuk Kecamatan Lemahabang, Kabupaten Cirebon.
 
 === SUMBER DATA ===
 Semua data berasal dari:
 - Sinkronisasi Dapodik (Data Pokok Pendidikan) via database Turso
-- Data pegawai dari arsip kepegawaian kecamatan (282 pegawai PNS/PPPK/Honorer)
-- Data siswa dari Rombel per sekolah (SD)
-- Dokumen arsip digital (841 dokumen: SK, ijazah, sertifikat, KTP, dll)
-- Data sekolah dari profil Satuan Pendidikan (22 SD Negeri)
+- Data pegawai dari arsip kepegawaian kecamatan
+- Data siswa dari Rombel per sekolah
+- Dokumen arsip digital
+- Data sekolah dari profil Satuan Pendidikan
 
 === CAKUPAN DATA ===
-- Total Sekolah Negeri: ${totalSchools} SD
+${scopeInfo}
+${schoolScope ? '' : `- Total Sekolah: ${totalSchools}`}
+${schoolScope ? `- Sekolah: ${schools[0]?.name} (${schools[0]?.level})` : `- Total Sekolah: ${totalSchools} ${totalSchools > 0 ? schools[0]?.level || '' : ''}`}
 - Total Siswa: ${totalStudents}
 - Total Guru/Pegawai: ${totalTeachers} orang
-- Rata-rata Health Score: ${averageHealth}/100
-- Sekolah Kritis (Health Score < 40): ${criticalSchools.length}
-- Sekolah Waspada (Health Score 40-59): ${warningSchools.length}
-- Data pegawai mencakup: nama, NIP, NIK, golongan, jabatan, status kepegawaian (PNS/PPPK/Honorer), pendidikan, sertifikasi
-- Setiap pegawai memiliki dokumen arsip yang sudah diverifikasi
-- Desa: Lemahabang, Cipeujeuh Wetan, Cipeujeuh Kulon, Belawa, Tuk Karangsuwung, Picungpugur, Sindanglaut, Wangkelang, Asem, Sigong, Sarajaya, Leuwidingding.
+${schoolScope ? '' : `- Rata-rata Health Score: ${averageHealth}/100
+- Sekolah Kritis: ${criticalSchools.length}
+- Sekolah Waspada: ${warningSchools.length}`}
+- Desa tercakup: ${schoolScope ? schools.map(s => s.village).join(', ') : villages}
 
 === ATURAN RESPON ===
 1. Jawab dalam bahasa Indonesia yang santai dan alami — seperti ngobrol dengan rekan kerja. Jangan kaku.
-2. Kalau ditanya **sumber data** (misal "data siswa dari mana?"), jelaskan bahwa data bersumber dari Dapodik dan database internal kecamatan yang disinkronkan secara berkala.
-3. Kalau ditanya tentang **data spesifik yang tidak tersedia** (misal data siswa per individu), jangan mengarang — bilang saja datanya tidak tersedia atau terbatas, lalu tawarkan data lain yang relevan.
-4. Ground jawaban pada data yang disebutkan di atas. Jangan mengada-ada.
-5. Kalau diminta menampilkan data, gunakan format tabel atau poin yang rapi.
-6. Jangan lebay. Cukup informatif, jelas, dan membantu.`;
+2. Kalau pengguna adalah OPERATOR SEKOLAH, hanya tampilkan data sekolahnya sendiri. Jangan menampilkan data sekolah lain.
+3. Kalau ditanya **sumber data**, jelaskan bahwa data bersumber dari Dapodik dan database internal.
+4. Kalau ditanya data spesifik yang tidak tersedia, jangan mengarang.
+5. Ground jawaban pada data yang disebutkan di atas.
+6. Gunakan format tabel atau poin yang rapi jika diminta menampilkan data.
+7. Jangan lebay. Cukup informatif, jelas, dan membantu.`;
 
   if (aiClient) {
     try {

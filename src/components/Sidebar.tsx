@@ -56,7 +56,7 @@ const ROLE_MENU_ACCESS: Record<string, string[]> = {
     'documents', 'monthly-report', 'reports',
   ],
   operator_sekolah: [
-    'dashboard', 'monitor',
+    'dashboard', 'monitor', 'console',
     'pegawai', 'students', 'rombels',
     'school-profile',
     'academic-calendar',
