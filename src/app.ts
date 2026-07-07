@@ -8,7 +8,7 @@ import rateLimit from 'express-rate-limit';
 import { google } from 'googleapis';
 import { GoogleGenAI } from '@google/genai';
 import { SimulationScenario, SimulationResult } from './types';
-import { getDb, initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getStudentByNik, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod, getMonthlyReport, getUserByUsername, changePassword, deleteEmployeeDocument, getStudentDetail, upsertStudentParents, upsertStudentAddress, upsertStudentHealth, getAllUsers, getUserById, createUser, updateUser, deleteUser, getAlumni, getAlumniById, insertAlumni, updateAlumni } from './db';
+import { getDb, initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getStudentByNik, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod, getMonthlyReport, getUserByUsername, changePassword, deleteEmployeeDocument, getStudentDetail, upsertStudentParents, upsertStudentAddress, upsertStudentHealth, getAllUsers, getUserById, createUser, updateUser, deleteUser, getAlumni, getAlumniById, insertAlumni, updateAlumni, insertActivityLog, getActivityLogs } from './db';
 import { getAuth as getDriveAuth } from './drive';
 
 function sanitizeAPI(val: unknown): string {
@@ -100,6 +100,23 @@ function getSchoolScope(req: express.Request): string | null {
   return null; // null = no filter (see all)
 }
 
+/**
+ * Helper to log an activity from current request context
+ */
+async function logActivity(req: express.Request, action: string, entityType?: string, entityId?: string, details?: Record<string, any>) {
+  if (!req.user) return;
+  await insertActivityLog({
+    user_id: req.user.id,
+    username: req.user.username,
+    user_role: req.user.role,
+    action,
+    entity_type: entityType,
+    entity_id: entityId,
+    details: details ? JSON.stringify(details) : '{}',
+    ip_address: req.ip || req.socket.remoteAddress || undefined,
+  });
+}
+
 // ── Auth endpoints ──
 app.post('/api/auth/login', authLimiter, async (req, res) => {
   const { username, password } = req.body;
@@ -121,11 +138,23 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
               schoolNpsn: school.npsn, schoolName: school.name, schoolLevel: school.level,
             };
             const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+            await insertActivityLog({
+              user_id: user.id, username: user.username, user_role: user.role,
+              action: 'login', entity_type: 'auth', entity_id: user.id,
+              details: JSON.stringify({ method: 'password' }),
+              ip_address: req.ip || req.socket.remoteAddress || undefined,
+            });
             return res.json({ token, user });
           }
         }
         const user: AuthUser = { id: dbUser.id, username: dbUser.username, role: dbUser.role as any };
         const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+        await insertActivityLog({
+          user_id: user.id, username: user.username, user_role: user.role,
+          action: 'login', entity_type: 'auth', entity_id: user.id,
+          details: JSON.stringify({ method: 'password' }),
+          ip_address: req.ip || req.socket.remoteAddress || undefined,
+        });
         return res.json({ token, user });
       }
     }
@@ -643,6 +672,7 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
   const sanitized = { ...req.body, nama: sanitizeAPI(req.body.nama || ''), nik: sanitizeAPI(req.body.nik || '') };
   const emp = await insertEmployee(sanitized);
   if (!emp) return res.status(400).json({ error: 'Failed to create employee' });
+  await logActivity(req, 'create', 'employee', emp.id, { nama: sanitized.nama, sekolah_id: sanitized.sekolah_id });
   res.status(201).json(emp);
 });
 
@@ -659,6 +689,7 @@ app.put('/api/employees/:id', authenticateToken, async (req, res) => {
   }
   const ok = await updateEmployee(req.params.id, req.body);
   if (!ok) return res.status(400).json({ error: 'Failed to update employee' });
+  await logActivity(req, 'update', 'employee', req.params.id, { updated_fields: Object.keys(req.body) });
   res.json({ success: true });
 });
 
@@ -675,6 +706,7 @@ app.delete('/api/employees/:id', authenticateToken, async (req, res) => {
   }
   const ok = await deleteEmployee(req.params.id);
   if (!ok) return res.status(400).json({ error: 'Failed to delete employee' });
+  await logActivity(req, 'delete', 'employee', req.params.id);
   res.json({ success: true });
 });
 
@@ -696,18 +728,21 @@ app.post('/api/employees/:id/periods', authenticateToken, async (req, res) => {
     status,
   });
   if (!result) return res.status(500).json({ error: 'Failed to create period' });
+  await logActivity(req, 'create', 'employee_period', result.id, { employee_id: req.params.id });
   res.status(201).json(result);
 });
 
 app.put('/api/employees/:id/periods/:periodId', authenticateToken, async (req, res) => {
   const ok = await updateEmployeePeriod(req.params.periodId, req.body);
   if (!ok) return res.status(400).json({ error: 'Failed to update period' });
+  await logActivity(req, 'update', 'employee_period', req.params.periodId, { employee_id: req.params.id });
   res.json({ success: true });
 });
 
 app.delete('/api/employees/:id/periods/:periodId', authenticateToken, async (req, res) => {
   const ok = await deleteEmployeePeriod(req.params.periodId);
   if (!ok) return res.status(400).json({ error: 'Failed to delete period' });
+  await logActivity(req, 'delete', 'employee_period', req.params.periodId, { employee_id: req.params.id });
   res.json({ success: true });
 });
 
@@ -719,6 +754,7 @@ app.post('/api/documents', authenticateToken, async (req, res) => {
   }
   const ok = await upsertEmployeeDocument(req.body);
   if (!ok) return res.status(400).json({ error: 'Failed to save document' });
+  await logActivity(req, 'create', 'document', req.body.id, { employee_id: req.body.employee_id, kategori: req.body.kategori });
   res.status(201).json({ success: true });
 });
 
@@ -751,6 +787,7 @@ app.delete('/api/documents/:id', authenticateToken, async (req, res) => {
 
   const result = await deleteEmployeeDocument(req.params.id);
   if (!result.ok) return res.status(500).json({ error: 'Failed to delete document' });
+  await logActivity(req, 'delete', 'document', req.params.id, { nama_file: row.nama_file });
   res.json({ success: true });
 });
 
@@ -771,6 +808,7 @@ app.post('/api/documents/:id/verify', authenticateToken, async (req, res) => {
   const { status, catatan } = req.body;
   const ok = await verifyEmployeeDocument(req.params.id, status, catatan);
   if (!ok) return res.status(400).json({ error: 'Failed to verify document' });
+  await logActivity(req, 'verify', 'document', req.params.id, { status, catatan: catatan || null });
   res.json({ success: true });
 });
 
@@ -819,6 +857,7 @@ app.post('/api/upload-file', authenticateToken, async (req, res) => {
     });
 
     if (!ok) return res.status(500).json({ error: 'Failed to save document' });
+    await logActivity(req, 'upload', 'document', undefined, { employee_id: employeeId, nama_file: fileName, kategori: kategori || 'LAINNYA' });
     res.json({ success: true, fileId, driveUrl });
   } catch (err: any) {
     console.error('Upload error:', err);
@@ -991,6 +1030,7 @@ app.post('/api/students', authenticateToken, async (req, res) => {
   const sanitized = { ...req.body, nama: sanitizeAPI(req.body.nama || '') };
   const stu = await insertStudent(sanitized);
   if (!stu) return res.status(400).json({ error: 'Gagal menambah siswa' });
+  await logActivity(req, 'create', 'student', stu.id, { nama: sanitized.nama, school_npsn: sanitized.school_npsn });
   res.status(201).json(stu);
 });
 
@@ -1023,6 +1063,7 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
   }
   const ok = await updateStudent(req.params.id, req.body);
   if (!ok) return res.status(400).json({ error: 'Gagal mengupdate siswa' });
+  await logActivity(req, 'update', 'student', req.params.id, { updated_fields: Object.keys(req.body) });
   res.json({ success: true });
 });
 
@@ -1061,6 +1102,7 @@ app.put('/api/students/:id/detail', authenticateToken, async (req, res) => {
     health ? upsertStudentHealth(row.nisn, health) : Promise.resolve(true),
   ]);
   if (results.some(r => !r)) return res.status(500).json({ error: 'Failed to save student detail' });
+  await logActivity(req, 'update', 'student_detail', req.params.id, { updated_sections: Object.keys(req.body) });
   const detail = await getStudentDetail(row.nisn);
   res.json(detail);
 });
@@ -1078,6 +1120,7 @@ app.delete('/api/students/:id', authenticateToken, async (req, res) => {
   }
   const ok = await deleteStudent(req.params.id);
   if (!ok) return res.status(400).json({ error: 'Gagal menghapus siswa' });
+  await logActivity(req, 'delete', 'student', req.params.id);
   res.json({ success: true });
 });
 
@@ -1110,6 +1153,7 @@ app.post('/api/graduates', authenticateToken, async (req, res) => {
         graduated.push(alum);
       }
     }
+    await logActivity(req, 'graduate', 'student', undefined, { count: graduated.length, tahun_pelajaran_lulus });
     res.json({ success: true, count: graduated.length, data: graduated });
   } catch (err: any) {
     console.error('graduates error:', err);
@@ -1139,6 +1183,7 @@ app.put('/api/alumni/:id', authenticateToken, async (req, res) => {
   }
   const ok = await updateAlumni(req.params.id, req.body);
   if (!ok) return res.status(400).json({ error: 'Gagal mengupdate alumni' });
+  await logActivity(req, 'update', 'alumni', req.params.id);
   const updated = await getAlumniById(req.params.id);
   res.json(updated);
 });
@@ -1163,18 +1208,21 @@ app.post('/api/calendar', authenticateToken, async (req, res) => {
   const sanitized = { ...req.body, title: sanitizeAPI(req.body.title || '') };
   const ev = await insertCalendarEvent(sanitized);
   if (!ev) return res.status(400).json({ error: 'Gagal menambah event' });
+  await logActivity(req, 'create', 'calendar_event', ev.id, { title: sanitized.title });
   res.status(201).json(ev);
 });
 
 app.put('/api/calendar/:id', authenticateToken, async (req, res) => {
   const ok = await updateCalendarEvent(req.params.id, req.body);
   if (!ok) return res.status(400).json({ error: 'Gagal mengupdate event' });
+  await logActivity(req, 'update', 'calendar_event', req.params.id);
   res.json({ success: true });
 });
 
 app.delete('/api/calendar/:id', authenticateToken, async (req, res) => {
   const ok = await deleteCalendarEvent(req.params.id);
   if (!ok) return res.status(400).json({ error: 'Gagal menghapus event' });
+  await logActivity(req, 'delete', 'calendar_event', req.params.id);
   res.json({ success: true });
 });
 
@@ -1217,6 +1265,7 @@ app.post('/api/recommendations/:id/apply', authenticateToken, requireRole('admin
       sql: 'UPDATE recommendations SET applied = 1 WHERE id = ?',
       args: [req.params.id]
     });
+    await logActivity(req, 'apply', 'recommendation', req.params.id);
     res.json({ success: true });
   } catch {
     res.status(400).json({ error: 'Failed to apply recommendation' });
@@ -1309,6 +1358,7 @@ app.post('/api/users', authenticateToken, requireRole('admin'), async (req, res)
     if (existing) return res.status(409).json({ error: 'Username already exists' });
     const ok = await createUser(username, password, role, school_npsn || null);
     if (!ok) return res.status(500).json({ error: 'Failed to create user' });
+    await logActivity(req, 'create', 'user', undefined, { username, role, school_npsn: school_npsn || null });
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -1326,6 +1376,7 @@ app.put('/api/users/:id', authenticateToken, requireRole('admin'), async (req, r
     if (!existing) return res.status(404).json({ error: 'User not found' });
     const ok = await updateUser(req.params.id, username, role, school_npsn || null, password || undefined);
     if (!ok) return res.status(500).json({ error: 'Failed to update user' });
+    await logActivity(req, 'update', 'user', req.params.id, { username, role });
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -1341,7 +1392,25 @@ app.delete('/api/users/:id', authenticateToken, requireRole('admin'), async (req
     }
     const ok = await deleteUser(req.params.id);
     if (!ok) return res.status(500).json({ error: 'Failed to delete user' });
+    await logActivity(req, 'delete', 'user', req.params.id, { username: existing.username });
     res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Activity Logs API ──
+app.get('/api/activity-logs', authenticateToken, requireRole('admin', 'staff_kecamatan'), async (req, res) => {
+  try {
+    const { limit, offset, action, user_id } = req.query;
+    const result = await getActivityLogs({
+      limit: parseInt(limit as string) || 100,
+      offset: parseInt(offset as string) || 0,
+      excludeRole: 'admin',
+      action: action as string || undefined,
+      user_id: user_id as string || undefined,
+    });
+    res.json(result);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

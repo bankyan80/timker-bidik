@@ -18,6 +18,7 @@ import {
   Calendar,
   Target,
   Shield,
+  History,
 } from 'lucide-react';
 import { useAuth } from './AuthContext';
 
@@ -38,7 +39,7 @@ interface MenuItem {
 
 const ROLE_MENU_ACCESS: Record<string, string[]> = {
   admin: [
-    'dashboard', 'monitor', 'console', 'gis',
+    'dashboard', 'monitor', 'console', 'activity-log', 'gis',
     'warehouse', 'pegawai', 'students', 'rombels',
     'hr', 'advanced-hr', 'infrastructure', 'school-profile', 'school-comparison',
     'academic-calendar', 'kpi',
@@ -47,7 +48,7 @@ const ROLE_MENU_ACCESS: Record<string, string[]> = {
     'user-management',
   ],
   staff_kecamatan: [
-    'dashboard', 'monitor', 'console', 'gis',
+    'dashboard', 'monitor', 'console', 'activity-log', 'gis',
     'warehouse', 'pegawai', 'students', 'rombels',
     'hr', 'advanced-hr', 'infrastructure', 'school-profile', 'school-comparison',
     'academic-calendar', 'kpi',
@@ -74,7 +75,8 @@ export default function Sidebar({ currentModule, setCurrentModule, theme, isOpen
       items: [
         { id: 'dashboard', label: 'Dasbor Eksekutif', icon: LayoutDashboard },
         { id: 'monitor', label: 'Pemantauan Langsung', icon: Activity },
-        { id: 'console', label: 'Konsol Perintah', icon: Terminal }
+        { id: 'console', label: 'Konsol Perintah', icon: Terminal },
+        { id: 'activity-log', label: 'Riwayat Aktivitas', icon: History, roles: ['admin', 'staff_kecamatan'] }
       ]
     },
     {

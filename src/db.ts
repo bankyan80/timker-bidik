@@ -332,6 +332,21 @@ export async function initSchema() {
   `);
 
   await client.execute(`
+    CREATE TABLE IF NOT EXISTS activity_logs (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      username TEXT,
+      user_role TEXT,
+      action TEXT NOT NULL,
+      entity_type TEXT,
+      entity_id TEXT,
+      details TEXT DEFAULT '{}',
+      ip_address TEXT,
+      created_at INTEGER NOT NULL
+    )
+  `);
+
+  await client.execute(`
     CREATE TABLE IF NOT EXISTS student_alumni (
       id TEXT PRIMARY KEY,
       student_id TEXT,
@@ -374,6 +389,8 @@ export async function initSchema() {
     'CREATE INDEX IF NOT EXISTS idx_alerts_school ON alerts(school_name)',
     'CREATE INDEX IF NOT EXISTS idx_recommendations_school ON recommendations(target_school_npsn)',
     'CREATE INDEX IF NOT EXISTS idx_calendar_level ON academic_calendar(education_level)',
+    'CREATE INDEX IF NOT EXISTS idx_activity_logs_created ON activity_logs(created_at DESC)',
+    'CREATE INDEX IF NOT EXISTS idx_activity_logs_role ON activity_logs(user_role)',
   ];
   for (const sql of indexes) {
     try { await client.execute(sql); } catch { /* index may already exist */ }
@@ -1451,7 +1468,61 @@ export async function upsertStudentHealth(nisn: string, data: Record<string, any
   } catch (e) { console.error('upsertStudentHealth error', e); return false; }
 }
 
-// â”€â”€ User / Auth CRUD â”€â”€
+// ── Activity Logs CRUD ──
+
+export async function insertActivityLog(data: {
+  user_id?: string; username?: string; user_role?: string;
+  action: string; entity_type?: string; entity_id?: string;
+  details?: string; ip_address?: string;
+}): Promise<boolean> {
+  const client = getDb();
+  if (!client) return false;
+  const now = Date.now();
+  const id = `LOG-${now}-${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    await client.execute({
+      sql: `INSERT INTO activity_logs (id, user_id, username, user_role, action, entity_type, entity_id, details, ip_address, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [id, data.user_id ?? null, data.username ?? null, data.user_role ?? null,
+             data.action, data.entity_type ?? null, data.entity_id ?? null,
+             data.details ?? '{}', data.ip_address ?? null, now]
+    });
+    return true;
+  } catch (err) {
+    console.error('insertActivityLog error:', err);
+    return false;
+  }
+}
+
+export async function getActivityLogs(opts: {
+  limit?: number; offset?: number;
+  excludeRole?: string; action?: string; user_id?: string;
+}): Promise<{ rows: any[]; total: number }> {
+  const client = getDb();
+  if (!client) return { rows: [], total: 0 };
+  const limit = Math.min(Math.max(opts.limit ?? 100, 1), 500);
+  const offset = Math.max(opts.offset ?? 0, 0);
+  const conditions: string[] = [];
+  const args: any[] = [];
+  if (opts.excludeRole) { conditions.push('user_role != ?'); args.push(opts.excludeRole); }
+  if (opts.action) { conditions.push('action = ?'); args.push(opts.action); }
+  if (opts.user_id) { conditions.push('user_id = ?'); args.push(opts.user_id); }
+  const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+  try {
+    const countR = await client.execute(`SELECT COUNT(*) as cnt FROM activity_logs ${where}`, args);
+    const total = Number(countR.rows[0].cnt);
+    const result = await client.execute({
+      sql: `SELECT * FROM activity_logs ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      args: [...args, limit, offset]
+    });
+    return { rows: result.rows, total };
+  } catch (err) {
+    console.error('getActivityLogs error:', err);
+    return { rows: [], total: 0 };
+  }
+}
+
+// ── User / Auth CRUD ──
 
 export async function getUserByUsername(username: string): Promise<{ id: string; username: string; password: string; role: string; school_npsn: string | null } | null> {
   const client = getDb();
