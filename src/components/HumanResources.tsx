@@ -146,19 +146,24 @@ export default function HumanResources() {
         rombel = Math.max(3, Math.ceil(school.students.total / 36));
       }
 
-      // Deterministic Kepsek status based on NPSN digits
-      const lastDigit = parseInt(school.npsn.slice(-1)) || 0;
+      // Kepsek status — override for specific schools with Plt
       let kepsek = 'PNS - Aktif';
-      if (lastDigit === 3 || lastDigit === 7) {
+      if (school.npsn === '20215564' || school.npsn === '20215161') {
         kepsek = 'PNS - Plt';
-      } else if (lastDigit === 5) {
-        kepsek = 'PPPK - Aktif';
-      } else if (lastDigit === 9 && school.status === 'Swasta') {
-        kepsek = 'GTY (Yayasan)';
+      } else {
+        const lastDigit = parseInt(school.npsn.slice(-1)) || 0;
+        if (lastDigit === 3 || lastDigit === 7) {
+          kepsek = 'PNS - Plt';
+        } else if (lastDigit === 5) {
+          kepsek = 'PPPK - Aktif';
+        } else if (lastDigit === 9 && school.status === 'Swasta') {
+          kepsek = 'GTY (Yayasan)';
+        }
       }
 
-      // Generate Tendik (Staff/Admin)
-      const tTotal = Math.min(school.teachers.total, Math.max(1, Math.floor(school.students.total / 100)));
+      // Generate Tendik (Staff/Admin) — max 2, kepala sekolah not counted as tendik
+      const totalWithoutKepsek = Math.max(0, school.teachers.total - 1);
+      const tTotal = Math.min(2, Math.max(0, Math.floor(school.students.total / 100)), totalWithoutKepsek);
       const tPns = Math.min(school.teachers.pns, Math.max(0, Math.floor(tTotal * 0.3)));
       const tPppk = Math.min(school.teachers.pppk, Math.max(0, Math.floor(tTotal * 0.2)));
       const tPppkParuh = Math.max(0, Math.floor(tTotal * 0.1));
