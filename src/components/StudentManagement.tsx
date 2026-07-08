@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
-import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight, Trash, ArrowUp, Eye, X, Loader2 } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight, Trash, ArrowUp, Eye, X, Loader2, Heart } from 'lucide-react';
 import { ALL_SCHOOLS } from '../data/mockData';
 import { useAuth } from './AuthContext';
 
@@ -9,7 +9,22 @@ interface Student {
   nik: string | null; jenis_kelamin: string | null; tempat_lahir: string | null;
   tanggal_lahir: string | null; jenjang: string; kelas_kelompok: string;
   rombel: string | null; status_siswa: string; tahun_pelajaran: string;
+  status_anak?: string;
 }
+
+const STATUS_ANAK_LABEL: Record<string, string> = {
+  normal: 'Normal',
+  yatim: 'Yatim',
+  piatu: 'Piatu',
+  yatim_piatu: 'Yatim Piatu',
+};
+
+const STATUS_ANAK_COLOR: Record<string, string> = {
+  normal: 'text-slate-400 bg-slate-800',
+  yatim: 'text-blue-400 bg-blue-950/40 border-blue-800',
+  piatu: 'text-pink-400 bg-pink-950/40 border-pink-800',
+  yatim_piatu: 'text-amber-400 bg-amber-950/40 border-amber-800',
+};
 
 const THEME = 'dark';
 const npsnToSchool = new Map(ALL_SCHOOLS.map(s => [s.npsn, s.name]));
@@ -33,6 +48,7 @@ export default function StudentManagement() {
   const [search, setSearch] = useState('');
   const [filterSchool, setFilterSchool] = useState(isOperator ? operatorNpsn : 'ALL');
   const [filterKelas, setFilterKelas] = useState('ALL');
+  const [filterAnak, setFilterAnak] = useState('ALL');
   const [levelTab, setLevelTab] = useState<string>(operatorLevel || 'SD');
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -70,9 +86,10 @@ export default function StudentManagement() {
       if (levelTab === 'SD') f = f.filter(s => s.kelas_kelompok === 'Kelas ' + filterKelas);
       else f = f.filter(s => (s.rombel && s.rombel.toLowerCase() !== s.kelas_kelompok.toLowerCase() ? s.rombel : '-') === filterKelas);
     }
+    if (filterAnak !== 'ALL') f = f.filter(s => (s.status_anak || 'normal') === filterAnak);
     setFiltered(f);
     setCurrentPage(1);
-  }, [search, filterSchool, filterKelas, levelTab, students]);
+  }, [search, filterSchool, filterKelas, filterAnak, levelTab, students]);
 
   async function load() {
     setLoading(true);
@@ -253,7 +270,12 @@ export default function StudentManagement() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ parents, address, health }),
       });
-      if (r.ok) setDetailData(await r.json());
+      if (r.ok) {
+        const data = await r.json();
+        setDetailData(data);
+        // Refresh status_anak in the student list
+        setStudents(prev => prev.map(s => s.id === detailStudent.id ? { ...s, status_anak: data?.student?.status_anak || s.status_anak } : s));
+      }
     } catch {}
     setDetailSaving(false);
   }
@@ -318,12 +340,13 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-5 gap-4">
         {[
           { label: 'Total Siswa', value: filteredByLevel.length, icon: Users, color: 'text-cyan-400 bg-cyan-950/40 border-cyan-900' },
           { label: 'Laki-laki', value: laki, icon: Users, color: 'text-blue-400 bg-blue-950/40 border-blue-900' },
           { label: 'Perempuan', value: perempuan, icon: Users, color: 'text-pink-400 bg-pink-950/40 border-pink-900' },
           { label: 'Sekolah', value: schools.size, icon: School, color: 'text-emerald-400 bg-emerald-950/40 border-emerald-900' },
+          { label: 'Yatim / Piatu', value: filteredByLevel.filter(s => s.status_anak && s.status_anak !== 'normal').length, icon: Heart, color: 'text-amber-400 bg-amber-950/40 border-amber-900' },
         ].map((c, i) => (
           <div key={i} className={`p-4 rounded-xl border ${c.color}`}>
             <div className="flex items-center gap-3">
@@ -358,6 +381,13 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
             {[...new Set(filteredByLevel.map(s => s.rombel && s.rombel.toLowerCase() !== s.kelas_kelompok.toLowerCase() ? s.rombel : '-').filter(Boolean))].map(r => <option key={r} value={r}>{r === '-' ? '— (tanpa rombel)' : r}</option>)}
           </select>
         )}
+        <select value={filterAnak} onChange={e => setFilterAnak(e.target.value)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
+          <option value="ALL">Semua Status</option>
+          <option value="normal">Normal</option>
+          <option value="yatim">Yatim</option>
+          <option value="piatu">Piatu</option>
+          <option value="yatim_piatu">Yatim Piatu</option>
+        </select>
       </div>
 
       {/* Bulk Delete */}
@@ -423,7 +453,14 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                   )}
                   <td className="px-4 py-3 text-slate-300 text-[11px]">{npsnToSchool.get(s.school_npsn) || s.school_npsn}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono uppercase ${s.status_siswa === 'aktif' ? 'text-emerald-400 bg-emerald-950/40' : 'text-red-400 bg-red-950/40'}`}>{s.status_siswa}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono uppercase ${s.status_siswa === 'aktif' ? 'text-emerald-400 bg-emerald-950/40' : 'text-red-400 bg-red-950/40'}`}>{s.status_siswa}</span>
+                      {s.status_anak && s.status_anak !== 'normal' && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono border ${STATUS_ANAK_COLOR[s.status_anak] || ''}`}>
+                          {STATUS_ANAK_LABEL[s.status_anak] || s.status_anak}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -629,6 +666,11 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
               <div>
                 <h2 className="text-lg font-bold text-white">Detail Siswa</h2>
                 <p className="text-xs text-slate-400 font-mono mt-0.5">{detailStudent.nama} — {detailStudent.nisn || 'Tanpa NISN'}</p>
+                {detailStudent.status_anak && detailStudent.status_anak !== 'normal' && (
+                  <span className={`inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded font-mono border ${STATUS_ANAK_COLOR[detailStudent.status_anak] || ''}`}>
+                    {STATUS_ANAK_LABEL[detailStudent.status_anak]}
+                  </span>
+                )}
               </div>
               <button onClick={() => setDetailOpen(false)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-white transition-colors cursor-pointer">
                 <X className="h-4 w-4" />

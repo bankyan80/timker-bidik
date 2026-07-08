@@ -31,6 +31,7 @@ export type StudentRow = {
   rombel: string | null;
   status_siswa: string;
   tahun_pelajaran: string;
+  status_anak?: string;
 };
 
 export type SchoolStudentAggregate = {
@@ -263,7 +264,8 @@ export async function initSchema() {
       kelas_kelompok TEXT NOT NULL,
       rombel TEXT,
       status_siswa TEXT NOT NULL DEFAULT 'aktif',
-      tahun_pelajaran TEXT NOT NULL
+      tahun_pelajaran TEXT NOT NULL,
+      status_anak TEXT NOT NULL DEFAULT 'normal'
     )
   `);
 
@@ -379,6 +381,9 @@ export async function initSchema() {
       updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
     )
   `);
+
+  // Migration: add status_anak column for existing databases
+  try { await client.execute('ALTER TABLE students ADD COLUMN status_anak TEXT NOT NULL DEFAULT \'normal\''); } catch { /* column already exists */ }
 
   // â”€â”€ Indexes for performance â”€â”€
   const indexes = [
@@ -1495,6 +1500,20 @@ export async function upsertStudentParents(nisn: string, data: Record<string, an
             ON CONFLICT(siswa_nisn) DO UPDATE SET ${assignments}`,
       args: [nisn, ...vals, ...vals]
     });
+    // Compute status_anak based on parent statuses
+    const merged = { ...data };
+    if (merged.status_ayah || merged.status_ibu) {
+      const ayah = (merged.status_ayah || '').toLowerCase();
+      const ibu = (merged.status_ibu || '').toLowerCase();
+      let status_anak = 'normal';
+      if (ayah === 'meninggal' && ibu === 'meninggal') status_anak = 'yatim_piatu';
+      else if (ayah === 'meninggal') status_anak = 'yatim';
+      else if (ibu === 'meninggal') status_anak = 'piatu';
+      await client.execute({
+        sql: `UPDATE students SET status_anak = ? WHERE nisn = ?`,
+        args: [status_anak, nisn]
+      });
+    }
     return true;
   } catch (e) { console.error('upsertStudentParents error', e); return false; }
 }

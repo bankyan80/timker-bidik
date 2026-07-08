@@ -1021,25 +1021,34 @@ app.get('/api/document-search', authenticateToken, async (req, res) => {
 
 // 7. Student API
 app.get('/api/students', authenticateToken, async (req, res) => {
-  const { school, rombel, limit, offset } = req.query;
-  const pageLimit = Math.min(Math.max(parseInt(limit as string) || 10000, 1), 50000);
-  const pageOffset = Math.max(parseInt(offset as string) || 0, 0);
-  const schoolScope = getSchoolScope(req);
-  const effectiveSchool = schoolScope || (school as string);
-  if (!effectiveSchool && schoolScope) {
-    return res.json([]);
+  try {
+    const { school, rombel, limit, offset, status_anak } = req.query;
+    const pageLimit = Math.min(Math.max(parseInt(limit as string, 10) || 10000, 1), 50000);
+    const pageOffset = Math.max(parseInt(offset as string, 10) || 0, 0);
+    const schoolScope = getSchoolScope(req);
+    const effectiveSchool = schoolScope || (school as string);
+    if (!effectiveSchool && schoolScope) {
+      return res.json([]);
+    }
+    let students;
+    if (rombel && effectiveSchool) students = await getStudentsByRombel(effectiveSchool, rombel as string);
+    else if (effectiveSchool) students = await getStudentsBySchool(effectiveSchool);
+    else students = await getStudents();
+    if (status_anak) {
+      const sa = (status_anak as string).toLowerCase();
+      students = students.filter(s => (s.status_anak || 'normal') === sa);
+    }
+    const paginated = students.slice(pageOffset, pageOffset + pageLimit);
+    res.json({
+      data: paginated,
+      total: students.length,
+      limit: pageLimit,
+      offset: pageOffset,
+    });
+  } catch (err) {
+    console.error('GET /api/students error:', err);
+    res.status(500).json({ error: 'Gagal memuat data siswa' });
   }
-  let students;
-  if (rombel && effectiveSchool) students = await getStudentsByRombel(effectiveSchool, rombel as string);
-  else if (effectiveSchool) students = await getStudentsBySchool(effectiveSchool);
-  else students = await getStudents();
-  const paginated = students.slice(pageOffset, pageOffset + pageLimit);
-  res.json({
-    data: paginated,
-    total: students.length,
-    limit: pageLimit,
-    offset: pageOffset,
-  });
 });
 
 app.get('/api/students/rombels', authenticateToken, async (req, res) => {
@@ -1137,8 +1146,11 @@ app.put('/api/students/:id/detail', authenticateToken, async (req, res) => {
     ]);
     if (results.some(r => !r)) return res.status(500).json({ error: 'Failed to save student detail' });
     await logActivity(req, 'update', 'student_detail', req.params.id, { updated_sections: Object.keys(req.body) });
-    const detail = await getStudentDetail(row.nisn);
-    res.json(detail);
+    const [detail, studentRows] = await Promise.all([
+      getStudentDetail(row.nisn),
+      db.execute('SELECT status_anak FROM students WHERE id = ?', [req.params.id]),
+    ]);
+    res.json({ ...detail, student: studentRows.rows[0] || null });
   } catch (err) {
     console.error('PUT /api/students/:id/detail error:', err);
     res.status(500).json({ error: 'Gagal menyimpan detail siswa' });
