@@ -912,10 +912,11 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
 const STATUS_OPTIONS = ['Hidup', 'Meninggal'];
 
 function StatusField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const normalized = STATUS_OPTIONS.find(o => o.toLowerCase() === (value || '').toLowerCase()) || 'Hidup';
   return (
     <div>
       <label className="text-[10px] font-mono text-slate-400 uppercase">{label}</label>
-      <select value={value || 'Hidup'} onChange={e => onChange(e.target.value)}
+      <select value={normalized} onChange={e => onChange(e.target.value)}
         className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
         {STATUS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
