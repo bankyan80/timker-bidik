@@ -701,14 +701,14 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                   <Field label="Pekerjaan Ayah" value={detailField('pekerjaan_ayah')} onChange={v => setDetailField('pekerjaan_ayah', v)} />
                   <Field label="Penghasilan Ayah" value={detailField('penghasilan_ayah')} onChange={v => setDetailField('penghasilan_ayah', v)} />
                   <Field label="No HP Ayah" value={detailField('no_hp_ayah')} onChange={v => setDetailField('no_hp_ayah', v)} />
-                  <Field label="Status Ayah" value={detailField('status_ayah')} onChange={v => setDetailField('status_ayah', v)} />
+                  <StatusField label="Status Ayah" value={detailField('status_ayah')} onChange={v => setDetailField('status_ayah', v)} />
                   <Field label="Nama Ibu" value={detailField('nama_ibu')} onChange={v => setDetailField('nama_ibu', v)} />
                   <Field label="NIK Ibu" value={detailField('nik_ibu')} onChange={v => setDetailField('nik_ibu', v)} />
                   <Field label="Pendidikan Ibu" value={detailField('pendidikan_ibu')} onChange={v => setDetailField('pendidikan_ibu', v)} />
                   <Field label="Pekerjaan Ibu" value={detailField('pekerjaan_ibu')} onChange={v => setDetailField('pekerjaan_ibu', v)} />
                   <Field label="Penghasilan Ibu" value={detailField('penghasilan_ibu')} onChange={v => setDetailField('penghasilan_ibu', v)} />
                   <Field label="No HP Ibu" value={detailField('no_hp_ibu')} onChange={v => setDetailField('no_hp_ibu', v)} />
-                  <Field label="Status Ibu" value={detailField('status_ibu')} onChange={v => setDetailField('status_ibu', v)} />
+                  <StatusField label="Status Ibu" value={detailField('status_ibu')} onChange={v => setDetailField('status_ibu', v)} />
                   <div className="col-span-2 border-t border-slate-700/50 pt-3 mt-1">
                     <p className="text-[10px] font-mono text-slate-500 uppercase mb-2">Wali</p>
                   </div>
@@ -905,6 +905,20 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
       <label className="text-[10px] font-mono text-slate-400 uppercase">{label}</label>
       <input value={value} onChange={e => onChange(e.target.value)}
         className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700" />
+    </div>
+  );
+}
+
+const STATUS_OPTIONS = ['Hidup', 'Meninggal'];
+
+function StatusField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <label className="text-[10px] font-mono text-slate-400 uppercase">{label}</label>
+      <select value={value || 'Hidup'} onChange={e => onChange(e.target.value)}
+        className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
+        {STATUS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
     </div>
   );
 }
