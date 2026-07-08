@@ -38,8 +38,7 @@ export default function StudentManagement() {
   const isOperator = user?.role === 'operator_sekolah';
   const operatorNpsn = user?.schoolNpsn || '';
   const operatorName = user?.schoolName || '';
-
-  const [students, setStudents] = useState<Student[]>([]);
+  const operatorLevel = isOperator ? (user?.schoolLevel || 'SD') : null;
   const [filtered, setFiltered] = useState<Student[]>([]);
   const [search, setSearch] = useState('');
   const [filterSchool, setFilterSchool] = useState(isOperator ? operatorNpsn : 'ALL');
@@ -74,7 +73,6 @@ export default function StudentManagement() {
 
   const npsnToSchool = new Map(schoolsList.map(s => [s.npsn, s.name]));
   const schoolLevel = new Map(schoolsList.map(s => [s.npsn, s.level]));
-  const operatorLevel = isOperator ? (user?.schoolLevel || schoolLevel.get(operatorNpsn) || 'SD') : null;
 
   useEffect(() => { load(); }, []);
 
