@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { School } from '../types';
 import { loadSchools } from '../data/dataService';
 import { ALL_SCHOOLS, VILLAGES } from '../data/mockData';
+import { api } from '../api';
 import {
   Users,
   GraduationCap,
@@ -18,6 +19,27 @@ import {
   Layers
 } from 'lucide-react';
 
+interface EmployeeData {
+  id: string;
+  nama: string;
+  nik: string;
+  nip: string | null;
+  sekolah_id: string;
+  jabatan: string | null;
+  status_pegawai: string | null;
+}
+
+type StaffCategory = 'tendik' | 'pai' | 'penjas' | 'kelas';
+
+interface CategoryDetail {
+  pns: number;
+  pppk: number;
+  pppkParuh: number;
+  honorer: number;
+  total: number;
+  delta: number;
+}
+
 interface StaffMapping {
   npsn: string;
   name: string;
@@ -26,42 +48,54 @@ interface StaffMapping {
   students: number;
   rombel: number;
   kepsek: string;
-  tendik: {
-    pns: number;
-    pppk: number;
-    pppkParuh: number;
-    honorer: number;
-    total: number;
-    delta: number;
+  tendik: CategoryDetail;
+  pai: CategoryDetail;
+  penjas: CategoryDetail;
+  kelas: CategoryDetail;
+}
+
+function categorizeJabatan(j: string | null): StaffCategory | null {
+  if (!j) return null;
+  const jLower = j.toLowerCase();
+  if (jLower.includes('kepala sekolah')) return null;
+  if (jLower.includes('guru agama') || jLower.includes('guru pai')) return 'pai';
+  if (jLower.includes('guru pjok') || jLower.includes('guru penjas') || jLower.includes('guru olahraga')) return 'penjas';
+  if (jLower.includes('guru kelas')) return 'kelas';
+  if (jLower === 'guru') return 'kelas';
+  return 'tendik';
+}
+
+function mapStatusToGroup(status: string | null): 'pns' | 'pppk' | 'pppkParuh' | 'honorer' {
+  if (!status) return 'honorer';
+  const s = status.toLowerCase();
+  if (s === 'pns') return 'pns';
+  if (s.startsWith('pppk')) {
+    if (s.includes('paruh waktu') || s === 'pppk pw') return 'pppkParuh';
+    return 'pppk';
+  }
+  return 'honorer';
+}
+
+function statusLabel(s: string | null): string {
+  if (!s) return '—';
+  const m: Record<string, string> = {
+    'PNS': 'PNS - Aktif',
+    'PPPK': 'PPPK - Aktif',
+    'PPPK Paruh Waktu': 'PPPK - Paruh Waktu',
+    'PPPK PW': 'PPPK - Paruh Waktu',
+    'GTY/PTY': 'GTY (Yayasan)',
+    'Honorer Sekolah/Daerah': 'Honorer - Aktif',
+    'Tenaga Honor Sekolah': 'Honorer - Aktif',
+    'Guru Honor Sekolah': 'Honorer - Aktif',
+    'Honor Daerah TK.II Kab/Kota': 'Honorer - Aktif',
+    'Lainnya': 'Honorer - Aktif',
   };
-  pai: {
-    pns: number;
-    pppk: number;
-    pppkParuh: number;
-    honorer: number;
-    total: number;
-    delta: number;
-  };
-  penjas: {
-    pns: number;
-    pppk: number;
-    pppkParuh: number;
-    honorer: number;
-    total: number;
-    delta: number;
-  };
-  kelas: {
-    pns: number;
-    pppk: number;
-    pppkParuh: number;
-    honorer: number;
-    total: number;
-    delta: number;
-  };
+  return m[s] || s;
 }
 
 export default function HumanResources() {
   const [schools, setSchools] = useState<School[]>(ALL_SCHOOLS);
+  const [employees, setEmployees] = useState<EmployeeData[]>([]);
   const [activeTab, setActiveTab] = useState<'analytics' | 'mapping'>('mapping');
   const [forecastYears, setForecastYears] = useState<'1' | '3' | '5'>('3');
   
@@ -72,13 +106,16 @@ export default function HumanResources() {
 
   useEffect(() => {
     loadSchools().then(s => { if (s.length) setSchools(s); });
+    api('/api/employees').then(res => res.json()).then(data => {
+      if (data?.data) setEmployees(data.data);
+    }).catch(() => {});
   }, []);
 
-  // Compute base overview stats
-  const totalTeachers = schools.reduce((sum, s) => sum + s.teachers.total, 0);
-  const totalPns = schools.reduce((sum, s) => sum + s.teachers.pns, 0);
-  const totalPppk = schools.reduce((sum, s) => sum + s.teachers.pppk, 0);
-  const totalHonorer = schools.reduce((sum, s) => sum + s.teachers.honorer, 0);
+  // Compute base overview stats from real employees
+  const totalTeachers = employees.length || schools.reduce((sum, s) => sum + s.teachers.total, 0);
+  const totalPns = employees.filter(e => e.status_pegawai === 'PNS').length || schools.reduce((sum, s) => sum + s.teachers.pns, 0);
+  const totalPppk = employees.filter(e => e.status_pegawai === 'PPPK').length || schools.reduce((sum, s) => sum + s.teachers.pppk, 0);
+  const totalHonorer = employees.length ? employees.filter(e => mapStatusToGroup(e.status_pegawai) === 'honorer').length : schools.reduce((sum, s) => sum + s.teachers.honorer, 0);
   const certifiedCount = schools.reduce((sum, s) => sum + s.teachers.certified, 0);
 
   // Subject distribution summary (procedural calculation)
@@ -133,10 +170,45 @@ export default function HumanResources() {
     }
   ];
 
+  // Group employees by school + count by category & status
+  const employeesBySchool = useMemo(() => {
+    const map = new Map<string, { kepsek: EmployeeData | null; byCat: Record<StaffCategory, EmployeeData[]> }>();
+    for (const emp of employees) {
+      if (!map.has(emp.sekolah_id)) {
+        map.set(emp.sekolah_id, { kepsek: null, byCat: { tendik: [], pai: [], penjas: [], kelas: [] } });
+      }
+      const entry = map.get(emp.sekolah_id)!;
+      if (emp.jabatan?.toLowerCase().includes('kepala sekolah')) {
+        entry.kepsek = emp;
+        continue;
+      }
+      const cat = categorizeJabatan(emp.jabatan);
+      if (cat) entry.byCat[cat].push(emp);
+    }
+    return map;
+  }, [employees]);
+
+  function buildCategory(emps: EmployeeData[], required: number): CategoryDetail {
+    let pns = 0, pppk = 0, pppkParuh = 0, honorer = 0;
+    for (const emp of emps) {
+      const group = mapStatusToGroup(emp.status_pegawai);
+      if (group === 'pns') pns++;
+      else if (group === 'pppk') pppk++;
+      else if (group === 'pppkParuh') pppkParuh++;
+      else honorer++;
+    }
+    const total = pns + pppk + pppkParuh + honorer;
+    return { pns, pppk, pppkParuh, honorer, total, delta: total - required };
+  }
+
   // Generate detailed staff mapping matrix for ALL schools
   const staffMappings = useMemo<StaffMapping[]>(() => {
     return schools.map((school) => {
-      // Study groups: SD typically 6 rombel, TK/KB fewer
+      const npsn = school.npsn;
+      const empEntry = employeesBySchool.get(npsn);
+      const schoolEmps = empEntry?.byCat;
+
+      // Rombel estimate
       let rombel = 1;
       if (school.level === 'SD') {
         rombel = Math.max(6, Math.ceil(school.students.total / 28));
@@ -146,112 +218,33 @@ export default function HumanResources() {
         rombel = Math.max(3, Math.ceil(school.students.total / 36));
       }
 
-      // Kepsek status — override for specific schools with Plt
-      let kepsek = 'PNS - Aktif';
-      if (school.npsn === '20215564' || school.npsn === '20215161') {
-        kepsek = 'PNS - Plt';
-      } else {
-        const lastDigit = parseInt(school.npsn.slice(-1)) || 0;
-        if (lastDigit === 3 || lastDigit === 7) {
-          kepsek = 'PNS - Plt';
-        } else if (lastDigit === 5) {
-          kepsek = 'PPPK - Aktif';
-        } else if (lastDigit === 9 && school.status === 'Swasta') {
-          kepsek = 'GTY (Yayasan)';
-        }
+      // Kepsek from real data
+      let kepsek = '—';
+      if (empEntry?.kepsek) {
+        kepsek = statusLabel(empEntry.kepsek.status_pegawai);
       }
 
-      // Generate Tendik (Staff/Admin) — max 2, kepala sekolah not counted as tendik
-      const totalWithoutKepsek = Math.max(0, school.teachers.total - 1);
-      const tTotal = Math.min(2, Math.max(0, Math.floor(school.students.total / 100)), totalWithoutKepsek);
-      const tPns = Math.min(school.teachers.pns, Math.max(0, Math.floor(tTotal * 0.3)));
-      const tPppk = Math.min(school.teachers.pppk, Math.max(0, Math.floor(tTotal * 0.2)));
-      const tPppkParuh = Math.max(0, Math.floor(tTotal * 0.1));
-      const tHonorer = Math.max(0, tTotal - tPns - tPppk - tPppkParuh);
+      // Required counts (keep synthetic estimates)
       const tRequired = school.level === 'SD' ? (rombel > 12 ? 4 : 2) : (school.level === 'SMP' ? 4 : 6);
-      const tDelta = tTotal - tRequired;
-
-      // Generate Guru PAI (Religion)
-      const totalGuru = Math.max(0, school.teachers.total - tTotal);
       const pRequired = school.level === 'SD' ? (rombel > 12 ? 2 : 1) : (school.level === 'SMP' ? 2 : 3);
-      const pTotal = Math.min(pRequired, Math.max(0, Math.floor(totalGuru * 0.08)));
-      const pPns = Math.min(school.teachers.pns, Math.min(pTotal, Math.max(0, Math.floor(pTotal * 0.3))));
-      const pPppk = Math.min(school.teachers.pppk, Math.min(pTotal - pPns, Math.max(0, Math.floor(pTotal * 0.4))));
-      const pPppkParuh = Math.max(0, Math.min(1, Math.floor(pTotal * 0.1)));
-      const pHonorer = Math.max(0, pTotal - pPns - pPppk - pPppkParuh);
-      const pDelta = pTotal - pRequired;
-
-      // Generate Guru Penjaskes (PJOK)
       const jRequired = school.level === 'SD' ? (rombel > 12 ? 2 : 1) : 2;
-      const jTotal = Math.min(jRequired, Math.max(0, Math.floor(totalGuru * 0.07)));
-      const jPns = Math.min(school.teachers.pns, Math.min(jTotal, Math.max(0, Math.floor(jTotal * 0.2))));
-      const jPppk = Math.min(school.teachers.pppk, Math.min(jTotal - jPns, Math.max(0, Math.floor(jTotal * 0.3))));
-      const jPppkParuh = Math.max(0, Math.min(1, Math.floor(jTotal * 0.1)));
-      const jHonorer = Math.max(0, jTotal - jPns - jPppk - jPppkParuh);
-      const jDelta = jTotal - jRequired;
-
-      // Generate Guru Kelas (Primary class teachers, only SD)
-      let kPns = 0;
-      let kPppk = 0;
-      let kPppkParuh = 0;
-      let kHonorer = 0;
-      let kTotal = 0;
-      let kRequired = 0;
-      let kDelta = 0;
-
-      if (school.level === 'SD') {
-        kPns = Math.max(1, Math.floor(school.teachers.pns * 0.6));
-        kPppk = Math.max(0, Math.floor(school.teachers.pppk * 0.5));
-        kPppkParuh = school.teachers.honorer > 5 ? 1 : 0;
-        kHonorer = Math.max(1, Math.floor(school.teachers.honorer * 0.4));
-        kTotal = kPns + kPppk + kPppkParuh + kHonorer;
-        kRequired = rombel;
-        kDelta = kTotal - kRequired;
-      }
+      const kRequired = school.level === 'SD' ? rombel : 0;
 
       return {
-        npsn: school.npsn,
+        npsn,
         name: school.name,
         level: school.level,
         village: school.village,
         students: school.students.total,
         rombel,
         kepsek,
-        tendik: {
-          pns: tPns,
-          pppk: tPppk,
-          pppkParuh: tPppkParuh,
-          honorer: tHonorer,
-          total: tTotal,
-          delta: tDelta
-        },
-        pai: {
-          pns: pPns,
-          pppk: pPppk,
-          pppkParuh: pPppkParuh,
-          honorer: pHonorer,
-          total: pTotal,
-          delta: pDelta
-        },
-        penjas: {
-          pns: jPns,
-          pppk: jPppk,
-          pppkParuh: jPppkParuh,
-          honorer: jHonorer,
-          total: jTotal,
-          delta: jDelta
-        },
-        kelas: {
-          pns: kPns,
-          pppk: kPppk,
-          pppkParuh: kPppkParuh,
-          honorer: kHonorer,
-          total: kTotal,
-          delta: kDelta
-        }
+        tendik: buildCategory(schoolEmps?.tendik || [], tRequired),
+        pai: buildCategory(schoolEmps?.pai || [], pRequired),
+        penjas: buildCategory(schoolEmps?.penjas || [], jRequired),
+        kelas: buildCategory(schoolEmps?.kelas || [], kRequired),
       };
     });
-  }, [schools]);
+  }, [schools, employeesBySchool]);
 
   // Filter staff mappings based on search/filters
   const filteredMappings = useMemo(() => {
