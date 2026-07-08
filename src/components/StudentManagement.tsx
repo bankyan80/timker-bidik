@@ -85,37 +85,37 @@ export default function StudentManagement() {
 
   async function save() {
     const selectedLevel = form.school_npsn ? (schoolLevel.get(form.school_npsn) || 'SD') : levelTab;
-    // Map form values to DB format
     const kk = form.kelas_kelompok;
     const kelas_kelompok = selectedLevel === 'SD' ? (kk.match(/^Kelas /) ? kk : 'Kelas ' + kk) : kk;
+    let res: Response;
     if (editId) {
-      await api(`/api/students/${editId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      res = await api(`/api/students/${editId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         nama: form.nama, nisn: form.nisn || null, nik: form.nik || null,
         jenis_kelamin: form.jenis_kelamin, tempat_lahir: form.tempat_lahir || null,
         tanggal_lahir: form.tanggal_lahir || null, kelas_kelompok,
         rombel: form.rombel || null
       })});
     } else if (foundStudent) {
-      // TK/KB student found by NIK — update jenjang to SD instead of creating new
-      await api(`/api/students/${foundStudent.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      res = await api(`/api/students/${foundStudent.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         nama: form.nama, nisn: form.nisn || null, nik: form.nik || null,
         jenis_kelamin: form.jenis_kelamin, tempat_lahir: form.tempat_lahir || null,
         tanggal_lahir: form.tanggal_lahir || null, kelas_kelompok,
         rombel: form.rombel || null, jenjang: 'SD', status_siswa: 'aktif'
       })});
     } else {
-      await api('/api/students', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      res = await api('/api/students', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         ...form, kelas_kelompok, nisn: form.nisn || null, nik: form.nik || null,
         jenjang: selectedLevel, status_siswa: 'aktif'
       })});
     }
+    if (!res.ok) return; // Don't close modal on error
     setFormOpen(false); setEditId(null); resetForm(); load();
   }
 
   async function remove(id: string) {
     if (!confirm('Hapus siswa ini?')) return;
-    await api(`/api/students/${id}`, { method: 'DELETE' });
-    load();
+    const res = await api(`/api/students/${id}`, { method: 'DELETE' });
+    if (res.ok) load();
   }
 
   function toggleCheck(id: string) {
@@ -138,11 +138,13 @@ export default function StudentManagement() {
   async function bulkDelete() {
     if (checkedIds.size === 0) return;
     if (!confirm(`Hapus ${checkedIds.size} siswa yang dipilih?`)) return;
+    let ok = true;
     for (const id of checkedIds) {
-      await api(`/api/students/${id}`, { method: 'DELETE' });
+      const res = await api(`/api/students/${id}`, { method: 'DELETE' });
+      if (!res.ok) ok = false;
     }
     setCheckedIds(new Set());
-    load();
+    if (ok) load();
   }
 
   const GRADE_NEXT: Record<string, string> = {
@@ -157,7 +159,6 @@ export default function StudentManagement() {
     const kelas6 = selected.filter(s => s.kelas_kelompok === 'Kelas 6');
     const non6 = selected.filter(s => s.kelas_kelompok !== 'Kelas 6');
     if (kelas6.length > 0 && non6.length === 0) {
-      // Only Kelas 6 selected — show graduation modal directly
       setGradStudents(kelas6);
       const init: Record<string, any> = {};
       kelas6.forEach(s => { init[s.id] = { status_lanjutan: '', tujuan_nama: '', tujuan_jenjang: '', alasan: '', alasan_detail: '' }; });
@@ -166,36 +167,36 @@ export default function StudentManagement() {
       return;
     }
     if (kelas6.length > 0 && non6.length > 0) {
-      // Mixed — promote non-6 first
       if (!confirm(`Naikkan ${non6.length} siswa ke kelas berikutnya? ${kelas6.length} siswa Kelas 6 akan diproses kelulusan.`)) return;
+      let ok = true;
       for (const s of non6) {
         const next = GRADE_NEXT[s.kelas_kelompok];
         if (!next) continue;
-        await api(`/api/students/${s.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kelas_kelompok: next, rombel: null }) });
+        const res = await api(`/api/students/${s.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kelas_kelompok: next, rombel: null }) });
+        if (!res.ok) ok = false;
       }
       setGradStudents(kelas6);
       const init: Record<string, any> = {};
       kelas6.forEach(s => { init[s.id] = { status_lanjutan: '', tujuan_nama: '', tujuan_jenjang: '', alasan: '', alasan_detail: '' }; });
       setGradData(init);
       setGradModalOpen(true);
-      load();
+      if (ok) load();
       return;
     }
-    // No Kelas 6 — promote normally
     if (!confirm(`Naikkan ${non6.length} siswa yang dipilih ke kelas berikutnya?`)) return;
-    let promoted = 0;
+    let ok = true;
     for (const s of non6) {
       const next = GRADE_NEXT[s.kelas_kelompok];
       if (!next) continue;
-      await api(`/api/students/${s.id}`, {
+      const res = await api(`/api/students/${s.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kelas_kelompok: next, rombel: null }),
       });
-      promoted++;
+      if (!res.ok) ok = false;
     }
     setCheckedIds(new Set());
-    if (promoted > 0) load();
+    if (ok) load();
   }
 
   function resetForm() { setNikLookup('idle'); setFoundStudent(null); const y = new Date().getFullYear(); const m = new Date().getMonth(); const tp = m >= 6 ? `${y}/${y+1}` : `${y-1}/${y}`; const defaultKk = levelTab === 'SD' ? '1' : levelTab === 'TK' ? 'TK A' : 'Kelompok A'; setForm({ school_npsn: '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki', tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: defaultKk, rombel: '', tahun_pelajaran: tp }); }

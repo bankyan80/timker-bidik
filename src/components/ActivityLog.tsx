@@ -87,6 +87,7 @@ export default function ActivityLog() {
       params.set('limit', String(pageSize));
       params.set('offset', String(page * pageSize));
       if (actionFilter) params.set('action', actionFilter);
+      if (search) params.set('search', search);
       const range = getDateRange(
         DATE_PRESETS.find(p => p.label === datePreset)?.days ?? -1
       );
@@ -101,17 +102,12 @@ export default function ActivityLog() {
     } finally {
       setLoading(false);
     }
-  }, [page, actionFilter, datePreset]);
+  }, [page, actionFilter, datePreset, search]);
 
   useEffect(() => { load(); }, [load]);
 
   const totalPages = Math.ceil(total / pageSize);
-
-  const filtered = logs.filter(l =>
-    !search || l.username?.toLowerCase().includes(search.toLowerCase()) ||
-    (ENTITY_LABELS[l.entity_type] || l.entity_type || '').toLowerCase().includes(search.toLowerCase()) ||
-    (l.entity_id || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = logs;
 
   const formatDate = (ts: number) => {
     const d = new Date(ts);

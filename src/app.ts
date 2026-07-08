@@ -11,11 +11,6 @@ import { SimulationScenario, SimulationResult } from './types';
 import { getDb, initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getStudentByNik, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod, getMonthlyReport, getUserByUsername, changePassword, deleteEmployeeDocument, getStudentDetail, upsertStudentParents, upsertStudentAddress, upsertStudentHealth, getAllUsers, getUserById, createUser, updateUser, deleteUser, getAlumni, getAlumniById, insertAlumni, updateAlumni, insertActivityLog, getActivityLogs, getMonthlySubmissions, submitMonthlyReport } from './db';
 import { getAuth as getDriveAuth } from './drive';
 
-function sanitizeAPI(val: unknown): string {
-  if (typeof val !== 'string') return '';
-  return val.replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' })[c] || c);
-}
-
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(helmet());
@@ -146,6 +141,8 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
             });
             return res.json({ token, user });
           }
+          // School not found in DB — operator cannot log in
+          return res.status(401).json({ error: 'Sekolah tidak ditemukan. Hubungi admin.' });
         }
         const user: AuthUser = { id: dbUser.id, username: dbUser.username, role: dbUser.role as any };
         const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
@@ -170,26 +167,31 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
 });
 
 app.put('/api/auth/change-password', authenticateToken, async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({ error: 'Password saat ini dan password baru wajib diisi' });
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Password saat ini dan password baru wajib diisi' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password baru minimal 6 karakter' });
+    }
+
+    const dbUser = await getUserByUsername(req.user!.username);
+    if (!dbUser) return res.status(400).json({ error: 'User tidak ditemukan' });
+
+    const passwordMatch = await bcrypt.compare(currentPassword, dbUser.password);
+    if (!passwordMatch) {
+      return res.status(400).json({ error: 'Password saat ini salah' });
+    }
+
+    const ok = await changePassword(req.user!.username, newPassword);
+    if (!ok) return res.status(500).json({ error: 'Gagal mengubah password' });
+
+    res.json({ success: true, message: 'Password berhasil diubah' });
+  } catch (err) {
+    console.error('change-password error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server' });
   }
-  if (newPassword.length < 6) {
-    return res.status(400).json({ error: 'Password baru minimal 6 karakter' });
-  }
-
-  const dbUser = await getUserByUsername(req.user!.username);
-  if (!dbUser) return res.status(400).json({ error: 'User tidak ditemukan' });
-
-  const passwordMatch = await bcrypt.compare(currentPassword, dbUser.password);
-  if (!passwordMatch) {
-    return res.status(400).json({ error: 'Password saat ini salah' });
-  }
-
-  const ok = await changePassword(req.user!.username, newPassword);
-  if (!ok) return res.status(500).json({ error: 'Gagal mengubah password' });
-
-  res.json({ success: true, message: 'Password berhasil diubah' });
 });
 
 // Initialize Gemini Client safely
@@ -219,7 +221,10 @@ app.get('/api/health', (req, res) => {
 // 1. Predictive Engine Endpoint
 app.post('/api/predict', authenticateToken, async (req, res) => {
   const { years = 1 } = req.body;
-  const numYears = parseInt(years);
+  const numYears = parseInt(years, 10);
+  if (isNaN(numYears) || numYears < 1 || numYears > 50) {
+    return res.status(400).json({ error: 'Years must be a number between 1 and 50' });
+  }
   const schools = await getAllSchools();
 
   const totalStudents = schools.reduce((sum, s) => sum + s.students.total, 0);
@@ -597,23 +602,28 @@ ${schoolScope ? '' : `- Rata-rata Health Score: ${averageHealth}/100
 
 // 4. Employee & Document API
 app.get('/api/employees', authenticateToken, async (req, res) => {
-  const { limit, offset } = req.query;
-  const pageLimit = Math.min(Math.max(parseInt(limit as string) || 10000, 1), 50000);
-  const pageOffset = Math.max(parseInt(offset as string) || 0, 0);
-  const schoolScope = getSchoolScope(req);
-  let employees;
-  if (schoolScope) {
-    employees = await getEmployeesBySchool(schoolScope);
-  } else {
-    employees = await getEmployees();
+  try {
+    const { limit, offset } = req.query;
+    const pageLimit = Math.min(Math.max(parseInt(limit as string, 10) || 10000, 1), 50000);
+    const pageOffset = Math.max(parseInt(offset as string, 10) || 0, 0);
+    const schoolScope = getSchoolScope(req);
+    let employees;
+    if (schoolScope) {
+      employees = await getEmployeesBySchool(schoolScope);
+    } else {
+      employees = await getEmployees();
+    }
+    const paginated = employees.slice(pageOffset, pageOffset + pageLimit);
+    res.json({
+      data: paginated,
+      total: employees.length,
+      limit: pageLimit,
+      offset: pageOffset,
+    });
+  } catch (err) {
+    console.error('GET /api/employees error:', err);
+    res.status(500).json({ error: 'Gagal memuat data pegawai' });
   }
-  const paginated = employees.slice(pageOffset, pageOffset + pageLimit);
-  res.json({
-    data: paginated,
-    total: employees.length,
-    limit: pageLimit,
-    offset: pageOffset,
-  });
 });
 
 // 5. Schools & Dashboard API
@@ -682,7 +692,7 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
   if (schoolScope && req.body.sekolah_id !== schoolScope) {
     return res.status(403).json({ error: 'Forbidden: you can only add employees to your own school' });
   }
-  const sanitized = { ...req.body, nama: sanitizeAPI(req.body.nama || ''), nik: sanitizeAPI(req.body.nik || '') };
+  const sanitized = { ...req.body, nama: req.body.nama || '', nik: req.body.nik || '' };
   const emp = await insertEmployee(sanitized);
   if (!emp) return res.status(400).json({ error: 'Failed to create employee' });
   await logActivity(req, 'create', 'employee', emp.id, { nama: sanitized.nama, sekolah_id: sanitized.sekolah_id });
@@ -789,12 +799,15 @@ app.delete('/api/documents/:id', authenticateToken, async (req, res) => {
   }
 
   // Delete from Google Drive
-  try {
-    const auth = getDriveAuth();
-    await google.drive({ version: 'v3', auth }).files.delete({ fileId: row.drive_file_id });
-  } catch (driveErr: any) {
-    if (driveErr.code !== 404) {
-      console.error('Drive delete error:', driveErr.message);
+  if (row.drive_file_id) {
+    try {
+      const auth = getDriveAuth();
+      await google.drive({ version: 'v3', auth }).files.delete({ fileId: row.drive_file_id });
+    } catch (driveErr: any) {
+      if (driveErr.code !== 404) {
+        console.error('Drive delete error:', driveErr.message);
+        return res.status(500).json({ error: 'Gagal menghapus file dari Google Drive' });
+      }
     }
   }
 
@@ -945,62 +958,65 @@ app.get('/api/schools/stats', authenticateToken, async (req, res) => {
 
 // 6. Document OCR / Semantic Search Engine
 app.get('/api/document-search', authenticateToken, async (req, res) => {
-  const { q = '' } = req.query;
-  const query = q.toString();
+  try {
+    const { q = '' } = req.query;
+    const query = q.toString();
 
-  // Search both main documents table and employee_documents
-  const docs = query ? await searchDocuments(query) : [];
+    const docs = query ? await searchDocuments(query) : [];
 
-  const db = getDb();
-  if (db) {
-    const searchQ = query.toLowerCase();
-    const schoolScope = getSchoolScope(req);
-    let empDocs;
-    const whereClause = query
-      ? `WHERE (LOWER(ed.nama_file) LIKE ? OR LOWER(ed.jenis_dokumen) LIKE ? OR LOWER(ed.kategori) LIKE ? OR LOWER(e.nama) LIKE ?)`
-      : '';
-    const scopeClause = schoolScope ? (whereClause ? ' AND' : 'WHERE') + ' e.sekolah_id = ?' : '';
-    const params: any[] = query
-      ? [`%${searchQ}%`, `%${searchQ}%`, `%${searchQ}%`, `%${searchQ}%`]
-      : [];
-    if (schoolScope) params.push(schoolScope);
+    const db = getDb();
+    if (db) {
+      const searchQ = query.toLowerCase();
+      const schoolScope = getSchoolScope(req);
+      let empDocs;
+      const whereClause = query
+        ? `WHERE (LOWER(ed.nama_file) LIKE ? OR LOWER(ed.jenis_dokumen) LIKE ? OR LOWER(ed.kategori) LIKE ? OR LOWER(e.nama) LIKE ?)`
+        : '';
+      const scopeClause = schoolScope ? (whereClause ? ' AND' : 'WHERE') + ' e.sekolah_id = ?' : '';
+      const params: any[] = query
+        ? [`%${searchQ}%`, `%${searchQ}%`, `%${searchQ}%`, `%${searchQ}%`]
+        : [];
+      if (schoolScope) params.push(schoolScope);
 
-    if (!query && !schoolScope) {
-      // No query, no scope — return all docs (limit 200)
-      empDocs = await db.execute({
-        sql: `SELECT ed.*, e.nama as employee_name, e.sekolah_id, sk.name as school_name
-              FROM employee_documents ed
-              LEFT JOIN employees e ON e.id = ed.employee_id
-              LEFT JOIN schools sk ON sk.npsn = e.sekolah_id
-              LIMIT 200`,
-      });
-    } else {
-      empDocs = await db.execute({
-        sql: `SELECT ed.*, e.nama as employee_name, e.sekolah_id, sk.name as school_name
-              FROM employee_documents ed
-              LEFT JOIN employees e ON e.id = ed.employee_id
-              LEFT JOIN schools sk ON sk.npsn = e.sekolah_id
-              ${whereClause}${scopeClause}
-              LIMIT 200`,
-        args: params,
-      });
+      if (!query && !schoolScope) {
+        empDocs = await db.execute({
+          sql: `SELECT ed.*, e.nama as employee_name, e.sekolah_id, sk.name as school_name
+                FROM employee_documents ed
+                LEFT JOIN employees e ON e.id = ed.employee_id
+                LEFT JOIN schools sk ON sk.npsn = e.sekolah_id
+                LIMIT 200`,
+        });
+      } else {
+        empDocs = await db.execute({
+          sql: `SELECT ed.*, e.nama as employee_name, e.sekolah_id, sk.name as school_name
+                FROM employee_documents ed
+                LEFT JOIN employees e ON e.id = ed.employee_id
+                LEFT JOIN schools sk ON sk.npsn = e.sekolah_id
+                ${whereClause}${scopeClause}
+                LIMIT 200`,
+          args: params,
+        });
+      }
+      const mapped = empDocs.rows.map((row: any) => ({
+        id: row.id,
+        title: row.nama_file,
+        category: row.kategori,
+        schoolName: row.school_name || null,
+        schoolNpsn: row.sekolah_id || null,
+        lastUpdated: row.updated_at ? new Date(Number(row.updated_at)).toISOString() : '',
+        status: row.status_verifikasi === 'sudah_diverifikasi' ? 'verified' : 'pending',
+        employeeName: row.employee_name,
+        jenisDokumen: row.jenis_dokumen,
+        driveUrl: row.drive_url,
+      }));
+      return res.json([...docs, ...mapped]);
     }
-    const mapped = empDocs.rows.map((row: any) => ({
-      id: row.id,
-      title: row.nama_file,
-      category: row.kategori,
-      schoolName: row.school_name || null,
-      schoolNpsn: row.sekolah_id || null,
-      lastUpdated: row.updated_at ? new Date(Number(row.updated_at)).toISOString() : '',
-      status: row.status_verifikasi === 'sudah_diverifikasi' ? 'verified' : 'pending',
-      employeeName: row.employee_name,
-      jenisDokumen: row.jenis_dokumen,
-      driveUrl: row.drive_url,
-    }));
-    return res.json([...docs, ...mapped]);
-  }
 
-  res.json(query ? docs : []);
+    res.json(query ? docs : []);
+  } catch (err) {
+    console.error('GET /api/document-search error:', err);
+    res.status(500).json({ error: 'Gagal mencari dokumen' });
+  }
 });
 
 // 7. Student API
@@ -1040,7 +1056,7 @@ app.post('/api/students', authenticateToken, async (req, res) => {
   if (schoolScope && req.body.school_npsn !== schoolScope) {
     return res.status(403).json({ error: 'Forbidden: you can only add students to your own school' });
   }
-  const sanitized = { ...req.body, nama: sanitizeAPI(req.body.nama || '') };
+  const sanitized = { ...req.body, nama: req.body.nama || '' };
   const stu = await insertStudent(sanitized);
   if (!stu) return res.status(400).json({ error: 'Gagal menambah siswa' });
   await logActivity(req, 'create', 'student', stu.id, { nama: sanitized.nama, school_npsn: sanitized.school_npsn });
@@ -1082,42 +1098,51 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
 
 // Student detail endpoints (parents, address, health)
 app.get('/api/students/:id/detail', authenticateToken, async (req, res) => {
-  const db = getDb();
-  if (!db) return res.status(500).json({ error: 'DB not available' });
-  // Find student to get NISN
-  const stu = await db.execute('SELECT id, nisn, school_npsn FROM students WHERE id = ?', [req.params.id]);
-  if (stu.rows.length === 0) return res.status(404).json({ error: 'Student not found' });
-  const row = stu.rows[0] as any;
-  const schoolScope = getSchoolScope(req);
-  if (schoolScope && row.school_npsn !== schoolScope) {
-    return res.status(403).json({ error: 'Forbidden: you can only view students in your own school' });
+  try {
+    const db = getDb();
+    if (!db) return res.status(500).json({ error: 'DB not available' });
+    const stu = await db.execute('SELECT id, nisn, school_npsn FROM students WHERE id = ?', [req.params.id]);
+    if (stu.rows.length === 0) return res.status(404).json({ error: 'Student not found' });
+    const row = stu.rows[0] as any;
+    const schoolScope = getSchoolScope(req);
+    if (schoolScope && row.school_npsn !== schoolScope) {
+      return res.status(403).json({ error: 'Forbidden: you can only view students in your own school' });
+    }
+    if (!row.nisn) return res.json({ parents: null, address: null, health: null });
+    const detail = await getStudentDetail(row.nisn);
+    res.json(detail);
+  } catch (err) {
+    console.error('GET /api/students/:id/detail error:', err);
+    res.status(500).json({ error: 'Gagal memuat detail siswa' });
   }
-  if (!row.nisn) return res.json({ parents: null, address: null, health: null });
-  const detail = await getStudentDetail(row.nisn);
-  res.json(detail);
 });
 
 app.put('/api/students/:id/detail', authenticateToken, async (req, res) => {
-  const db = getDb();
-  if (!db) return res.status(500).json({ error: 'DB not available' });
-  const stu = await db.execute('SELECT id, nisn, school_npsn FROM students WHERE id = ?', [req.params.id]);
-  if (stu.rows.length === 0) return res.status(404).json({ error: 'Student not found' });
-  const row = stu.rows[0] as any;
-  const schoolScope = getSchoolScope(req);
-  if (schoolScope && row.school_npsn !== schoolScope) {
-    return res.status(403).json({ error: 'Forbidden: you can only update students in your own school' });
+  try {
+    const db = getDb();
+    if (!db) return res.status(500).json({ error: 'DB not available' });
+    const stu = await db.execute('SELECT id, nisn, school_npsn FROM students WHERE id = ?', [req.params.id]);
+    if (stu.rows.length === 0) return res.status(404).json({ error: 'Student not found' });
+    const row = stu.rows[0] as any;
+    const schoolScope = getSchoolScope(req);
+    if (schoolScope && row.school_npsn !== schoolScope) {
+      return res.status(403).json({ error: 'Forbidden: you can only update students in your own school' });
+    }
+    if (!row.nisn) return res.status(400).json({ error: 'Student has no NISN' });
+    const { parents, address, health } = req.body;
+    const results = await Promise.all([
+      parents ? upsertStudentParents(row.nisn, parents) : Promise.resolve(true),
+      address ? upsertStudentAddress(row.nisn, address) : Promise.resolve(true),
+      health ? upsertStudentHealth(row.nisn, health) : Promise.resolve(true),
+    ]);
+    if (results.some(r => !r)) return res.status(500).json({ error: 'Failed to save student detail' });
+    await logActivity(req, 'update', 'student_detail', req.params.id, { updated_sections: Object.keys(req.body) });
+    const detail = await getStudentDetail(row.nisn);
+    res.json(detail);
+  } catch (err) {
+    console.error('PUT /api/students/:id/detail error:', err);
+    res.status(500).json({ error: 'Gagal menyimpan detail siswa' });
   }
-  if (!row.nisn) return res.status(400).json({ error: 'Student has no NISN' });
-  const { parents, address, health } = req.body;
-  const results = await Promise.all([
-    parents ? upsertStudentParents(row.nisn, parents) : Promise.resolve(true),
-    address ? upsertStudentAddress(row.nisn, address) : Promise.resolve(true),
-    health ? upsertStudentHealth(row.nisn, health) : Promise.resolve(true),
-  ]);
-  if (results.some(r => !r)) return res.status(500).json({ error: 'Failed to save student detail' });
-  await logActivity(req, 'update', 'student_detail', req.params.id, { updated_sections: Object.keys(req.body) });
-  const detail = await getStudentDetail(row.nisn);
-  res.json(detail);
 });
 
 app.delete('/api/students/:id', authenticateToken, async (req, res) => {
@@ -1150,10 +1175,10 @@ app.post('/api/graduates', authenticateToken, async (req, res) => {
   try {
     const result = await db.execute('SELECT * FROM students WHERE id IN (' + student_ids.map(() => '?').join(',') + ')', student_ids);
     const graduated: any[] = [];
+    const rollback: string[] = [];
     for (const row of result.rows) {
       const s = row as any;
       if (schoolScope && s.school_npsn !== schoolScope) continue;
-      // Insert into alumni
       const alum = await insertAlumni({
         student_id: s.id as string, nama: s.nama as string, nisn: s.nisn as string,
         nik: s.nik as string, jenis_kelamin: s.jenis_kelamin as string,
@@ -1161,15 +1186,23 @@ app.post('/api/graduates', authenticateToken, async (req, res) => {
         school_npsn: s.school_npsn as string, tahun_pelajaran_lulus,
       });
       if (alum) {
-        // Update student status to lulus
         await db.execute({ sql: 'UPDATE students SET status_siswa = ? WHERE id = ?', args: ['lulus', s.id] });
         graduated.push(alum);
+        rollback.push(s.id as string);
       }
     }
     await logActivity(req, 'graduate', 'student', undefined, { count: graduated.length, tahun_pelajaran_lulus });
     res.json({ success: true, count: graduated.length, data: graduated });
   } catch (err: any) {
     console.error('graduates error:', err);
+    // Attempt rollback: restore students that were marked as lulus
+    try {
+      for (const sid of rollback || []) {
+        await db.execute({ sql: 'UPDATE students SET status_siswa = ? WHERE id = ?', args: ['aktif', sid] });
+      }
+    } catch (rbErr) {
+      console.error('rollback error:', rbErr);
+    }
     res.status(500).json({ error: err.message || 'Gagal meluluskan siswa' });
   }
 });
@@ -1218,7 +1251,7 @@ app.get('/api/calendar/:id', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/calendar', authenticateToken, async (req, res) => {
-  const sanitized = { ...req.body, title: sanitizeAPI(req.body.title || '') };
+  const sanitized = { ...req.body, title: req.body.title || '' };
   const ev = await insertCalendarEvent(sanitized);
   if (!ev) return res.status(400).json({ error: 'Gagal menambah event' });
   await logActivity(req, 'create', 'calendar_event', ev.id, { title: sanitized.title });
@@ -1331,7 +1364,7 @@ app.get('/api/reports/submissions', authenticateToken, async (req, res) => {
 });
 
 // Operator submits monthly report for their school
-app.post('/api/reports/submit', authenticateToken, requireRole(['operator_sekolah']), async (req, res) => {
+app.post('/api/reports/submit', authenticateToken, requireRole('operator_sekolah'), async (req, res) => {
   const schoolScope = getSchoolScope(req);
   if (!schoolScope) return res.status(403).json({ error: 'Anda tidak memiliki akses sekolah' });
 
@@ -1461,15 +1494,16 @@ app.delete('/api/users/:id', authenticateToken, requireRole('admin'), async (req
 // ── Activity Logs API ──
 app.get('/api/activity-logs', authenticateToken, requireRole('admin', 'staff_kecamatan'), async (req, res) => {
   try {
-    const { limit, offset, action, user_id, date_from, date_to } = req.query;
+    const { limit, offset, action, user_id, date_from, date_to, search } = req.query;
     const result = await getActivityLogs({
-      limit: parseInt(limit as string) || 100,
-      offset: parseInt(offset as string) || 0,
+      limit: parseInt(limit as string, 10) || 100,
+      offset: parseInt(offset as string, 10) || 0,
       excludeRole: 'admin',
       action: action as string || undefined,
       user_id: user_id as string || undefined,
-      dateFrom: date_from ? parseInt(date_from as string) : undefined,
-      dateTo: date_to ? parseInt(date_to as string) : undefined,
+      dateFrom: date_from ? parseInt(date_from as string, 10) : undefined,
+      dateTo: date_to ? parseInt(date_to as string, 10) : undefined,
+      search: search as string || undefined,
     });
     res.json(result);
   } catch (e: any) {

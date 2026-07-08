@@ -7,11 +7,9 @@ const ALLOWED_COLUMNS_EMPLOYEE = new Set(['nama','nik','nip','nuptk','email','no
 const ALLOWED_COLUMNS_STUDENT = new Set(['nama','nisn','nik','jenis_kelamin','tempat_lahir','tanggal_lahir','kelas_kelompok','rombel','status_siswa','jenjang']);
 const ALLOWED_COLUMNS_PERIOD = new Set(['tanggal_mulai','tanggal_selesai','status']);
 const ALLOWED_COLUMNS_CALENDAR = new Set(['title','category','semester','start_date','end_date','description','education_level','completed']);
-
-function sanitizeStr(val: unknown): string {
-  if (typeof val !== 'string') return '';
-  return val.replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' })[c] || c);
-}
+const ALLOWED_COLUMNS_PARENTS = new Set(['nama_ayah','nik_ayah','pendidikan_ayah','pekerjaan_ayah','penghasilan_ayah','no_hp_ayah','status_ayah','nama_ibu','nik_ibu','pendidikan_ibu','pekerjaan_ibu','penghasilan_ibu','no_hp_ibu','status_ibu','nama_wali','nik_wali','hubungan_wali','pendidikan_wali','pekerjaan_wali','penghasilan_wali','no_hp_wali']);
+const ALLOWED_COLUMNS_ADDRESS = new Set(['provinsi','kabupaten','kecamatan','desa','dusun','alamat','rt','rw','kode_pos','lat','lng','jarak_sekolah','transportasi','waktu_tempuh']);
+const ALLOWED_COLUMNS_HEALTH = new Set(['golongan_darah','tinggi_badan','berat_badan','riwayat_penyakit','kebutuhan_khusus','catatan']);
 
 function validateColumns(keys: string[], allowed: Set<string>): string[] {
   return keys.filter(k => allowed.has(k));
@@ -606,11 +604,11 @@ export async function getMonthlyReport(schoolNpsn?: string): Promise<MonthlyRepo
   const employeesR = await client.execute({
     sql: `SELECT sekolah_id,
           COUNT(*) as total,
-          SUM(CASE WHEN LOWER(status_pegawai) = 'pns' THEN 1 ELSE 0 END) as pns,
-          SUM(CASE WHEN LOWER(status_pegawai) LIKE '%pppk%' THEN 1 ELSE 0 END) as pppk,
-          SUM(CASE WHEN LOWER(status_pegawai) NOT IN ('pns') AND LOWER(status_pegawai) NOT LIKE '%pppk%' THEN 1 ELSE 0 END) as honorer,
-          SUM(CASE WHEN LOWER(jabatan) LIKE '%guru%' OR LOWER(jabatan) LIKE '%kepala sekolah%' OR LOWER(jabatan) LIKE '%wali kelas%' THEN 1 ELSE 0 END) as guru,
-          SUM(CASE WHEN LOWER(jabatan) NOT LIKE '%guru%' AND LOWER(jabatan) NOT LIKE '%kepala sekolah%' AND LOWER(jabatan) NOT LIKE '%wali kelas%' THEN 1 ELSE 0 END) as tendik,
+          SUM(CASE WHEN LOWER(COALESCE(status_pegawai,'')) = 'pns' THEN 1 ELSE 0 END) as pns,
+          SUM(CASE WHEN LOWER(COALESCE(status_pegawai,'')) LIKE '%pppk%' THEN 1 ELSE 0 END) as pppk,
+          SUM(CASE WHEN LOWER(COALESCE(status_pegawai,'')) NOT IN ('pns') AND LOWER(COALESCE(status_pegawai,'')) NOT LIKE '%pppk%' THEN 1 ELSE 0 END) as honorer,
+          SUM(CASE WHEN LOWER(COALESCE(jabatan,'')) LIKE '%guru%' OR LOWER(COALESCE(jabatan,'')) LIKE '%kepala sekolah%' OR LOWER(COALESCE(jabatan,'')) LIKE '%wali kelas%' THEN 1 ELSE 0 END) as guru,
+          SUM(CASE WHEN LOWER(COALESCE(jabatan,'')) NOT LIKE '%guru%' AND LOWER(COALESCE(jabatan,'')) NOT LIKE '%kepala sekolah%' AND LOWER(COALESCE(jabatan,'')) NOT LIKE '%wali kelas%' THEN 1 ELSE 0 END) as tendik,
           SUM(CASE WHEN sertifikasi IS NOT NULL AND sertifikasi != '' THEN 1 ELSE 0 END) as certified
           FROM employees WHERE is_active = 1 AND sekolah_id IN (${placeholders})
           GROUP BY sekolah_id`,
@@ -919,7 +917,7 @@ export async function updateEmployee(id: string, data: Partial<{
     const val = data[key as keyof typeof data];
     if (val !== undefined) {
       sets.push(`${key} = ?`);
-      args.push(typeof val === 'string' ? sanitizeStr(val) : val);
+      args.push(val);
     }
   }
   if (sets.length === 0) return false;
@@ -1008,7 +1006,7 @@ export async function updateEmployeePeriod(periodId: string, data: Partial<{
     const val = data[key as keyof typeof data];
     if (val !== undefined) {
       sets.push(`${key} = ?`);
-      args.push(typeof val === 'string' ? sanitizeStr(val) : val);
+      args.push(typeof val === 'string' ? val : val);
     }
   }
   if (sets.length === 0) return false;
@@ -1098,7 +1096,7 @@ export async function insertCalendarEvent(data: {
     });
     return getCalendarEventById(id);
   } catch (err) {
-    console.error('insertEmployeePeriod error:', err);
+    console.error('insertCalendarEvent error:', err);
     return null;
   }
 }
@@ -1115,7 +1113,7 @@ export async function updateCalendarEvent(id: string, data: Partial<{
   const allowedKeys = validateColumns(Object.keys(data), ALLOWED_COLUMNS_CALENDAR);
   for (const key of allowedKeys) {
     const val = data[key as keyof typeof data];
-    if (val !== undefined) { sets.push(`${key} = ?`); args.push(typeof val === 'string' ? sanitizeStr(val) : val); }
+    if (val !== undefined) { sets.push(`${key} = ?`); args.push(typeof val === 'string' ? val : val); }
   }
   if (sets.length === 0) return false;
   sets.push('updated_at = ?');
@@ -1329,7 +1327,7 @@ export async function insertStudent(data: {
     const result = await client.execute({ sql: 'SELECT * FROM students WHERE id = ?', args: [id] });
     return result.rows[0] as unknown as StudentRow;
   } catch (err) {
-    console.error('insertEmployeePeriod error:', err);
+    console.error('insertStudent error:', err);
     return null;
   }
 }
@@ -1346,7 +1344,7 @@ export async function updateStudent(id: string, data: Partial<{
   const allowedKeys = validateColumns(Object.keys(data), ALLOWED_COLUMNS_STUDENT);
   for (const key of allowedKeys) {
     const val = data[key as keyof typeof data];
-    if (val !== undefined) { sets.push(`${key} = ?`); args.push(typeof val === 'string' ? sanitizeStr(val) : val); }
+    if (val !== undefined) { sets.push(`${key} = ?`); args.push(typeof val === 'string' ? val : val); }
   }
   if (sets.length === 0) return false;
   args.push(id);
@@ -1486,7 +1484,7 @@ export async function getStudentDetail(nisn: string): Promise<{
 export async function upsertStudentParents(nisn: string, data: Record<string, any>): Promise<boolean> {
   const client = getDb();
   if (!client) return false;
-  const cols = Object.keys(data).filter(k => data[k] !== undefined);
+  const cols = validateColumns(Object.keys(data), ALLOWED_COLUMNS_PARENTS);
   const vals = cols.map(c => data[c]);
   if (cols.length === 0) return true;
   const placeholders = cols.map(() => '?').join(',');
@@ -1504,7 +1502,7 @@ export async function upsertStudentParents(nisn: string, data: Record<string, an
 export async function upsertStudentAddress(nisn: string, data: Record<string, any>): Promise<boolean> {
   const client = getDb();
   if (!client) return false;
-  const cols = Object.keys(data).filter(k => data[k] !== undefined);
+  const cols = validateColumns(Object.keys(data), ALLOWED_COLUMNS_ADDRESS);
   if (cols.length === 0) return true;
   const vals = cols.map(c => data[c]);
   const placeholders = cols.map(() => '?').join(',');
@@ -1522,7 +1520,7 @@ export async function upsertStudentAddress(nisn: string, data: Record<string, an
 export async function upsertStudentHealth(nisn: string, data: Record<string, any>): Promise<boolean> {
   const client = getDb();
   if (!client) return false;
-  const cols = Object.keys(data).filter(k => data[k] !== undefined);
+  const cols = validateColumns(Object.keys(data), ALLOWED_COLUMNS_HEALTH);
   if (cols.length === 0) return true;
   const vals = cols.map(c => data[c]);
   const placeholders = cols.map(() => '?').join(',');
@@ -1566,7 +1564,7 @@ export async function insertActivityLog(data: {
 export async function getActivityLogs(opts: {
   limit?: number; offset?: number;
   excludeRole?: string; action?: string; user_id?: string;
-  dateFrom?: number; dateTo?: number;
+  dateFrom?: number; dateTo?: number; search?: string;
 }): Promise<{ rows: any[]; total: number }> {
   const client = getDb();
   if (!client) return { rows: [], total: 0 };
@@ -1579,6 +1577,11 @@ export async function getActivityLogs(opts: {
   if (opts.user_id) { conditions.push('user_id = ?'); args.push(opts.user_id); }
   if (opts.dateFrom) { conditions.push('created_at >= ?'); args.push(opts.dateFrom); }
   if (opts.dateTo) { conditions.push('created_at <= ?'); args.push(opts.dateTo); }
+  if (opts.search) {
+    const q = `%${opts.search.toLowerCase()}%`;
+    conditions.push('(LOWER(username) LIKE ? OR LOWER(entity_type) LIKE ? OR LOWER(entity_id) LIKE ? OR LOWER(details) LIKE ?)');
+    args.push(q, q, q, q);
+  }
   const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
   try {
     const countR = await client.execute(`SELECT COUNT(*) as cnt FROM activity_logs ${where}`, args);
@@ -1605,7 +1608,7 @@ export async function getUserByUsername(username: string): Promise<{ id: string;
     const row = r.rows[0] as any;
     return { id: row.id, username: row.username, password: row.password, role: row.role, school_npsn: row.school_npsn || null };
   } catch (err) {
-    console.error('insertEmployeePeriod error:', err);
+    console.error('getUserByUsername error:', err);
     return null;
   }
 }

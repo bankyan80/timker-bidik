@@ -88,7 +88,7 @@ export default function SchoolComparison() {
       ) : (
         <>
           {/* Header Cards */}
-          <div className={`grid gap-4 ${selData.length <= 3 ? `grid-cols-${selData.length}` : 'grid-cols-3'}`}>
+          <div className={`grid gap-4 ${selData.length === 1 ? 'grid-cols-1' : selData.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
             {selData.map(s => (
               <div key={s.npsn} className="border border-slate-800 rounded-xl p-4 bg-slate-900/40">
                 <div className="flex items-center justify-between mb-2">

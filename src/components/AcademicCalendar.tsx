@@ -287,9 +287,11 @@ export default function AcademicCalendar() {
   }
 
   const handleDeleteEvent = async (id: string) => {
-    await api(`/api/calendar/${id}`, { method: 'DELETE' });
-    setEvents(prev => prev.filter(e => e.id !== id));
-    setSelectedEvent(null);
+    const res = await api(`/api/calendar/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setEvents(prev => prev.filter(e => e.id !== id));
+      setSelectedEvent(null);
+    }
   };
 
   // ── Render ──
