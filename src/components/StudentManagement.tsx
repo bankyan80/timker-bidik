@@ -39,6 +39,7 @@ export default function StudentManagement() {
   const operatorNpsn = user?.schoolNpsn || '';
   const operatorName = user?.schoolName || '';
   const operatorLevel = isOperator ? (user?.schoolLevel || 'SD') : null;
+  const [students, setStudents] = useState<Student[]>([]);
   const [filtered, setFiltered] = useState<Student[]>([]);
   const [search, setSearch] = useState('');
   const [filterSchool, setFilterSchool] = useState(isOperator ? operatorNpsn : 'ALL');
