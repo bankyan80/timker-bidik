@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight, Trash, ArrowUp, Eye, X, Loader2, Heart } from 'lucide-react';
-import { ALL_SCHOOLS } from '../data/mockData';
 import { useAuth } from './AuthContext';
 
 interface Student {
@@ -27,8 +26,6 @@ const STATUS_ANAK_COLOR: Record<string, string> = {
 };
 
 const THEME = 'dark';
-const npsnToSchool = new Map(ALL_SCHOOLS.map(s => [s.npsn, s.name]));
-const schoolLevel = new Map(ALL_SCHOOLS.map(s => [s.npsn, s.level]));
 
 const kelasByLevel: Record<string, string[]> = {
   SD: ['1', '2', '3', '4', '5', '6'],
@@ -41,7 +38,6 @@ export default function StudentManagement() {
   const isOperator = user?.role === 'operator_sekolah';
   const operatorNpsn = user?.schoolNpsn || '';
   const operatorName = user?.schoolName || '';
-  const operatorLevel = isOperator ? (user?.schoolLevel || schoolLevel.get(operatorNpsn) || 'SD') : null;
 
   const [students, setStudents] = useState<Student[]>([]);
   const [filtered, setFiltered] = useState<Student[]>([]);
@@ -69,12 +65,16 @@ export default function StudentManagement() {
   const [gradSaving, setGradSaving] = useState(false);
   const [nikLookup, setNikLookup] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle');
   const [foundStudent, setFoundStudent] = useState<any>(null);
-
   const [form, setForm] = useState({
     school_npsn: isOperator ? operatorNpsn : '', nama: '', nisn: '', nik: '', jenis_kelamin: 'Laki-laki',
     tempat_lahir: '', tanggal_lahir: '', kelas_kelompok: 'Kelas 1',
     rombel: '', tahun_pelajaran: (() => { const y = new Date().getFullYear(); const m = new Date().getMonth(); return m >= 6 ? `${y}/${y+1}` : `${y-1}/${y}`; })()
   });
+  const [schoolsList, setSchoolsList] = useState<{ npsn: string; name: string; level: string }[]>([]);
+
+  const npsnToSchool = new Map(schoolsList.map(s => [s.npsn, s.name]));
+  const schoolLevel = new Map(schoolsList.map(s => [s.npsn, s.level]));
+  const operatorLevel = isOperator ? (user?.schoolLevel || schoolLevel.get(operatorNpsn) || 'SD') : null;
 
   useEffect(() => { load(); }, []);
 
@@ -94,8 +94,9 @@ export default function StudentManagement() {
   async function load() {
     setLoading(true);
     try {
-      const r = await api('/api/students');
-      if (r.ok) { const body = await r.json(); setStudents(body.data || body); }
+      const [sr, scr] = await Promise.all([api('/api/students'), api('/api/schools')]);
+      if (sr.ok) { const body = await sr.json(); setStudents(body.data || body); }
+      if (scr.ok) { const body = await scr.json(); setSchoolsList(body || []); }
     } catch {}
     setLoading(false);
   }
@@ -367,7 +368,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
         {!isOperator && (
           <select value={filterSchool} onChange={e => setFilterSchool(e.target.value)} className="px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-700">
             <option value="ALL">Semua Sekolah</option>
-            {ALL_SCHOOLS.filter(s => s.level === levelTab).map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
+            {schoolsList.filter(s => s.level === levelTab).map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
           </select>
         )}
         {levelTab === 'SD' ? (
@@ -573,7 +574,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                   <label className="text-[10px] font-mono text-slate-400 uppercase">Sekolah</label>
                   <select value={form.school_npsn} onChange={e => handleSchoolChange(e.target.value)} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
                     <option value="">Pilih Sekolah {formLevel}</option>
-                    {ALL_SCHOOLS.filter(s => s.level === formLevel).map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
+                    {schoolsList.filter(s => s.level === formLevel).map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
                   </select>
                 </div>
               )}
