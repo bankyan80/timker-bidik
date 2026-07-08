@@ -66,7 +66,7 @@ function getStatusOptions(sekolahStatus: string): string[] {
   return sekolahStatus === 'Negeri' ? STATUS_OPTIONS_NEGERI : STATUS_OPTIONS_SWASTA;
 }
 const GENDER_OPTIONS = ['Laki-laki', 'Perempuan'];
-const JABATAN_OPTIONS = ['Kepala Sekolah', 'Guru Kelas', 'Guru Agama', 'Guru PJOK', 'Guru Muatan Lokal', 'Kepala Tata Usaha', 'Staf Administrasi', 'Operator Sekolah', 'Pustakawan', 'Penjaga Sekolah', 'Petugas Kebersihan'];
+const JABATAN_OPTIONS = ['Kepala Sekolah', 'Plt. Kepala Sekolah', 'Guru Kelas', 'Guru Agama', 'Guru PJOK', 'Guru Muatan Lokal', 'Kepala Tata Usaha', 'Staf Administrasi', 'Operator Sekolah', 'Pustakawan', 'Penjaga Sekolah', 'Petugas Kebersihan'];
 
 export default function ManajemenPegawai() {
   const { user } = useAuth();
