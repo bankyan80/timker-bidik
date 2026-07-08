@@ -76,22 +76,6 @@ function mapStatusToGroup(status: string | null): 'pns' | 'pppk' | 'pppkParuh' |
   return 'honorer';
 }
 
-function statusLabel(s: string | null): string {
-  if (!s) return '—';
-  const m: Record<string, string> = {
-    'PNS': 'PNS - Aktif',
-    'PPPK': 'PPPK - Aktif',
-    'PPPK Paruh Waktu': 'PPPK - Paruh Waktu',
-    'PPPK PW': 'PPPK - Paruh Waktu',
-    'GTY/PTY': 'GTY (Yayasan)',
-    'Honorer Sekolah/Daerah': 'Honorer - Aktif',
-    'Tenaga Honor Sekolah': 'Honorer - Aktif',
-    'Guru Honor Sekolah': 'Honorer - Aktif',
-    'Honor Daerah TK.II Kab/Kota': 'Honorer - Aktif',
-    'Lainnya': 'Honorer - Aktif',
-  };
-  return m[s] || s;
-}
 
 export default function HumanResources() {
   const [schools, setSchools] = useState<School[]>(ALL_SCHOOLS);
@@ -179,7 +163,8 @@ export default function HumanResources() {
       }
       const entry = map.get(emp.sekolah_id)!;
       if (emp.jabatan?.toLowerCase().includes('kepala sekolah')) {
-        entry.kepsek = emp;
+        const isPlt = emp.jabatan.toLowerCase().includes('plt');
+        if (!entry.kepsek || !isPlt) entry.kepsek = emp;
         continue;
       }
       const cat = categorizeJabatan(emp.jabatan);
@@ -218,10 +203,10 @@ export default function HumanResources() {
         rombel = Math.max(3, Math.ceil(school.students.total / 36));
       }
 
-      // Kepsek from real data
+      // Kepsek: 1 = definitif, 0 = Plt, — = none
       let kepsek = '—';
       if (empEntry?.kepsek) {
-        kepsek = statusLabel(empEntry.kepsek.status_pegawai);
+        kepsek = empEntry.kepsek.jabatan?.toLowerCase().includes('plt') ? '0' : '1';
       }
 
       // Required counts (keep synthetic estimates)
