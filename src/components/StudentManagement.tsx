@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
-import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight, Trash, ArrowUp, Eye, X, Loader2, Heart, UserPlus, ArrowUpRight, UserX, Upload, FileSpreadsheet } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight, Trash, ArrowUp, Eye, X, Loader2, Heart, UserPlus, ArrowUpRight, UserX, Upload, FileSpreadsheet, Download } from 'lucide-react';
 import { useAuth } from './AuthContext';
 
 export type StudentView = 'all' | 'baru-kelas1' | 'melanjutkan' | 'tidak-melanjutkan' | 'kelulusan';
@@ -1160,6 +1160,20 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                     </button>
                     {uploadFile && <span className="text-xs text-slate-400">{uploadFile.name}</span>}
                   </div>
+                </div>
+                <div>
+                  <button onClick={async () => {
+                    const XLSX = await import('xlsx');
+                    const headers = ['npsn_sekolah','nama_pd','kelas','jk','nipd','nisn','tempat_lahir','tanggal_lahir','nik','alamat_rmh','desa','kecamatan_rmh','nama_ayah','nama_ibu','sekolah_asal','status_sekolah_asal','kecamatan_sekolah_asal','kab_asal','provinsi_asal'];
+                    const sample = ['20215216','NAMA SISWA','1','L','','','','','','','','','','','','','','',''];
+                    const ws = XLSX.utils.aoa_to_sheet([headers, sample]);
+                    ws['!cols'] = headers.map(() => ({ wch: 18 }));
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Template PD Baru');
+                    XLSX.writeFile(wb, 'template_pd_baru.xlsx');
+                  }} className="flex items-center gap-2 px-3 py-1.5 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/30 border border-emerald-700/50 hover:border-emerald-600 rounded-lg transition-colors cursor-pointer">
+                    <Download className="h-3.5 w-3.5" /> Unduh Template Excel
+                  </button>
                 </div>
               </div>
             )}
