@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
-import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight, Trash, ArrowUp, Eye, X, Loader2, Heart, UserPlus, ArrowUpRight, UserX, Upload, FileSpreadsheet, Download } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight, Trash, ArrowUp, Eye, X, Loader2, Heart, UserPlus, ArrowUpRight, UserX, Upload, FileSpreadsheet, Download, CheckSquare } from 'lucide-react';
 import { useAuth } from './AuthContext';
 
 export type StudentView = 'all' | 'baru-kelas1' | 'melanjutkan' | 'tidak-melanjutkan' | 'kelulusan';
@@ -202,6 +202,16 @@ export default function StudentManagement({ view = 'all' }: { view?: StudentView
       setCheckedIds(prev => { const next = new Set(prev); pageIds.forEach(id => next.delete(id)); return next; });
     } else {
       setCheckedIds(prev => { const next = new Set(prev); pageIds.forEach(id => next.add(id)); return next; });
+    }
+  }
+
+  function toggleAllFiltered() {
+    const allIds = filtered.filter(s => view === 'baru-kelas1' || s.status_siswa === 'aktif').map(s => s.id);
+    const allChecked = allIds.length > 0 && allIds.every(id => checkedIds.has(id));
+    if (allChecked) {
+      setCheckedIds(prev => { const next = new Set(prev); allIds.forEach(id => next.delete(id)); return next; });
+    } else {
+      setCheckedIds(prev => { const next = new Set(prev); allIds.forEach(id => next.add(id)); return next; });
     }
   }
 
@@ -772,6 +782,9 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
       {checkedIds.size > 0 && (
         <div className="flex items-center gap-2 px-4 py-2 bg-red-950/30 border border-red-900/50 rounded-lg">
           <span className="text-xs font-mono text-red-300">{checkedIds.size} siswa dipilih</span>
+          <button onClick={toggleAllFiltered} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-mono rounded transition-colors cursor-pointer">
+            <CheckSquare className="h-3 w-3" /> Pilih Semua ({filtered.length})
+          </button>
           <button onClick={naikKelas} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-mono rounded transition-colors cursor-pointer">
             <ArrowUp className="h-3 w-3" /> Naik Kelas
           </button>
