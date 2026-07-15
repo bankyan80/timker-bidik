@@ -566,6 +566,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
       const ws = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(ws);
       const preview = json.slice(0, 10).map((row: any) => ({
+        npsn: row.npsn ? String(row.npsn).trim() : '',
         nama_pd: row.nama_pd || '',
         kelas: row.kelas || 6,
         jk: row.jk || '',
@@ -605,6 +606,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
         return String(v || '');
       }
       const rows = json.map((row: any) => ({
+        npsn: row.npsn ? String(row.npsn).trim() : '',
         nama_pd: row.nama_pd || '',
         kelas: row.kelas || 6,
         jk: row.jk || '',
@@ -1741,8 +1743,8 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                 <div>
                   <button onClick={async () => {
                     const XLSX = await import('xlsx');
-                    const headers = ['nama_pd','kelas','jk','nipd','nisn','tempat_lahir','tanggal_lahir','nik','no_seri_ijazah','alamat_rmh','desa','kecamatan_rmh','nama_ayah','nama_ibu'];
-                    const sample = ['NAMA SISWA','6','L','','','','','','','','','','',''];
+                    const headers = ['npsn','nama_pd','kelas','jk','nipd','nisn','tempat_lahir','tanggal_lahir','nik','no_seri_ijazah','alamat_rmh','desa','kecamatan_rmh','nama_ayah','nama_ibu'];
+                    const sample = ['','NAMA SISWA','6','L','','','','','','','','','','',''];
                     const ws = XLSX.utils.aoa_to_sheet([headers, sample]);
                     ws['!cols'] = headers.map(() => ({ wch: 20 }));
                     const wb = XLSX.utils.book_new();
@@ -1771,6 +1773,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                       <thead>
                         <tr className="bg-slate-800 text-slate-400 font-mono uppercase">
                           <th className="px-2 py-2 text-left">No</th>
+                          <th className="px-2 py-2 text-left">NPSN</th>
                           <th className="px-2 py-2 text-left">Nama PD</th>
                           <th className="px-2 py-2 text-center">Kelas</th>
                           <th className="px-2 py-2 text-center">JK</th>
@@ -1788,6 +1791,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                         {kelUploadPreview.map((row, i) => (
                           <tr key={i} className="hover:bg-slate-800/30">
                             <td className="px-2 py-1.5 text-slate-500 font-mono">{i + 1}</td>
+                            <td className="px-2 py-1.5 text-slate-400 font-mono text-[10px]">{row.npsn || '-'}</td>
                             <td className="px-2 py-1.5 text-white font-medium">{row.nama_pd}</td>
                             <td className="px-2 py-1.5 text-center text-slate-300 font-mono">{row.kelas}</td>
                             <td className="px-2 py-1.5 text-center">

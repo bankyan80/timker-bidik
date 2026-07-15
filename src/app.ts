@@ -1277,6 +1277,7 @@ app.post('/api/students/import-kelulusan', authenticateToken, async (req, res) =
       const kelasNum = row.kelas || 6;
       const kelas_kelompok = 'Kelas ' + kelasNum;
       const noSeriIjazah = row.no_seri_ijazah ? String(row.no_seri_ijazah).trim() : null;
+      const npsn = row.npsn ? String(row.npsn).trim() : '';
       const tempatLahir = row.tempat_lahir || null;
       const tl = row.tanggal_lahir;
       let tanggalLahir: string | null = null;
@@ -1297,7 +1298,9 @@ app.post('/api/students/import-kelulusan', authenticateToken, async (req, res) =
         // Find student
         let stu: any = null;
         if (nisn) {
-          const r = await db?.execute({ sql: 'SELECT * FROM students WHERE nisn = ? LIMIT 1', args: [nisn] });
+          const r = npsn
+            ? await db?.execute({ sql: 'SELECT * FROM students WHERE nisn = ? AND school_npsn = ? LIMIT 1', args: [nisn, npsn] })
+            : await db?.execute({ sql: 'SELECT * FROM students WHERE nisn = ? LIMIT 1', args: [nisn] });
           stu = r?.rows[0] || null;
         }
         if (!stu) {
@@ -1305,9 +1308,8 @@ app.post('/api/students/import-kelulusan', authenticateToken, async (req, res) =
           stu = r?.rows[0] || null;
         }
         if (!stu) {
-          // Insert new graduated student
           const newStu = await insertStudent({
-            school_npsn: '', nama, nisn, nik,
+            school_npsn: npsn, nama, nisn, nik,
             jenis_kelamin: jk,
             tempat_lahir: tempatLahir,
             tanggal_lahir: tanggalLahir,
