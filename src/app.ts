@@ -1111,8 +1111,10 @@ app.post('/api/students/import', authenticateToken, async (req, res) => {
       const jk = (row.jk || '').toUpperCase() === 'P' ? 'Perempuan' : 'Laki-laki';
       const kelasNum = row.kelas || 1;
       const kelas_kelompok = 'Kelas ' + kelasNum;
-      const nisn = row.nisn ? String(row.nisn).trim() : null;
-      const nik = row.nik ? String(row.nik).trim() : null;
+      const rawNisn = row.nisn ? String(row.nisn).trim() : '';
+      const nisn = (rawNisn === '-' || rawNisn === '' || rawNisn === '0') ? null : rawNisn || null;
+      const rawNik = row.nik ? String(row.nik).trim() : '';
+      const nik = (rawNik === '-' || rawNik === '' || rawNik === '0') ? null : rawNik || null;
       const tempatLahir = row.tempat_lahir || null;
       const tl = row.tanggal_lahir;
       let tanggalLahir: string | null = null;
@@ -1177,7 +1179,8 @@ app.post('/api/students/import', authenticateToken, async (req, res) => {
           updated++;
         }
         // 3. Always upsert parent/address data
-        const effectiveNisn = nisn || (stu ? stu.id : null);
+        // Use Excel nisn > existing student nisn > student id as key
+        const effectiveNisn = nisn || (stu?.nisn) || (stu ? stu.id : null);
         if (effectiveNisn && stu) {
           const parentData: Record<string, any> = {};
           if (row.nama_ayah) parentData.nama_ayah = row.nama_ayah;
