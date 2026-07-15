@@ -1093,15 +1093,22 @@ app.post('/api/students/import', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Data kosong' });
     }
     const schoolScope = getSchoolScope(req);
-    if (schoolScope && school_npsn !== schoolScope) {
-      return res.status(403).json({ error: 'Forbidden: you can only import students to your own school' });
-    }
-    const db = getDb();
     let created = 0, skipped = 0, errors: string[] = [];
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const nama = (row.nama_pd || '').trim();
       if (!nama) { skipped++; continue; }
+      // Determine school_npsn: row.npsn_sekolah > body school_npsn > operator scope
+      let rowSchoolNpsn = (row.npsn_sekolah || '').toString().trim() || school_npsn || '';
+      if (schoolScope) {
+        // Operator: force their school
+        rowSchoolNpsn = schoolScope;
+      }
+      if (!rowSchoolNpsn) {
+        skipped++;
+        errors.push(`Baris ${i + 1}: NPSN sekolah tidak ditemukan`);
+        continue;
+      }
       const jk = (row.jk || '').toUpperCase() === 'P' ? 'Perempuan' : 'Laki-laki';
       const kelasNum = row.kelas || 1;
       const kelas_kelompok = 'Kelas ' + kelasNum;
@@ -1119,7 +1126,7 @@ app.post('/api/students/import', authenticateToken, async (req, res) => {
       }
       try {
         const stu = await insertStudent({
-          school_npsn, nama, nisn, nik,
+          school_npsn: rowSchoolNpsn, nama, nisn, nik,
           jenis_kelamin: jk,
           tempat_lahir: row.tempat_lahir || null,
           tanggal_lahir: tanggalLahir,

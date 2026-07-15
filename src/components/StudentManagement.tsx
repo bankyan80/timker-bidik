@@ -357,6 +357,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
       const ws = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(ws);
       const preview = json.slice(0, 10).map((row: any) => ({
+        npsn_sekolah: row.npsn_sekolah || '',
         nama_pd: row.nama_pd || row.nama || '',
         kelas: row.kelas || 1,
         jk: row.jk || '',
@@ -393,6 +394,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
       const ws = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(ws);
       const rows = json.map((row: any) => ({
+        npsn_sekolah: row.npsn_sekolah || '',
         nama_pd: row.nama_pd || row.nama || '',
         kelas: row.kelas || 1,
         jk: row.jk || '',
@@ -563,6 +565,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                     <th className="w-10 px-2 py-3 text-center">No</th>
                     <th className="text-left px-3 py-3">Nama PD</th>
                     <th className="text-center px-2 py-3">Kelas</th>
+                    <th className="text-left px-3 py-3">Sekolah</th>
                     <th className="text-center px-2 py-3">JK</th>
                     <th className="text-left px-3 py-3">NIPD</th>
                     <th className="text-left px-3 py-3">NISN</th>
@@ -602,9 +605,9 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
-                <tr><td colSpan={view === 'baru-kelas1' ? 20 : (levelTab === 'SD' ? 9 : 8)} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
+                <tr><td colSpan={view === 'baru-kelas1' ? 21 : (levelTab === 'SD' ? 9 : 8)} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={view === 'baru-kelas1' ? 20 : (levelTab === 'SD' ? 9 : 8)} className="text-center py-12 text-slate-500">
+                <tr><td colSpan={view === 'baru-kelas1' ? 21 : (levelTab === 'SD' ? 9 : 8)} className="text-center py-12 text-slate-500">
                   {view === 'baru-kelas1' ? 'Tidak ada data siswa baru Kelas 1' : `Tidak ada data siswa untuk jenjang ${levelTab}`}
                 </td></tr>
               ) : view === 'baru-kelas1' ? (
@@ -613,6 +616,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                     <td className="w-10 px-2 py-3 text-center text-slate-500 font-mono text-[11px]">{(currentPage - 1) * pageSize + idx + 1}</td>
                     <td className="px-3 py-3 text-white font-medium text-[12px]">{s.nama}</td>
                     <td className="px-2 py-3 text-center text-slate-300 font-mono text-[11px]">1</td>
+                    <td className="px-3 py-3 text-slate-400 text-[11px]">{npsnToSchool.get(s.school_npsn) || s.school_npsn || '-'}</td>
                     <td className="px-2 py-3 text-center">
                       <span className={`text-[10px] px-1 py-0.5 rounded font-mono ${(s.jenis_kelamin || '').toLowerCase().includes('laki') || s.jenis_kelamin === 'L' ? 'text-blue-400 bg-blue-950/40' : 'text-pink-400 bg-pink-950/40'}`}>
                         {(s.jenis_kelamin || '').toLowerCase().includes('laki') || s.jenis_kelamin === 'L' ? 'L' : 'P'}
@@ -1120,7 +1124,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                   <FileSpreadsheet className="h-5 w-5 text-emerald-400" /> Import Siswa dari Excel
                 </h2>
-                <p className="text-xs text-slate-400 font-mono mt-0.5">Upload file .xlsx sesuai template PD Baru</p>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">Upload file .xlsx — kolom <span className="text-cyan-400">npsn_sekolah</span> untuk multi-sekolah (admin), otomatis untuk operator</p>
               </div>
               <button onClick={() => { setUploadModalOpen(false); resetUpload(); }} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-white transition-colors cursor-pointer">
                 <X className="h-4 w-4" />
@@ -1181,6 +1185,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                     <thead>
                       <tr className="bg-slate-800 text-slate-400 font-mono uppercase">
                         <th className="px-2 py-2 text-left">No</th>
+                        <th className="px-2 py-2 text-left">NPSN</th>
                         <th className="px-2 py-2 text-left">Nama PD</th>
                         <th className="px-2 py-2 text-center">Kelas</th>
                         <th className="px-2 py-2 text-center">JK</th>
@@ -1201,6 +1206,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                       {uploadPreview.map((row, i) => (
                         <tr key={i} className="hover:bg-slate-800/30">
                           <td className="px-2 py-1.5 text-slate-500 font-mono">{i + 1}</td>
+                          <td className="px-2 py-1.5 text-cyan-400 font-mono text-[10px]">{row.npsn_sekolah || '-'}</td>
                           <td className="px-2 py-1.5 text-white font-medium">{row.nama_pd}</td>
                           <td className="px-2 py-1.5 text-center text-slate-300">{row.kelas}</td>
                           <td className="px-2 py-1.5 text-center">
