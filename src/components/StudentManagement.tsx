@@ -75,6 +75,8 @@ export default function StudentManagement({ view = 'all' }: { view?: StudentView
   const [schoolsList, setSchoolsList] = useState<{ npsn: string; name: string; level: string }[]>([]);
 
   // Upload Excel state
+  const currentTP = (() => { const y = new Date().getFullYear(); const m = new Date().getMonth(); return m >= 6 ? `${y}/${y+1}` : `${y-1}/${y}`; })();
+
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<any[]>([]);
@@ -83,8 +85,6 @@ export default function StudentManagement({ view = 'all' }: { view?: StudentView
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'parsing' | 'preview' | 'uploading' | 'done' | 'error'>('idle');
   const [uploadResult, setUploadResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  const currentTP = (() => { const y = new Date().getFullYear(); const m = new Date().getMonth(); return m >= 6 ? `${y}/${y+1}` : `${y-1}/${y}`; })();
 
   const viewConfig: Record<StudentView, { title: string; desc: string; icon: React.ComponentType<{ className?: string }> }> = {
     all: { title: 'Data Siswa Tahun Pelajaran ' + currentTP, desc: 'Semua data siswa aktif — jenjang SD, TK, KB', icon: GraduationCap },
