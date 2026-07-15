@@ -370,6 +370,11 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
         kecamatan_rmh: row.kecamatan_rmh || '',
         nama_ayah: row.nama_ayah || '',
         nama_ibu: row.nama_ibu || '',
+        sekolah_asal: row.sekolah_asal || '',
+        status_sekolah_asal: row.status_sekolah_asal || '',
+        kecamatan_sekolah_asal: row.kecamatan_sekolah_asal || '',
+        kab_asal: row.kab_asal || '',
+        provinsi_asal: row.provinsi_asal || '',
       }));
       setUploadPreview(preview);
       setUploadStatus('preview');
@@ -401,6 +406,11 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
         kecamatan_rmh: row.kecamatan_rmh || '',
         nama_ayah: row.nama_ayah || '',
         nama_ibu: row.nama_ibu || '',
+        sekolah_asal: row.sekolah_asal || '',
+        status_sekolah_asal: row.status_sekolah_asal || '',
+        kecamatan_sekolah_asal: row.kecamatan_sekolah_asal || '',
+        kab_asal: row.kab_asal || '',
+        provinsi_asal: row.provinsi_asal || '',
       }));
       const res = await api('/api/students/import', {
         method: 'POST',
@@ -554,6 +564,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                     <th className="text-left px-3 py-3">Nama PD</th>
                     <th className="text-center px-2 py-3">Kelas</th>
                     <th className="text-center px-2 py-3">JK</th>
+                    <th className="text-left px-3 py-3">NIPD</th>
                     <th className="text-left px-3 py-3">NISN</th>
                     <th className="text-left px-3 py-3">Tempat Lahir</th>
                     <th className="text-left px-3 py-3">Tgl Lahir</th>
@@ -563,6 +574,11 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                     <th className="text-left px-3 py-3">Kecamatan</th>
                     <th className="text-left px-3 py-3">Nama Ayah</th>
                     <th className="text-left px-3 py-3">Nama Ibu</th>
+                    <th className="text-left px-3 py-3">Sekolah Asal</th>
+                    <th className="text-left px-3 py-3">Status SA</th>
+                    <th className="text-left px-3 py-3">Kec. SA</th>
+                    <th className="text-left px-3 py-3">Kab. Asal</th>
+                    <th className="text-left px-3 py-3">Prov. Asal</th>
                     <th className="text-right px-3 py-3">Aksi</th>
                   </>
                 ) : (
@@ -586,9 +602,9 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
-                <tr><td colSpan={view === 'baru-kelas1' ? 14 : (levelTab === 'SD' ? 9 : 8)} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
+                <tr><td colSpan={view === 'baru-kelas1' ? 20 : (levelTab === 'SD' ? 9 : 8)} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={view === 'baru-kelas1' ? 14 : (levelTab === 'SD' ? 9 : 8)} className="text-center py-12 text-slate-500">
+                <tr><td colSpan={view === 'baru-kelas1' ? 20 : (levelTab === 'SD' ? 9 : 8)} className="text-center py-12 text-slate-500">
                   {view === 'baru-kelas1' ? 'Tidak ada data siswa baru Kelas 1' : `Tidak ada data siswa untuk jenjang ${levelTab}`}
                 </td></tr>
               ) : view === 'baru-kelas1' ? (
@@ -602,6 +618,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                         {(s.jenis_kelamin || '').toLowerCase().includes('laki') || s.jenis_kelamin === 'L' ? 'L' : 'P'}
                       </span>
                     </td>
+                    <td className="px-3 py-3 text-slate-400 font-mono text-[10px]">{(s as any).nipd || '-'}</td>
                     <td className="px-3 py-3 text-slate-400 font-mono text-[11px]">{s.nisn || '-'}</td>
                     <td className="px-3 py-3 text-slate-300 text-[11px]">{s.tempat_lahir || '-'}</td>
                     <td className="px-3 py-3 text-slate-300 text-[11px]">{s.tanggal_lahir || '-'}</td>
@@ -611,6 +628,11 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                     <td className="px-3 py-3 text-slate-300 text-[11px]">{(s as any).kecamatan || '-'}</td>
                     <td className="px-3 py-3 text-slate-300 text-[11px] max-w-[100px] truncate">{(s as any).nama_ayah || '-'}</td>
                     <td className="px-3 py-3 text-slate-300 text-[11px] max-w-[100px] truncate">{(s as any).nama_ibu || '-'}</td>
+                    <td className="px-3 py-3 text-slate-400 text-[11px]">{(s as any).sekolah_asal || '-'}</td>
+                    <td className="px-3 py-3 text-slate-400 text-[11px]">{(s as any).status_sekolah_asal || '-'}</td>
+                    <td className="px-3 py-3 text-slate-400 text-[11px]">{(s as any).kecamatan_sekolah_asal || '-'}</td>
+                    <td className="px-3 py-3 text-slate-400 text-[11px]">{(s as any).kab_asal || '-'}</td>
+                    <td className="px-3 py-3 text-slate-400 text-[11px]">{(s as any).provinsi_asal || '-'}</td>
                     <td className="px-3 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={() => openDetail(s)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-emerald-400" title="Detail"><Eye className="h-3.5 w-3.5" /></button>
@@ -1162,12 +1184,17 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                         <th className="px-2 py-2 text-left">Nama PD</th>
                         <th className="px-2 py-2 text-center">Kelas</th>
                         <th className="px-2 py-2 text-center">JK</th>
+                        <th className="px-2 py-2 text-left">NIPD</th>
                         <th className="px-2 py-2 text-left">NISN</th>
                         <th className="px-2 py-2 text-left">Tempat Lahir</th>
                         <th className="px-2 py-2 text-left">Tgl Lahir</th>
                         <th className="px-2 py-2 text-left">NIK</th>
+                        <th className="px-2 py-2 text-left">Alamat</th>
+                        <th className="px-2 py-2 text-left">Desa</th>
+                        <th className="px-2 py-2 text-left">Kecamatan</th>
                         <th className="px-2 py-2 text-left">Nama Ayah</th>
                         <th className="px-2 py-2 text-left">Nama Ibu</th>
+                        <th className="px-2 py-2 text-left">Sekolah Asal</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
@@ -1179,12 +1206,17 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                           <td className="px-2 py-1.5 text-center">
                             <span className={`px-1 py-0.5 rounded font-mono ${row.jk === 'L' ? 'text-blue-400 bg-blue-950/40' : 'text-pink-400 bg-pink-950/40'}`}>{row.jk}</span>
                           </td>
+                          <td className="px-2 py-1.5 text-slate-400 font-mono text-[10px]">{row.nipd || '-'}</td>
                           <td className="px-2 py-1.5 text-slate-400 font-mono">{row.nisn || '-'}</td>
                           <td className="px-2 py-1.5 text-slate-300">{row.tempat_lahir}</td>
                           <td className="px-2 py-1.5 text-slate-300">{row.tanggal_lahir ? String(row.tanggal_lahir).split('T')[0] : '-'}</td>
                           <td className="px-2 py-1.5 text-slate-400 font-mono text-[10px]">{row.nik || '-'}</td>
+                          <td className="px-2 py-1.5 text-slate-300 max-w-[100px] truncate">{row.alamat_rmh || '-'}</td>
+                          <td className="px-2 py-1.5 text-slate-300">{row.desa || '-'}</td>
+                          <td className="px-2 py-1.5 text-slate-300">{row.kecamatan_rmh || '-'}</td>
                           <td className="px-2 py-1.5 text-slate-300">{row.nama_ayah || '-'}</td>
                           <td className="px-2 py-1.5 text-slate-300">{row.nama_ibu || '-'}</td>
+                          <td className="px-2 py-1.5 text-slate-400 text-[10px]">{row.sekolah_asal || '-'}</td>
                         </tr>
                       ))}
                     </tbody>
