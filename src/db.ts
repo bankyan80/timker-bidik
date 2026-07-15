@@ -413,6 +413,18 @@ export async function initSchema() {
   for (const sql of indexes) {
     try { await client.execute(sql); } catch { /* index may already exist */ }
   }
+  // Migration: add siswa_id column to parent/address/health tables
+  for (const table of ['student_parents', 'student_addresses', 'student_health']) {
+    try { await client.execute(`ALTER TABLE ${table} ADD COLUMN siswa_id TEXT`); } catch { /* column may already exist */ }
+  }
+  // Backfill siswa_id from students table
+  for (const table of ['student_parents', 'student_addresses', 'student_health']) {
+    try {
+      await client.execute({
+        sql: `UPDATE ${table} SET siswa_id = (SELECT id FROM students WHERE students.nisn = ${table}.siswa_nisn) WHERE siswa_id IS NULL AND siswa_nisn IS NOT NULL`
+      });
+    } catch { /* ignore */ }
+  }
 }
 
 export async function seedData() {
@@ -1279,8 +1291,8 @@ export async function getStudentsWithDetail(): Promise<any[]> {
     SELECT s.*, sp.nama_ayah, sp.nama_ibu,
            sa.alamat, sa.desa, sa.kecamatan
     FROM students s
-    LEFT JOIN student_parents sp ON s.nisn = sp.siswa_nisn
-    LEFT JOIN student_addresses sa ON s.nisn = sa.siswa_nisn
+    LEFT JOIN student_parents sp ON s.nisn = sp.siswa_nisn OR s.id = sp.siswa_id
+    LEFT JOIN student_addresses sa ON s.nisn = sa.siswa_nisn OR s.id = sa.siswa_id
     ORDER BY s.nama
   `);
   return result.rows;
@@ -1500,19 +1512,23 @@ export async function getStudentDetail(nisn: string): Promise<{
   };
 }
 
-export async function upsertStudentParents(nisn: string, data: Record<string, any>): Promise<boolean> {
+export async function upsertStudentParents(nisn: string, data: Record<string, any>, siswaId?: string | null): Promise<boolean> {
   const client = getDb();
   if (!client) return false;
   const cols = validateColumns(Object.keys(data), ALLOWED_COLUMNS_PARENTS);
   const vals = cols.map(c => data[c]);
-  if (cols.length === 0) return true;
-  const placeholders = cols.map(() => '?').join(',');
+  if (cols.length === 0 && !siswaId) return true;
+  const allCols = ['siswa_nisn', ...cols, ...(siswaId ? ['siswa_id'] : [])];
+  const allVals = [nisn, ...vals, ...(siswaId ? [siswaId] : [])];
+  const placeholders = allCols.map(() => '?').join(',');
   const assignments = cols.map(c => `${c} = ?`).join(',');
+  const siswaIdUpdate = siswaId ? (assignments ? ', siswa_id = ?' : 'siswa_id = ?') : '';
+  const siswaIdUpdateVal = siswaId ? [siswaId] : [];
   try {
     await client.execute({
-      sql: `INSERT INTO student_parents (siswa_nisn,${cols.join(',')}) VALUES (?${',' + placeholders})
-            ON CONFLICT(siswa_nisn) DO UPDATE SET ${assignments}`,
-      args: [nisn, ...vals, ...vals]
+      sql: `INSERT INTO student_parents (${allCols.join(',')}) VALUES (${placeholders})
+            ON CONFLICT(siswa_nisn) DO UPDATE SET ${assignments}${siswaIdUpdate}`,
+      args: [...allVals, ...vals, ...siswaIdUpdateVal]
     });
     // Compute status_anak based on parent statuses
     const merged = { ...data };
@@ -1532,37 +1548,45 @@ export async function upsertStudentParents(nisn: string, data: Record<string, an
   } catch (e) { console.error('upsertStudentParents error', e); return false; }
 }
 
-export async function upsertStudentAddress(nisn: string, data: Record<string, any>): Promise<boolean> {
+export async function upsertStudentAddress(nisn: string, data: Record<string, any>, siswaId?: string | null): Promise<boolean> {
   const client = getDb();
   if (!client) return false;
   const cols = validateColumns(Object.keys(data), ALLOWED_COLUMNS_ADDRESS);
-  if (cols.length === 0) return true;
+  if (cols.length === 0 && !siswaId) return true;
   const vals = cols.map(c => data[c]);
-  const placeholders = cols.map(() => '?').join(',');
+  const allCols = ['siswa_nisn', ...cols, ...(siswaId ? ['siswa_id'] : [])];
+  const allVals = [nisn, ...vals, ...(siswaId ? [siswaId] : [])];
+  const placeholders = allCols.map(() => '?').join(',');
   const assignments = cols.map(c => `${c} = ?`).join(',');
+  const siswaIdUpdate = siswaId ? (assignments ? ', siswa_id = ?' : 'siswa_id = ?') : '';
+  const siswaIdUpdateVal = siswaId ? [siswaId] : [];
   try {
     await client.execute({
-      sql: `INSERT INTO student_addresses (siswa_nisn,${cols.join(',')}) VALUES (?${',' + placeholders})
-            ON CONFLICT(siswa_nisn) DO UPDATE SET ${assignments}`,
-      args: [nisn, ...vals, ...vals]
+      sql: `INSERT INTO student_addresses (${allCols.join(',')}) VALUES (${placeholders})
+            ON CONFLICT(siswa_nisn) DO UPDATE SET ${assignments}${siswaIdUpdate}`,
+      args: [...allVals, ...vals, ...siswaIdUpdateVal]
     });
     return true;
   } catch (e) { console.error('upsertStudentAddress error', e); return false; }
 }
 
-export async function upsertStudentHealth(nisn: string, data: Record<string, any>): Promise<boolean> {
+export async function upsertStudentHealth(nisn: string, data: Record<string, any>, siswaId?: string | null): Promise<boolean> {
   const client = getDb();
   if (!client) return false;
   const cols = validateColumns(Object.keys(data), ALLOWED_COLUMNS_HEALTH);
-  if (cols.length === 0) return true;
+  if (cols.length === 0 && !siswaId) return true;
   const vals = cols.map(c => data[c]);
-  const placeholders = cols.map(() => '?').join(',');
+  const allCols = ['siswa_nisn', ...cols, ...(siswaId ? ['siswa_id'] : [])];
+  const allVals = [nisn, ...vals, ...(siswaId ? [siswaId] : [])];
+  const placeholders = allCols.map(() => '?').join(',');
   const assignments = cols.map(c => `${c} = ?`).join(',');
+  const siswaIdUpdate = siswaId ? (assignments ? ', siswa_id = ?' : 'siswa_id = ?') : '';
+  const siswaIdUpdateVal = siswaId ? [siswaId] : [];
   try {
     await client.execute({
-      sql: `INSERT INTO student_health (siswa_nisn,${cols.join(',')}) VALUES (?${',' + placeholders})
-            ON CONFLICT(siswa_nisn) DO UPDATE SET ${assignments}`,
-      args: [nisn, ...vals, ...vals]
+      sql: `INSERT INTO student_health (${allCols.join(',')}) VALUES (${placeholders})
+            ON CONFLICT(siswa_nisn) DO UPDATE SET ${assignments}${siswaIdUpdate}`,
+      args: [...allVals, ...vals, ...siswaIdUpdateVal]
     });
     return true;
   } catch (e) { console.error('upsertStudentHealth error', e); return false; }

@@ -1125,28 +1125,48 @@ app.post('/api/students/import', authenticateToken, async (req, res) => {
         }
       }
       try {
-        const stu = await insertStudent({
-          school_npsn: rowSchoolNpsn, nama, nisn, nik,
-          jenis_kelamin: jk,
-          tempat_lahir: row.tempat_lahir || null,
-          tanggal_lahir: tanggalLahir,
-          jenjang: 'SD',
-          kelas_kelompok,
-          rombel: null,
-          status_siswa: 'aktif',
-          tahun_pelajaran,
-        });
-        // Upsert parent/address regardless of insertStudent result (student may already exist)
+        // Check if student already exists (by nisn if present, or by name+school+kelas)
+        let stu: any = null;
         if (nisn) {
+          const existing = await getDb()?.execute({
+            sql: 'SELECT * FROM students WHERE nisn = ? AND school_npsn = ? LIMIT 1',
+            args: [nisn, rowSchoolNpsn]
+          });
+          stu = existing?.rows[0] || null;
+        }
+        if (!stu) {
+          const existing = await getDb()?.execute({
+            sql: 'SELECT * FROM students WHERE nama = ? AND school_npsn = ? AND kelas_kelompok = ? LIMIT 1',
+            args: [nama, rowSchoolNpsn, kelas_kelompok]
+          });
+          stu = existing?.rows[0] || null;
+        }
+        if (!stu) {
+          stu = await insertStudent({
+            school_npsn: rowSchoolNpsn, nama, nisn, nik,
+            jenis_kelamin: jk,
+            tempat_lahir: row.tempat_lahir || null,
+            tanggal_lahir: tanggalLahir,
+            jenjang: 'SD',
+            kelas_kelompok,
+            rombel: null,
+            status_siswa: 'aktif',
+            tahun_pelajaran,
+          });
+        }
+        // Upsert parent/address
+        // Use stu.id as fallback for siswa_nisn PK when nisn is null
+        const effectiveNisn = nisn || (stu ? stu.id : null);
+        if (effectiveNisn && stu) {
           const parentData: Record<string, any> = {};
           if (row.nama_ayah) parentData.nama_ayah = row.nama_ayah;
           if (row.nama_ibu) parentData.nama_ibu = row.nama_ibu;
-          if (Object.keys(parentData).length > 0) await upsertStudentParents(nisn, parentData);
+          if (Object.keys(parentData).length > 0) await upsertStudentParents(effectiveNisn, parentData, stu.id);
           const addrData: Record<string, any> = {};
           if (row.alamat_rmh) addrData.alamat = row.alamat_rmh;
           if (row.desa) addrData.desa = row.desa;
           if (row.kecamatan_rmh) addrData.kecamatan = row.kecamatan_rmh;
-          if (Object.keys(addrData).length > 0) await upsertStudentAddress(nisn, addrData);
+          if (Object.keys(addrData).length > 0) await upsertStudentAddress(effectiveNisn, addrData, stu.id);
         }
         if (stu) created++; else skipped++;
       } catch (e: any) {
