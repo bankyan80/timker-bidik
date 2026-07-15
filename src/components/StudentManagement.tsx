@@ -197,7 +197,7 @@ export default function StudentManagement({ view = 'all' }: { view?: StudentView
   }
 
   function toggleAllPage() {
-    const pageIds = paginated.filter(s => s.status_siswa === 'aktif').map(s => s.id);
+    const pageIds = paginated.filter(s => view === 'kelulusan' ? s.status_siswa === 'lulus' : s.status_siswa === 'aktif').map(s => s.id);
     if (pageIds.every(id => checkedIds.has(id))) {
       setCheckedIds(prev => { const next = new Set(prev); pageIds.forEach(id => next.delete(id)); return next; });
     } else {
@@ -206,7 +206,7 @@ export default function StudentManagement({ view = 'all' }: { view?: StudentView
   }
 
   function toggleAllFiltered() {
-    const allIds = filtered.filter(s => view === 'baru-kelas1' || s.status_siswa === 'aktif').map(s => s.id);
+    const allIds = filtered.filter(s => view === 'kelulusan' ? s.status_siswa === 'lulus' : s.status_siswa === 'aktif').map(s => s.id);
     const allChecked = allIds.length > 0 && allIds.every(id => checkedIds.has(id));
     if (allChecked) {
       setCheckedIds(prev => { const next = new Set(prev); allIds.forEach(id => next.delete(id)); return next; });
@@ -832,7 +832,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                 ) : (
                   <>
                     <th className="w-10 px-2 py-3 text-center">
-                      <input type="checkbox" checked={paginated.length > 0 && paginated.filter(s => s.status_siswa === 'aktif').every(st => checkedIds.has(st.id))}
+                      <input type="checkbox" checked={paginated.length > 0 && paginated.filter(s => view === 'kelulusan' ? s.status_siswa === 'lulus' : s.status_siswa === 'aktif').every(st => checkedIds.has(st.id))}
                         onChange={toggleAllPage}
                         className="accent-cyan-600 cursor-pointer" />
                     </th>
@@ -851,16 +851,16 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                         <th className="text-left px-4 py-3">Status Lanjutan</th>
                       </>
                     )}
-                    <th className="text-right px-4 py-3">Aksi</th>
+                    {view !== 'kelulusan' && <th className="text-right px-4 py-3">Aksi</th>}
                   </>
                 )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
-                <tr><td colSpan={view === 'baru-kelas1' ? 22 : (view === 'melanjutkan' ? (levelTab === 'SD' ? 13 : 12) : (levelTab === 'SD' ? 9 : 8))} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
+                <tr><td colSpan={view === 'baru-kelas1' ? 22 : (view === 'melanjutkan' ? (levelTab === 'SD' ? 13 : 12) : (view === 'kelulusan' ? (levelTab === 'SD' ? 8 : 7) : (levelTab === 'SD' ? 9 : 8)))} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={view === 'baru-kelas1' ? 22 : (view === 'melanjutkan' ? (levelTab === 'SD' ? 13 : 12) : (levelTab === 'SD' ? 9 : 8))} className="text-center py-12 text-slate-500">
+                <tr><td colSpan={view === 'baru-kelas1' ? 22 : (view === 'melanjutkan' ? (levelTab === 'SD' ? 13 : 12) : (view === 'kelulusan' ? (levelTab === 'SD' ? 8 : 7) : (levelTab === 'SD' ? 9 : 8)))} className="text-center py-12 text-slate-500">
                   {view === 'baru-kelas1' ? 'Tidak ada data siswa baru Kelas 1' : `Tidak ada data siswa untuk jenjang ${levelTab}`}
                 </td></tr>
               ) : view === 'baru-kelas1' ? (
@@ -906,7 +906,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                 paginated.map(s => (
                   <tr key={s.id} className={`hover:bg-slate-800/30 transition-colors ${checkedIds.has(s.id) ? 'bg-cyan-950/20' : ''}`}>
                     <td className="w-10 px-2 py-3 text-center">
-                      {s.status_siswa === 'aktif' ? (
+                      {(view === 'kelulusan' ? s.status_siswa === 'lulus' : s.status_siswa === 'aktif') ? (
                         <input type="checkbox" checked={checkedIds.has(s.id)} onChange={() => toggleCheck(s.id)} className="accent-cyan-600 cursor-pointer" />
                       ) : null}
                     </td>
@@ -950,13 +950,15 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                         </td>
                       </>
                     )}
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => openDetail(s)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-emerald-400" title="Detail Siswa"><Eye className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => openEdit(s)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-cyan-400"><Edit3 className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => remove(s.id)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
-                      </div>
-                    </td>
+                    {view !== 'kelulusan' && (
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => openDetail(s)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-emerald-400" title="Detail Siswa"><Eye className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => openEdit(s)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-cyan-400"><Edit3 className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => remove(s.id)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}
