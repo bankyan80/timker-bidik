@@ -1257,6 +1257,116 @@ app.post('/api/students/import-melanjutkan', authenticateToken, async (req, res)
   }
 });
 
+// Import kelulusan data — match by NISN/name, update student + set status lulus + no_seri_ijazah + parent/address
+app.post('/api/students/import-kelulusan', authenticateToken, async (req, res) => {
+  try {
+    const { rows, tahun_pelajaran } = req.body;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ error: 'Data kosong' });
+    }
+    const db = getDb();
+    let updated = 0, created = 0, skipped = 0, errors: string[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const nama = (row.nama_pd || '').trim();
+      if (!nama) { skipped++; continue; }
+      const rawNisn = row.nisn ? String(row.nisn).trim() : '';
+      const nisn = (rawNisn === '-' || rawNisn === '' || rawNisn === '0') ? null : rawNisn || null;
+      const nik = row.nik ? String(row.nik).trim() : null;
+      const jk = (row.jk || '').toUpperCase() === 'P' ? 'Perempuan' : 'Laki-laki';
+      const kelasNum = row.kelas || 6;
+      const kelas_kelompok = 'Kelas ' + kelasNum;
+      const noSeriIjazah = row.no_seri_ijazah ? String(row.no_seri_ijazah).trim() : null;
+      const tempatLahir = row.tempat_lahir || null;
+      const tl = row.tanggal_lahir;
+      let tanggalLahir: string | null = null;
+      if (tl) {
+        const tlStr = String(tl);
+        if (tlStr.includes('/')) {
+          const [d, m, y] = tlStr.split('/');
+          tanggalLahir = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        } else if (tlStr.includes('-')) {
+          tanggalLahir = tlStr.split('T')[0];
+        } else if (typeof tl === 'number') {
+          const d = new Date((tl - 25569) * 86400000);
+          tanggalLahir = d.toISOString().split('T')[0];
+        }
+      }
+      const tp = tahun_pelajaran || (() => { const y = new Date().getFullYear(); const m = new Date().getMonth(); return m >= 6 ? `${y}/${y+1}` : `${y-1}/${y}`; })();
+      try {
+        // Find student
+        let stu: any = null;
+        if (nisn) {
+          const r = await db?.execute({ sql: 'SELECT * FROM students WHERE nisn = ? LIMIT 1', args: [nisn] });
+          stu = r?.rows[0] || null;
+        }
+        if (!stu) {
+          const r = await db?.execute({ sql: 'SELECT * FROM students WHERE nama = ? AND kelas_kelompok = ? LIMIT 1', args: [nama, kelas_kelompok] });
+          stu = r?.rows[0] || null;
+        }
+        if (!stu) {
+          // Insert new graduated student
+          const newStu = await insertStudent({
+            school_npsn: '', nama, nisn, nik,
+            jenis_kelamin: jk,
+            tempat_lahir: tempatLahir,
+            tanggal_lahir: tanggalLahir,
+            jenjang: 'SD',
+            kelas_kelompok,
+            rombel: null,
+            status_siswa: 'lulus',
+            tahun_pelajaran: tp,
+          });
+          if (newStu) {
+            stu = newStu;
+            created++;
+          } else {
+            skipped++;
+            errors.push(`Baris ${i + 1}: Gagal membuat siswa baru`);
+            continue;
+          }
+        } else {
+          // Update existing student
+          const updates: string[] = ['status_siswa = ?'];
+          const uArgs: any[] = ['lulus'];
+          if (nisn && nisn !== stu.nisn) { updates.push('nisn = ?'); uArgs.push(nisn); }
+          if (nik && nik !== stu.nik) { updates.push('nik = ?'); uArgs.push(nik); }
+          if (jk && jk !== stu.jenis_kelamin) { updates.push('jenis_kelamin = ?'); uArgs.push(jk); }
+          if (tempatLahir && tempatLahir !== stu.tempat_lahir) { updates.push('tempat_lahir = ?'); uArgs.push(tempatLahir); }
+          if (tanggalLahir && tanggalLahir !== stu.tanggal_lahir) { updates.push('tanggal_lahir = ?'); uArgs.push(tanggalLahir); }
+          if (noSeriIjazah) { updates.push('no_seri_ijazah = ?'); uArgs.push(noSeriIjazah); }
+          uArgs.push(stu.id);
+          await db?.execute({ sql: `UPDATE students SET ${updates.join(', ')} WHERE id = ?`, args: uArgs });
+          const refreshed = await db?.execute({ sql: 'SELECT * FROM students WHERE id = ?', args: [stu.id] });
+          stu = refreshed?.rows[0] || stu;
+          updated++;
+        }
+        // Upsert parent/address
+        const effectiveNisn = nisn || (stu?.nisn) || (stu ? stu.id : null);
+        if (effectiveNisn && stu) {
+          const parentData: Record<string, any> = {};
+          if (row.nama_ayah) parentData.nama_ayah = row.nama_ayah;
+          if (row.nama_ibu) parentData.nama_ibu = row.nama_ibu;
+          if (Object.keys(parentData).length > 0) await upsertStudentParents(effectiveNisn, parentData, stu.id);
+          const addrData: Record<string, any> = {};
+          if (row.alamat_rmh) addrData.alamat = row.alamat_rmh;
+          if (row.desa) addrData.desa = row.desa;
+          if (row.kecamatan_rmh) addrData.kecamatan = row.kecamatan_rmh;
+          if (Object.keys(addrData).length > 0) await upsertStudentAddress(effectiveNisn, addrData, stu.id);
+        }
+      } catch (e: any) {
+        skipped++;
+        errors.push(`Baris ${i + 1}: ${e.message || 'error'}`);
+      }
+    }
+    await logActivity(req, 'import', 'student', null, { action: 'import-kelulusan', created, updated, skipped });
+    res.json({ created, updated, skipped, errors: errors.slice(0, 20) });
+  } catch (err) {
+    console.error('POST /api/students/import-kelulusan error:', err);
+    res.status(500).json({ error: 'Gagal mengimpor data kelulusan' });
+  }
+});
+
 app.get('/api/students/lookup-by-nik/:nik', authenticateToken, async (req, res) => {
   const { nik } = req.params;
   if (!nik || nik.length < 5) return res.json(null);

@@ -94,6 +94,14 @@ export default function StudentManagement({ view = 'all' }: { view?: StudentView
   const [melUploadResult, setMelUploadResult] = useState<{ updated: number; skipped: number; errors: string[] } | null>(null);
   const melFileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Kelulusan upload state
+  const [kelUploadOpen, setKelUploadOpen] = useState(false);
+  const [kelUploadFile, setKelUploadFile] = useState<File | null>(null);
+  const [kelUploadPreview, setKelUploadPreview] = useState<any[]>([]);
+  const [kelUploadStatus, setKelUploadStatus] = useState<'idle' | 'parsing' | 'preview' | 'uploading' | 'done' | 'error'>('idle');
+  const [kelUploadResult, setKelUploadResult] = useState<{ created: number; updated: number; skipped: number; errors: string[] } | null>(null);
+  const kelFileInputRef = React.useRef<HTMLInputElement>(null);
+
   const viewConfig: Record<StudentView, { title: string; desc: string; icon: React.ComponentType<{ className?: string }> }> = {
     all: { title: 'Data Siswa Tahun Pelajaran ' + currentTP, desc: 'Semua data siswa aktif — jenjang SD, TK, KB', icon: GraduationCap },
     'baru-kelas1': { title: 'Data Siswa Baru', desc: 'Siswa baru masuk Kelas 1 SD — TP ' + currentTP, icon: UserPlus },
@@ -537,6 +545,108 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
     setMelUploadResult(null);
   }
 
+  // Kelulusan Excel handlers
+  function excelDateToDDMMYYYY(val: any): string {
+    if (typeof val === 'number' && val > 30000 && val < 50000) {
+      const d = new Date((val - 25569) * 86400000);
+      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    }
+    return String(val || '');
+  }
+
+  async function handleKelUploadFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setKelUploadFile(file);
+    setKelUploadStatus('parsing');
+    try {
+      const XLSX = await import('xlsx');
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws);
+      const preview = json.slice(0, 10).map((row: any) => ({
+        nama_pd: row.nama_pd || '',
+        kelas: row.kelas || 6,
+        jk: row.jk || '',
+        nipd: row.nipd || '',
+        nisn: row.nisn ? String(row.nisn).trim() : '',
+        tempat_lahir: row.tempat_lahir || '',
+        tanggal_lahir: excelDateToDDMMYYYY(row.tanggal_lahir),
+        nik: row.nik ? String(row.nik).trim() : '',
+        no_seri_ijazah: row.no_seri_ijazah ? String(row.no_seri_ijazah).trim() : '',
+        alamat_rmh: row.alamat_rmh || '',
+        desa: row.desa || '',
+        kecamatan_rmh: row.kecamatan_rmh || '',
+        nama_ayah: row.nama_ayah || '',
+        nama_ibu: row.nama_ibu || '',
+      }));
+      setKelUploadPreview(preview);
+      setKelUploadStatus('preview');
+    } catch {
+      setKelUploadStatus('error');
+    }
+  }
+
+  async function doKelUpload() {
+    if (!kelUploadFile) return;
+    setKelUploadStatus('uploading');
+    try {
+      const XLSX = await import('xlsx');
+      const data = await kelUploadFile.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws);
+      function xlDate(v: any): string {
+        if (typeof v === 'number' && v > 30000 && v < 50000) {
+          const d = new Date((v - 25569) * 86400000);
+          return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        }
+        return String(v || '');
+      }
+      const rows = json.map((row: any) => ({
+        nama_pd: row.nama_pd || '',
+        kelas: row.kelas || 6,
+        jk: row.jk || '',
+        nipd: row.nipd || '',
+        nisn: row.nisn ? String(row.nisn).trim() : '',
+        tempat_lahir: row.tempat_lahir || '',
+        tanggal_lahir: xlDate(row.tanggal_lahir),
+        nik: row.nik ? String(row.nik).trim() : '',
+        no_seri_ijazah: row.no_seri_ijazah ? String(row.no_seri_ijazah).trim() : '',
+        alamat_rmh: row.alamat_rmh || '',
+        desa: row.desa || '',
+        kecamatan_rmh: row.kecamatan_rmh || '',
+        nama_ayah: row.nama_ayah || '',
+        nama_ibu: row.nama_ibu || '',
+      }));
+      const res = await api('/api/students/import-kelulusan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows, tahun_pelajaran: currentTP }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setKelUploadResult(result);
+        setKelUploadStatus('done');
+        load();
+      } else {
+        setKelUploadResult({ created: 0, updated: 0, skipped: 0, errors: [result.error || 'Gagal'] });
+        setKelUploadStatus('error');
+      }
+    } catch {
+      setKelUploadResult({ created: 0, updated: 0, skipped: 0, errors: ['Gagal terhubung ke server'] });
+      setKelUploadStatus('error');
+    }
+  }
+
+  function resetKelUpload() {
+    setKelUploadFile(null);
+    setKelUploadPreview([]);
+    setKelUploadStatus('idle');
+    setKelUploadResult(null);
+  }
+
   const levels = isOperator ? [operatorLevel!] : ['SD', 'TK', 'KB'];
   const levelCount = (lv: string) => {
     let base = students;
@@ -567,7 +677,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
           </h1>
           <p className="text-sm text-slate-400 mt-1">{viewConfig[view].desc} — {filtered.length} ditampilkan</p>
         </div>
-        {view !== 'kelulusan' && view !== 'tidak-melanjutkan' && (
+        {view !== 'tidak-melanjutkan' && (
           <div className="flex items-center gap-2">
             {view === 'baru-kelas1' && (
               <button onClick={() => { resetUpload(); setUploadModalOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors">
@@ -579,9 +689,16 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                 <Upload className="h-4 w-4" /> Upload Excel
               </button>
             )}
-            <button onClick={() => { setEditId(null); resetForm(); setFormOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors">
-              <Plus className="h-4 w-4" /> Tambah Siswa
-            </button>
+            {view === 'kelulusan' && (
+              <button onClick={() => { resetKelUpload(); setKelUploadOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors">
+                <Upload className="h-4 w-4" /> Upload Excel
+              </button>
+            )}
+            {view !== 'kelulusan' && (
+              <button onClick={() => { setEditId(null); resetForm(); setFormOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors">
+                <Plus className="h-4 w-4" /> Tambah Siswa
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -1585,6 +1702,162 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                 </div>
                 <div className="flex justify-end">
                   <button onClick={resetMelUpload} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Coba Lagi</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Kelulusan Upload Modal */}
+      {kelUploadOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { setKelUploadOpen(false); resetKelUpload(); }}>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <FileSpreadsheet className="h-5 w-5 text-amber-400" /> Import Data Kelulusan
+                </h2>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">Upload Excel — siswa akan ditandai sebagai lulus + data diperbarui</p>
+              </div>
+              <button onClick={() => { setKelUploadOpen(false); resetKelUpload(); }} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-white transition-colors cursor-pointer">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {kelUploadStatus === 'idle' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-mono text-slate-400 uppercase">File Excel (.xlsx)</label>
+                  <div className="mt-1 flex items-center gap-3">
+                    <input ref={kelFileInputRef} type="file" accept=".xlsx,.xls" onChange={handleKelUploadFile} className="hidden" />
+                    <button onClick={() => kelFileInputRef.current?.click()}
+                      className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-600 hover:border-cyan-700 rounded-lg text-sm text-white transition-colors cursor-pointer">
+                      <Upload className="h-4 w-4" /> {kelUploadFile ? kelUploadFile.name : 'Pilih File'}
+                    </button>
+                    {kelUploadFile && <span className="text-xs text-slate-400">{kelUploadFile.name}</span>}
+                  </div>
+                </div>
+                <div>
+                  <button onClick={async () => {
+                    const XLSX = await import('xlsx');
+                    const headers = ['nama_pd','kelas','jk','nipd','nisn','tempat_lahir','tanggal_lahir','nik','no_seri_ijazah','alamat_rmh','desa','kecamatan_rmh','nama_ayah','nama_ibu'];
+                    const sample = ['NAMA SISWA','6','L','','','','','','','','','','',''];
+                    const ws = XLSX.utils.aoa_to_sheet([headers, sample]);
+                    ws['!cols'] = headers.map(() => ({ wch: 20 }));
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Template Kelulusan');
+                    XLSX.writeFile(wb, 'template_kelulusan.xlsx');
+                  }} className="flex items-center gap-2 px-3 py-1.5 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/30 border border-emerald-700/50 hover:border-emerald-600 rounded-lg transition-colors cursor-pointer">
+                    <Download className="h-3.5 w-3.5" /> Unduh Template Excel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {kelUploadStatus === 'parsing' && (
+              <div className="flex items-center justify-center py-12 gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-cyan-400" />
+                <span className="text-sm text-slate-400">Membaca file Excel...</span>
+              </div>
+            )}
+
+            {kelUploadStatus === 'preview' && (
+              <div className="space-y-4">
+                <p className="text-xs text-slate-400">Preview {kelUploadPreview.length} baris pertama:</p>
+                <div className="border border-slate-700 rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto max-h-[300px]">
+                    <table className="w-full text-[11px]">
+                      <thead>
+                        <tr className="bg-slate-800 text-slate-400 font-mono uppercase">
+                          <th className="px-2 py-2 text-left">No</th>
+                          <th className="px-2 py-2 text-left">Nama PD</th>
+                          <th className="px-2 py-2 text-center">Kelas</th>
+                          <th className="px-2 py-2 text-center">JK</th>
+                          <th className="px-2 py-2 text-left">NISN</th>
+                          <th className="px-2 py-2 text-left">No Seri Ijazah</th>
+                          <th className="px-2 py-2 text-left">Tempat Lahir</th>
+                          <th className="px-2 py-2 text-left">Tgl Lahir</th>
+                          <th className="px-2 py-2 text-left">NIK</th>
+                          <th className="px-2 py-2 text-left">Alamat</th>
+                          <th className="px-2 py-2 text-left">Nama Ayah</th>
+                          <th className="px-2 py-2 text-left">Nama Ibu</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800">
+                        {kelUploadPreview.map((row, i) => (
+                          <tr key={i} className="hover:bg-slate-800/30">
+                            <td className="px-2 py-1.5 text-slate-500 font-mono">{i + 1}</td>
+                            <td className="px-2 py-1.5 text-white font-medium">{row.nama_pd}</td>
+                            <td className="px-2 py-1.5 text-center text-slate-300 font-mono">{row.kelas}</td>
+                            <td className="px-2 py-1.5 text-center">
+                              <span className={`text-[10px] px-1 py-0.5 rounded font-mono ${(row.jk || '').toUpperCase() === 'P' ? 'text-pink-400 bg-pink-950/40' : 'text-blue-400 bg-blue-950/40'}`}>
+                                {row.jk}
+                              </span>
+                            </td>
+                            <td className="px-2 py-1.5 text-slate-400 font-mono">{row.nisn || '-'}</td>
+                            <td className="px-2 py-1.5 text-amber-400 font-mono">{row.no_seri_ijazah || '-'}</td>
+                            <td className="px-2 py-1.5 text-slate-300">{row.tempat_lahir || '-'}</td>
+                            <td className="px-2 py-1.5 text-slate-300">{row.tanggal_lahir || '-'}</td>
+                            <td className="px-2 py-1.5 text-slate-400 font-mono text-[10px]">{row.nik || '-'}</td>
+                            <td className="px-2 py-1.5 text-slate-300 max-w-[120px] truncate">{row.alamat_rmh || '-'}</td>
+                            <td className="px-2 py-1.5 text-slate-300 max-w-[100px] truncate">{row.nama_ayah || '-'}</td>
+                            <td className="px-2 py-1.5 text-slate-300 max-w-[100px] truncate">{row.nama_ibu || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button onClick={resetKelUpload} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Batal</button>
+                  <button onClick={doKelUpload} className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors flex items-center gap-2">
+                    <Upload className="h-3.5 w-3.5" /> Import Sekarang
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {kelUploadStatus === 'uploading' && (
+              <div className="flex items-center justify-center py-12 gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-cyan-400" />
+                <span className="text-sm text-slate-400">Mengimpor data kelulusan...</span>
+              </div>
+            )}
+
+            {kelUploadStatus === 'done' && kelUploadResult && (
+              <div className="space-y-4">
+                <div className="bg-emerald-950/30 border border-emerald-900/50 rounded-lg p-4">
+                  <p className="text-sm text-emerald-400 font-bold">Import Selesai!</p>
+                  <div className="mt-2 text-xs text-slate-300 space-y-1">
+                    {kelUploadResult.created > 0 && <p><span className="text-emerald-400 font-mono">{kelUploadResult.created}</span> siswa baru ditambahkan</p>}
+                    <p><span className="text-cyan-400 font-mono">{kelUploadResult.updated}</span> siswa diperbarui & ditandai lulus</p>
+                    {kelUploadResult.skipped > 0 && <p><span className="text-amber-400 font-mono">{kelUploadResult.skipped}</span> dilewati (error/empty)</p>}
+                    {kelUploadResult.errors.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-red-400 font-mono text-[10px]">ERROR:</p>
+                        {kelUploadResult.errors.map((e, i) => <p key={i} className="text-[10px] text-red-300">{e}</p>)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={() => { setKelUploadOpen(false); resetKelUpload(); }}
+                    className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors">
+                    Tutup
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {kelUploadStatus === 'error' && (
+              <div className="space-y-4">
+                <div className="bg-red-950/30 border border-red-900/50 rounded-lg p-4">
+                  <p className="text-sm text-red-400 font-bold">Gagal Import</p>
+                  {kelUploadResult?.errors.map((e, i) => <p key={i} className="text-[11px] text-red-300 mt-1">{e}</p>)}
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={resetKelUpload} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Coba Lagi</button>
                 </div>
               </div>
             )}

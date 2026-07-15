@@ -429,6 +429,8 @@ export async function initSchema() {
   for (const col of ['sekolah_tujuan', 'kecamatan_tujuan', 'kab_kota_tujuan', 'status_lanjutan']) {
     try { await client.execute(`ALTER TABLE students ADD COLUMN ${col} TEXT`); } catch { /* column may already exist */ }
   }
+  // Migration: add no_seri_ijazah to students
+  try { await client.execute('ALTER TABLE students ADD COLUMN no_seri_ijazah TEXT'); } catch { /* column may already exist */ }
 }
 
 export async function seedData() {
