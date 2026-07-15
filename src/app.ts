@@ -1093,7 +1093,7 @@ app.post('/api/students/import', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Data kosong' });
     }
     const schoolScope = getSchoolScope(req);
-    let created = 0, skipped = 0, errors: string[] = [];
+    let created = 0, updated = 0, skipped = 0, errors: string[] = [];
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const nama = (row.nama_pd || '').trim();
@@ -1101,7 +1101,6 @@ app.post('/api/students/import', authenticateToken, async (req, res) => {
       // Determine school_npsn: row.npsn_sekolah > body school_npsn > operator scope
       let rowSchoolNpsn = (row.npsn_sekolah || '').toString().trim() || school_npsn || '';
       if (schoolScope) {
-        // Operator: force their school
         rowSchoolNpsn = schoolScope;
       }
       if (!rowSchoolNpsn) {
@@ -1114,6 +1113,7 @@ app.post('/api/students/import', authenticateToken, async (req, res) => {
       const kelas_kelompok = 'Kelas ' + kelasNum;
       const nisn = row.nisn ? String(row.nisn).trim() : null;
       const nik = row.nik ? String(row.nik).trim() : null;
+      const tempatLahir = row.tempat_lahir || null;
       const tl = row.tanggal_lahir;
       let tanggalLahir: string | null = null;
       if (tl) {
@@ -1125,27 +1125,29 @@ app.post('/api/students/import', authenticateToken, async (req, res) => {
         }
       }
       try {
-        // Check if student already exists (by nisn if present, or by name+school+kelas)
+        const db = getDb();
+        // 1. Find existing student: by nisn (if present) or by name+school+kelas
         let stu: any = null;
         if (nisn) {
-          const existing = await getDb()?.execute({
+          const existing = await db?.execute({
             sql: 'SELECT * FROM students WHERE nisn = ? AND school_npsn = ? LIMIT 1',
             args: [nisn, rowSchoolNpsn]
           });
           stu = existing?.rows[0] || null;
         }
         if (!stu) {
-          const existing = await getDb()?.execute({
+          const existing = await db?.execute({
             sql: 'SELECT * FROM students WHERE nama = ? AND school_npsn = ? AND kelas_kelompok = ? LIMIT 1',
             args: [nama, rowSchoolNpsn, kelas_kelompok]
           });
           stu = existing?.rows[0] || null;
         }
+        // 2. If not found → insert new; else → update existing fields from Excel
         if (!stu) {
           stu = await insertStudent({
             school_npsn: rowSchoolNpsn, nama, nisn, nik,
             jenis_kelamin: jk,
-            tempat_lahir: row.tempat_lahir || null,
+            tempat_lahir: tempatLahir,
             tanggal_lahir: tanggalLahir,
             jenjang: 'SD',
             kelas_kelompok,
@@ -1153,9 +1155,28 @@ app.post('/api/students/import', authenticateToken, async (req, res) => {
             status_siswa: 'aktif',
             tahun_pelajaran,
           });
+          created++;
+        } else {
+          // Update existing student with Excel data (overwrite old values)
+          const updates: string[] = [];
+          const uArgs: any[] = [];
+          if (nisn && nisn !== stu.nisn) { updates.push('nisn = ?'); uArgs.push(nisn); }
+          if (nik && nik !== stu.nik) { updates.push('nik = ?'); uArgs.push(nik); }
+          if (jk && jk !== stu.jenis_kelamin) { updates.push('jenis_kelamin = ?'); uArgs.push(jk); }
+          if (tempatLahir && tempatLahir !== stu.tempat_lahir) { updates.push('tempat_lahir = ?'); uArgs.push(tempatLahir); }
+          if (tanggalLahir && tanggalLahir !== stu.tanggal_lahir) { updates.push('tanggal_lahir = ?'); uArgs.push(tanggalLahir); }
+          if (rowSchoolNpsn !== stu.school_npsn) { updates.push('school_npsn = ?'); uArgs.push(rowSchoolNpsn); }
+          if (kelas_kelompok !== stu.kelas_kelompok) { updates.push('kelas_kelompok = ?'); uArgs.push(kelas_kelompok); }
+          if (updates.length > 0) {
+            uArgs.push(stu.id);
+            await db?.execute({ sql: `UPDATE students SET ${updates.join(', ')} WHERE id = ?`, args: uArgs });
+            // Refresh stu reference
+            const refreshed = await db?.execute({ sql: 'SELECT * FROM students WHERE id = ?', args: [stu.id] });
+            stu = refreshed?.rows[0] || stu;
+          }
+          updated++;
         }
-        // Upsert parent/address
-        // Use stu.id as fallback for siswa_nisn PK when nisn is null
+        // 3. Always upsert parent/address data
         const effectiveNisn = nisn || (stu ? stu.id : null);
         if (effectiveNisn && stu) {
           const parentData: Record<string, any> = {};
@@ -1168,14 +1189,13 @@ app.post('/api/students/import', authenticateToken, async (req, res) => {
           if (row.kecamatan_rmh) addrData.kecamatan = row.kecamatan_rmh;
           if (Object.keys(addrData).length > 0) await upsertStudentAddress(effectiveNisn, addrData, stu.id);
         }
-        if (stu) created++; else skipped++;
       } catch (e: any) {
         skipped++;
         errors.push(`Baris ${i + 1}: ${e.message || 'error'}`);
       }
     }
-    await logActivity(req, 'import', 'student', null, { created, skipped, school_npsn, tahun_pelajaran });
-    res.json({ created, skipped, errors: errors.slice(0, 20) });
+    await logActivity(req, 'import', 'student', null, { created, updated, skipped, school_npsn, tahun_pelajaran });
+    res.json({ created, updated, skipped, errors: errors.slice(0, 20) });
   } catch (err) {
     console.error('POST /api/students/import error:', err);
     res.status(500).json({ error: 'Gagal mengimpor siswa' });

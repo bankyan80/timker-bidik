@@ -83,7 +83,7 @@ export default function StudentManagement({ view = 'all' }: { view?: StudentView
   const [uploadSchoolNpsn, setUploadSchoolNpsn] = useState(isOperator ? operatorNpsn : '');
   const [uploadTp, setUploadTp] = useState(currentTP);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'parsing' | 'preview' | 'uploading' | 'done' | 'error'>('idle');
-  const [uploadResult, setUploadResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
+  const [uploadResult, setUploadResult] = useState<{ created: number; updated: number; skipped: number; errors: string[] } | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const viewConfig: Record<StudentView, { title: string; desc: string; icon: React.ComponentType<{ className?: string }> }> = {
@@ -445,11 +445,11 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
         setUploadStatus('done');
         load();
       } else {
-        setUploadResult({ created: 0, skipped: 0, errors: [result.error || 'Gagal'] });
+        setUploadResult({ created: 0, updated: 0, skipped: 0, errors: [result.error || 'Gagal'] });
         setUploadStatus('error');
       }
     } catch {
-      setUploadResult({ created: 0, skipped: 0, errors: ['Gagal terhubung ke server'] });
+      setUploadResult({ created: 0, updated: 0, skipped: 0, errors: ['Gagal terhubung ke server'] });
       setUploadStatus('error');
     }
   }
@@ -1286,8 +1286,9 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                 <div className="bg-emerald-950/30 border border-emerald-900/50 rounded-lg p-4">
                   <p className="text-sm text-emerald-400 font-bold">Import Selesai!</p>
                   <div className="mt-2 text-xs text-slate-300 space-y-1">
-                    <p><span className="text-emerald-400 font-mono">{uploadResult.created}</span> siswa berhasil ditambahkan</p>
-                    <p><span className="text-amber-400 font-mono">{uploadResult.skipped}</span> siswa dilewati (error/empty)</p>
+                    <p><span className="text-emerald-400 font-mono">{uploadResult.created}</span> siswa baru ditambahkan</p>
+                    {uploadResult.updated > 0 && <p><span className="text-cyan-400 font-mono">{uploadResult.updated}</span> siswa existing diperbarui</p>}
+                    {uploadResult.skipped > 0 && <p><span className="text-amber-400 font-mono">{uploadResult.skipped}</span> siswa dilewati (error/empty)</p>}
                     {uploadResult.errors.length > 0 && (
                       <div className="mt-2">
                         <p className="text-red-400 font-mono text-[10px]">ERROR:</p>
