@@ -96,7 +96,7 @@ export default function Sidebar({ currentModule, setCurrentModule, theme, isOpen
         { id: 'warehouse', label: 'Eksplorasi Data', icon: Database, roles: ['admin', 'staff_kecamatan'] },
         { id: 'pegawai', label: 'Manajemen Pegawai', icon: Users },
         { id: 'students', label: 'Data Siswa TP 2026/2027', icon: GraduationCap },
-        { id: 'students-baru-kelas1', label: 'Siswa Baru Kelas 1', icon: UserPlus },
+        { id: 'students-baru-kelas1', label: 'Data Siswa Baru', icon: UserPlus },
         { id: 'students-melanjutkan', label: 'Siswa Melanjutkan', icon: ArrowUpRight },
         { id: 'students-tidak-melanjutkan', label: 'Siswa Tidak Melanjutkan', icon: UserX },
         { id: 'students-kelulusan', label: 'Data Kelulusan TP 2026/2027', icon: GraduationCap },

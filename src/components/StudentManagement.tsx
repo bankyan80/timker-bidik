@@ -88,7 +88,7 @@ export default function StudentManagement({ view = 'all' }: { view?: StudentView
 
   const viewConfig: Record<StudentView, { title: string; desc: string; icon: React.ComponentType<{ className?: string }> }> = {
     all: { title: 'Data Siswa Tahun Pelajaran ' + currentTP, desc: 'Semua data siswa aktif — jenjang SD, TK, KB', icon: GraduationCap },
-    'baru-kelas1': { title: 'Data Siswa Baru Kelas 1', desc: 'Siswa baru masuk Kelas 1 SD — TP ' + currentTP, icon: UserPlus },
+    'baru-kelas1': { title: 'Data Siswa Baru', desc: 'Siswa baru masuk Kelas 1 SD — TP ' + currentTP, icon: UserPlus },
     'melanjutkan': { title: 'Data Siswa Melanjutkan', desc: 'Siswa aktif Kelas 2–5 yang melanjutkan — TP ' + currentTP, icon: ArrowUpRight },
     'tidak-melanjutkan': { title: 'Data Siswa Tidak Melanjutkan', desc: 'Siswa yang tidak melanjutkan pendidikan', icon: UserX },
     'kelulusan': { title: 'Data Kelulusan TP ' + currentTP, desc: 'Siswa lulusan tahun pelajaran ' + currentTP, icon: GraduationCap },
