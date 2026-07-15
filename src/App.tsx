@@ -13,6 +13,7 @@ import ReportCenter from './components/ReportCenter';
 import MonthlyReport from './components/MonthlyReport';
 
 import StudentManagement from './components/StudentManagement';
+import StudentViewWrapper from './components/StudentViewWrapper';
 import SchoolProfile from './components/SchoolProfile';
 import SchoolComparison from './components/SchoolComparison';
 import RombelManagement from './components/RombelManagement';
@@ -126,7 +127,11 @@ export default function App() {
       case 'pegawai':
         return <ManajemenPegawai />;
       case 'students':
-        return <StudentManagement />;
+      case 'students-baru-kelas1':
+      case 'students-melanjutkan':
+      case 'students-tidak-melanjutkan':
+      case 'students-kelulusan':
+        return <StudentViewWrapper currentModule={currentModule} />;
       case 'school-profile':
         return <SchoolProfile selectedNpsn={undefined} onBack={() => setCurrentModule('dashboard')} />;
       case 'school-comparison':

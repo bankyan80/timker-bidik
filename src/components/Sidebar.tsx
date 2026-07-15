@@ -19,6 +19,9 @@ import {
   Target,
   Shield,
   History,
+  UserPlus,
+  ArrowUpRight,
+  UserX,
 } from 'lucide-react';
 import { useAuth } from './AuthContext';
 
@@ -40,7 +43,7 @@ interface MenuItem {
 const ROLE_MENU_ACCESS: Record<string, string[]> = {
   admin: [
     'dashboard', 'monitor', 'console', 'activity-log', 'gis',
-    'warehouse', 'pegawai', 'students', 'rombels',
+    'warehouse', 'pegawai', 'students', 'students-baru-kelas1', 'students-melanjutkan', 'students-tidak-melanjutkan', 'students-kelulusan', 'rombels',
     'hr', 'advanced-hr', 'infrastructure', 'school-profile', 'school-comparison',
     'academic-calendar', 'kpi',
     'simulator',
@@ -49,7 +52,7 @@ const ROLE_MENU_ACCESS: Record<string, string[]> = {
   ],
   staff_kecamatan: [
     'dashboard', 'monitor', 'console', 'activity-log', 'gis',
-    'warehouse', 'pegawai', 'students', 'rombels',
+    'warehouse', 'pegawai', 'students', 'students-baru-kelas1', 'students-melanjutkan', 'students-tidak-melanjutkan', 'students-kelulusan', 'rombels',
     'hr', 'advanced-hr', 'infrastructure', 'school-profile', 'school-comparison',
     'academic-calendar', 'kpi',
     'simulator',
@@ -57,7 +60,7 @@ const ROLE_MENU_ACCESS: Record<string, string[]> = {
   ],
   operator_sekolah: [
     'dashboard', 'monitor', 'console',
-    'pegawai', 'students', 'rombels',
+    'pegawai', 'students', 'students-baru-kelas1', 'students-melanjutkan', 'students-tidak-melanjutkan', 'students-kelulusan', 'rombels',
     'school-profile',
     'academic-calendar',
     'documents', 'monthly-report', 'reports',
@@ -92,7 +95,11 @@ export default function Sidebar({ currentModule, setCurrentModule, theme, isOpen
       items: [
         { id: 'warehouse', label: 'Eksplorasi Data', icon: Database, roles: ['admin', 'staff_kecamatan'] },
         { id: 'pegawai', label: 'Manajemen Pegawai', icon: Users },
-        { id: 'students', label: 'Manajemen Siswa', icon: GraduationCap },
+        { id: 'students', label: 'Data Siswa TP 2026/2027', icon: GraduationCap },
+        { id: 'students-baru-kelas1', label: 'Siswa Baru Kelas 1', icon: UserPlus },
+        { id: 'students-melanjutkan', label: 'Siswa Melanjutkan', icon: ArrowUpRight },
+        { id: 'students-tidak-melanjutkan', label: 'Siswa Tidak Melanjutkan', icon: UserX },
+        { id: 'students-kelulusan', label: 'Data Kelulusan TP 2026/2027', icon: GraduationCap },
         { id: 'alumni', label: 'Data Kelulusan', icon: GraduationCap },
         { id: 'rombels', label: 'Manajemen Rombel', icon: List }
       ]

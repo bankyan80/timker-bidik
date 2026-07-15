@@ -1272,6 +1272,20 @@ export async function getStudents(): Promise<StudentRow[]> {
   return result.rows as unknown as StudentRow[];
 }
 
+export async function getStudentsWithDetail(): Promise<any[]> {
+  const client = getDb();
+  if (!client) return [];
+  const result = await client.execute(`
+    SELECT s.*, sp.nama_ayah, sp.nama_ibu,
+           sa.alamat, sa.desa, sa.kecamatan
+    FROM students s
+    LEFT JOIN student_parents sp ON s.nisn = sp.siswa_nisn
+    LEFT JOIN student_addresses sa ON s.nisn = sa.siswa_nisn
+    ORDER BY s.nama
+  `);
+  return result.rows;
+}
+
 export async function getStudentsBySchool(npsn: string): Promise<StudentRow[]> {
   const client = getDb();
   if (!client) return [];

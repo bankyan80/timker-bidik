@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
-import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight, Trash, ArrowUp, Eye, X, Loader2, Heart } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, Users, BookOpen, School, Filter, GraduationCap, ChevronLeft, ChevronRight, Trash, ArrowUp, Eye, X, Loader2, Heart, UserPlus, ArrowUpRight, UserX, Upload, FileSpreadsheet } from 'lucide-react';
 import { useAuth } from './AuthContext';
+
+export type StudentView = 'all' | 'baru-kelas1' | 'melanjutkan' | 'tidak-melanjutkan' | 'kelulusan';
 
 interface Student {
   id: string; school_npsn: string; nama: string; nisn: string | null;
@@ -33,7 +35,7 @@ const kelasByLevel: Record<string, string[]> = {
   KB: ['Kelompok A', 'Kelompok B'],
 };
 
-export default function StudentManagement() {
+export default function StudentManagement({ view = 'all' }: { view?: StudentView }) {
   const { user } = useAuth();
   const isOperator = user?.role === 'operator_sekolah';
   const operatorNpsn = user?.schoolNpsn || '';
@@ -72,13 +74,47 @@ export default function StudentManagement() {
   });
   const [schoolsList, setSchoolsList] = useState<{ npsn: string; name: string; level: string }[]>([]);
 
+  // Upload Excel state
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<any[]>([]);
+  const [uploadSchoolNpsn, setUploadSchoolNpsn] = useState(isOperator ? operatorNpsn : '');
+  const [uploadTp, setUploadTp] = useState(currentTP);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'parsing' | 'preview' | 'uploading' | 'done' | 'error'>('idle');
+  const [uploadResult, setUploadResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const currentTP = (() => { const y = new Date().getFullYear(); const m = new Date().getMonth(); return m >= 6 ? `${y}/${y+1}` : `${y-1}/${y}`; })();
+
+  const viewConfig: Record<StudentView, { title: string; desc: string; icon: React.ComponentType<{ className?: string }> }> = {
+    all: { title: 'Data Siswa Tahun Pelajaran ' + currentTP, desc: 'Semua data siswa aktif — jenjang SD, TK, KB', icon: GraduationCap },
+    'baru-kelas1': { title: 'Data Siswa Baru Kelas 1', desc: 'Siswa baru masuk Kelas 1 SD — TP ' + currentTP, icon: UserPlus },
+    'melanjutkan': { title: 'Data Siswa Melanjutkan', desc: 'Siswa aktif Kelas 2–5 yang melanjutkan — TP ' + currentTP, icon: ArrowUpRight },
+    'tidak-melanjutkan': { title: 'Data Siswa Tidak Melanjutkan', desc: 'Siswa yang tidak melanjutkan pendidikan', icon: UserX },
+    'kelulusan': { title: 'Data Kelulusan TP ' + currentTP, desc: 'Siswa lulusan tahun pelajaran ' + currentTP, icon: GraduationCap },
+  };
+
   const npsnToSchool = new Map(schoolsList.map(s => [s.npsn, s.name]));
   const schoolLevel = new Map(schoolsList.map(s => [s.npsn, s.level]));
 
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
-    let f = students.filter(s => s.jenjang === levelTab);
+    let f = students;
+    // View-based pre-filtering
+    if (view === 'baru-kelas1') {
+      f = f.filter(s => s.jenjang === 'SD' && (s.kelas_kelompok === 'Kelas 1' || s.kelas_kelompok === '1'));
+    } else if (view === 'melanjutkan') {
+      f = f.filter(s => s.jenjang === 'SD' && s.status_siswa === 'aktif' && /^Kelas [2-5]$/.test(s.kelas_kelompok));
+    } else if (view === 'tidak-melanjutkan') {
+      f = f.filter(s => s.status_siswa !== 'aktif');
+    } else if (view === 'kelulusan') {
+      f = f.filter(s => s.status_siswa === 'lulus');
+    } else {
+      f = f.filter(s => s.tahun_pelajaran === currentTP);
+    }
+    // Level tab filtering
+    f = f.filter(s => s.jenjang === levelTab);
     if (search) { const q = search.toLowerCase(); f = f.filter(s => s.nama.toLowerCase().includes(q) || (s.nisn && s.nisn.includes(q))); }
     if (filterSchool !== 'ALL') f = f.filter(s => s.school_npsn === filterSchool);
     if (filterKelas !== 'ALL') {
@@ -88,12 +124,13 @@ export default function StudentManagement() {
     if (filterAnak !== 'ALL') f = f.filter(s => (s.status_anak || 'normal') === filterAnak);
     setFiltered(f);
     setCurrentPage(1);
-  }, [search, filterSchool, filterKelas, filterAnak, levelTab, students]);
+  }, [search, filterSchool, filterKelas, filterAnak, levelTab, students, view]);
 
   async function load() {
     setLoading(true);
     try {
-      const [sr, scr] = await Promise.all([api('/api/students'), api('/api/schools')]);
+      const studentsUrl = view === 'baru-kelas1' ? '/api/students/with-detail' : '/api/students';
+      const [sr, scr] = await Promise.all([api(studentsUrl), api('/api/schools')]);
       if (sr.ok) { const body = await sr.json(); setStudents(body.data || body); }
       if (scr.ok) { const body = await scr.json(); setSchoolsList(body || []); }
     } catch {}
@@ -300,11 +337,104 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
     setForm({ ...form, school_npsn: npsn, kelas_kelompok: groups[0], rombel: '' });
   }
 
+  function resetUpload() {
+    setUploadFile(null);
+    setUploadPreview([]);
+    setUploadResult(null);
+    setUploadStatus('idle');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  async function handleUploadFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadFile(file);
+    setUploadStatus('parsing');
+    try {
+      const XLSX = await import('xlsx');
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws);
+      const preview = json.slice(0, 10).map((row: any) => ({
+        nama_pd: row.nama_pd || row.nama || '',
+        kelas: row.kelas || 1,
+        jk: row.jk || '',
+        nipd: row.nipd || '',
+        nisn: row.nisn || null,
+        tempat_lahir: row.tempat_lahir || '',
+        tanggal_lahir: row.tanggal_lahir || '',
+        nik: row.nik || '',
+        alamat_rmh: row.alamat_rmh || '',
+        desa: row.desa || '',
+        kecamatan_rmh: row.kecamatan_rmh || '',
+        nama_ayah: row.nama_ayah || '',
+        nama_ibu: row.nama_ibu || '',
+      }));
+      setUploadPreview(preview);
+      setUploadStatus('preview');
+    } catch {
+      setUploadStatus('error');
+    }
+  }
+
+  async function doUploadImport() {
+    if (!uploadFile || !uploadSchoolNpsn) return;
+    setUploadStatus('uploading');
+    try {
+      const XLSX = await import('xlsx');
+      const data = await uploadFile.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws);
+      const rows = json.map((row: any) => ({
+        nama_pd: row.nama_pd || row.nama || '',
+        kelas: row.kelas || 1,
+        jk: row.jk || '',
+        nipd: row.nipd || '',
+        nisn: row.nisn || null,
+        tempat_lahir: row.tempat_lahir || '',
+        tanggal_lahir: row.tanggal_lahir || '',
+        nik: row.nik || '',
+        alamat_rmh: row.alamat_rmh || '',
+        desa: row.desa || '',
+        kecamatan_rmh: row.kecamatan_rmh || '',
+        nama_ayah: row.nama_ayah || '',
+        nama_ibu: row.nama_ibu || '',
+      }));
+      const res = await api('/api/students/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows, school_npsn: uploadSchoolNpsn, tahun_pelajaran: uploadTp }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setUploadResult(result);
+        setUploadStatus('done');
+        load();
+      } else {
+        setUploadResult({ created: 0, skipped: 0, errors: [result.error || 'Gagal'] });
+        setUploadStatus('error');
+      }
+    } catch {
+      setUploadResult({ created: 0, skipped: 0, errors: ['Gagal terhubung ke server'] });
+      setUploadStatus('error');
+    }
+  }
+
   const levels = isOperator ? [operatorLevel!] : ['SD', 'TK', 'KB'];
-  const levelCount = (lv: string) => students.filter(s => s.jenjang === lv).length;
+  const levelCount = (lv: string) => {
+    let base = students;
+    if (view === 'baru-kelas1') base = base.filter(s => s.jenjang === 'SD' && (s.kelas_kelompok === 'Kelas 1' || s.kelas_kelompok === '1'));
+    else if (view === 'melanjutkan') base = base.filter(s => s.jenjang === 'SD' && s.status_siswa === 'aktif' && /^Kelas [2-5]$/.test(s.kelas_kelompok));
+    else if (view === 'tidak-melanjutkan') base = base.filter(s => s.status_siswa !== 'aktif');
+    else if (view === 'kelulusan') base = base.filter(s => s.status_siswa === 'lulus');
+    else base = base.filter(s => s.tahun_pelajaran === currentTP);
+    return base.filter(s => s.jenjang === lv).length;
+  };
   const currentKelasList = kelasByLevel[levelTab] || ['Kelas 1'];
   const total = students.length;
-  const filteredByLevel = students.filter(s => s.jenjang === levelTab);
+  const filteredByLevel = filtered; // use view-filtered data for stats
   const laki = filteredByLevel.filter(s => (s.jenis_kelamin || '').toLowerCase().includes('laki') || s.jenis_kelamin === 'L').length;
   const perempuan = filteredByLevel.filter(s => (s.jenis_kelamin || '').toLowerCase().includes('perempuan') || s.jenis_kelamin === 'P').length;
   const schools = new Set(filteredByLevel.map(s => s.school_npsn));
@@ -318,13 +448,22 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 text-cyan-400" /> Manajemen Siswa
+            {React.createElement(viewConfig[view].icon, { className: 'h-6 w-6 text-cyan-400' })} {viewConfig[view].title}
           </h1>
-          <p className="text-sm text-slate-400 mt-1">Data siswa se-Kecamatan Lemahabang — {total} total</p>
+          <p className="text-sm text-slate-400 mt-1">{viewConfig[view].desc} — {filtered.length} ditampilkan</p>
         </div>
-        <button onClick={() => { setEditId(null); resetForm(); setFormOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors">
-          <Plus className="h-4 w-4" /> Tambah Siswa
-        </button>
+        {view !== 'kelulusan' && view !== 'tidak-melanjutkan' && (
+          <div className="flex items-center gap-2">
+            {view === 'baru-kelas1' && (
+              <button onClick={() => { resetUpload(); setUploadModalOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors">
+                <Upload className="h-4 w-4" /> Upload Excel
+              </button>
+            )}
+            <button onClick={() => { setEditId(null); resetForm(); setFormOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors">
+              <Plus className="h-4 w-4" /> Tambah Siswa
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Level Tabs */}
@@ -409,74 +548,128 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-900/60 text-slate-400 text-[10px] font-mono uppercase tracking-wider">
-                <th className="w-10 px-2 py-3 text-center">
-                  <input type="checkbox" checked={paginated.length > 0 && paginated.filter(s => s.status_siswa === 'aktif').every(st => checkedIds.has(st.id))}
-                    onChange={toggleAllPage}
-                    className="accent-cyan-600 cursor-pointer" />
-                </th>
-                <th className="text-left px-4 py-3">Nama</th>
-                <th className="text-left px-4 py-3">NISN</th>
-                <th className="text-left px-4 py-3">JK</th>
-                <th className="text-left px-4 py-3">{levelTab === 'SD' ? 'Tingkat' : 'Rombel'}</th>
-                {levelTab === 'SD' && <th className="text-left px-4 py-3">Rombel</th>}
-                <th className="text-left px-4 py-3">Sekolah</th>
-                <th className="text-left px-4 py-3">Status</th>
-                <th className="text-right px-4 py-3">Aksi</th>
+                {view === 'baru-kelas1' ? (
+                  <>
+                    <th className="w-10 px-2 py-3 text-center">No</th>
+                    <th className="text-left px-3 py-3">Nama PD</th>
+                    <th className="text-center px-2 py-3">Kelas</th>
+                    <th className="text-center px-2 py-3">JK</th>
+                    <th className="text-left px-3 py-3">NISN</th>
+                    <th className="text-left px-3 py-3">Tempat Lahir</th>
+                    <th className="text-left px-3 py-3">Tgl Lahir</th>
+                    <th className="text-left px-3 py-3">NIK</th>
+                    <th className="text-left px-3 py-3">Alamat</th>
+                    <th className="text-left px-3 py-3">Desa</th>
+                    <th className="text-left px-3 py-3">Kecamatan</th>
+                    <th className="text-left px-3 py-3">Nama Ayah</th>
+                    <th className="text-left px-3 py-3">Nama Ibu</th>
+                    <th className="text-right px-3 py-3">Aksi</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="w-10 px-2 py-3 text-center">
+                      <input type="checkbox" checked={paginated.length > 0 && paginated.filter(s => s.status_siswa === 'aktif').every(st => checkedIds.has(st.id))}
+                        onChange={toggleAllPage}
+                        className="accent-cyan-600 cursor-pointer" />
+                    </th>
+                    <th className="text-left px-4 py-3">Nama</th>
+                    <th className="text-left px-4 py-3">NISN</th>
+                    <th className="text-left px-4 py-3">JK</th>
+                    <th className="text-left px-4 py-3">{levelTab === 'SD' ? 'Tingkat' : 'Rombel'}</th>
+                    {levelTab === 'SD' && <th className="text-left px-4 py-3">Rombel</th>}
+                    <th className="text-left px-4 py-3">Sekolah</th>
+                    <th className="text-left px-4 py-3">Status</th>
+                    <th className="text-right px-4 py-3">Aksi</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
-                <tr><td colSpan={levelTab === 'SD' ? 9 : 8} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
+                <tr><td colSpan={view === 'baru-kelas1' ? 14 : (levelTab === 'SD' ? 9 : 8)} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={levelTab === 'SD' ? 9 : 8} className="text-center py-12 text-slate-500">Tidak ada data siswa untuk jenjang {levelTab}</td></tr>
-              ) : paginated.map(s => (
-                <tr key={s.id} className={`hover:bg-slate-800/30 transition-colors ${checkedIds.has(s.id) ? 'bg-cyan-950/20' : ''}`}>
-                  <td className="w-10 px-2 py-3 text-center">
-                    {s.status_siswa === 'aktif' ? (
-                      <input type="checkbox" checked={checkedIds.has(s.id)} onChange={() => toggleCheck(s.id)} className="accent-cyan-600 cursor-pointer" />
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-3 text-white font-medium">{s.nama}</td>
-                  <td className="px-4 py-3 text-slate-400 font-mono text-[11px]">{s.nisn || '-'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-[11px] px-1.5 py-0.5 rounded font-mono ${(s.jenis_kelamin || '').toLowerCase().includes('laki') || s.jenis_kelamin === 'L' ? 'text-blue-400 bg-blue-950/40' : 'text-pink-400 bg-pink-950/40'}`}>
-                      {(s.jenis_kelamin || '').toLowerCase().includes('laki') || s.jenis_kelamin === 'L' ? 'L' : 'P'}
-                    </span>
-                  </td>
-                  {levelTab === 'SD' ? (
-                    <>
-                      <td className="px-4 py-3 text-slate-300">{s.kelas_kelompok}</td>
-                      <td className="px-4 py-3 text-slate-400 text-[11px]">{s.rombel && s.rombel.toLowerCase() !== s.kelas_kelompok.toLowerCase() ? s.rombel : '-'}</td>
-                    </>
-                  ) : (
-                    <td className="px-4 py-3 text-slate-300">{s.rombel || s.kelas_kelompok}</td>
-                  )}
-                  <td className="px-4 py-3 text-slate-300 text-[11px]">{npsnToSchool.get(s.school_npsn) || s.school_npsn}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono uppercase ${s.status_siswa === 'aktif' ? 'text-emerald-400 bg-emerald-950/40' : 'text-red-400 bg-red-950/40'}`}>{s.status_siswa}</span>
-                      {s.status_anak && s.status_anak !== 'normal' && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono border ${STATUS_ANAK_COLOR[s.status_anak] || ''}`}>
-                          {STATUS_ANAK_LABEL[s.status_anak] || s.status_anak}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => openDetail(s)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-emerald-400" title="Detail Siswa"><Eye className="h-3.5 w-3.5" /></button>
-                      <button onClick={() => openEdit(s)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-cyan-400"><Edit3 className="h-3.5 w-3.5" /></button>
-                      <button onClick={() => remove(s.id)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                <tr><td colSpan={view === 'baru-kelas1' ? 14 : (levelTab === 'SD' ? 9 : 8)} className="text-center py-12 text-slate-500">
+                  {view === 'baru-kelas1' ? 'Tidak ada data siswa baru Kelas 1' : `Tidak ada data siswa untuk jenjang ${levelTab}`}
+                </td></tr>
+              ) : view === 'baru-kelas1' ? (
+                paginated.map((s, idx) => (
+                  <tr key={s.id} className="hover:bg-slate-800/30 transition-colors">
+                    <td className="w-10 px-2 py-3 text-center text-slate-500 font-mono text-[11px]">{(currentPage - 1) * pageSize + idx + 1}</td>
+                    <td className="px-3 py-3 text-white font-medium text-[12px]">{s.nama}</td>
+                    <td className="px-2 py-3 text-center text-slate-300 font-mono text-[11px]">1</td>
+                    <td className="px-2 py-3 text-center">
+                      <span className={`text-[10px] px-1 py-0.5 rounded font-mono ${(s.jenis_kelamin || '').toLowerCase().includes('laki') || s.jenis_kelamin === 'L' ? 'text-blue-400 bg-blue-950/40' : 'text-pink-400 bg-pink-950/40'}`}>
+                        {(s.jenis_kelamin || '').toLowerCase().includes('laki') || s.jenis_kelamin === 'L' ? 'L' : 'P'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-slate-400 font-mono text-[11px]">{s.nisn || '-'}</td>
+                    <td className="px-3 py-3 text-slate-300 text-[11px]">{s.tempat_lahir || '-'}</td>
+                    <td className="px-3 py-3 text-slate-300 text-[11px]">{s.tanggal_lahir || '-'}</td>
+                    <td className="px-3 py-3 text-slate-400 font-mono text-[10px]">{s.nik || '-'}</td>
+                    <td className="px-3 py-3 text-slate-300 text-[11px] max-w-[120px] truncate" title={(s as any).alamat || ''}>{(s as any).alamat || '-'}</td>
+                    <td className="px-3 py-3 text-slate-300 text-[11px]">{(s as any).desa || '-'}</td>
+                    <td className="px-3 py-3 text-slate-300 text-[11px]">{(s as any).kecamatan || '-'}</td>
+                    <td className="px-3 py-3 text-slate-300 text-[11px] max-w-[100px] truncate">{(s as any).nama_ayah || '-'}</td>
+                    <td className="px-3 py-3 text-slate-300 text-[11px] max-w-[100px] truncate">{(s as any).nama_ibu || '-'}</td>
+                    <td className="px-3 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => openDetail(s)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-emerald-400" title="Detail"><Eye className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => openEdit(s)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-cyan-400"><Edit3 className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => remove(s.id)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                paginated.map(s => (
+                  <tr key={s.id} className={`hover:bg-slate-800/30 transition-colors ${checkedIds.has(s.id) ? 'bg-cyan-950/20' : ''}`}>
+                    <td className="w-10 px-2 py-3 text-center">
+                      {s.status_siswa === 'aktif' ? (
+                        <input type="checkbox" checked={checkedIds.has(s.id)} onChange={() => toggleCheck(s.id)} className="accent-cyan-600 cursor-pointer" />
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3 text-white font-medium">{s.nama}</td>
+                    <td className="px-4 py-3 text-slate-400 font-mono text-[11px]">{s.nisn || '-'}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-[11px] px-1.5 py-0.5 rounded font-mono ${(s.jenis_kelamin || '').toLowerCase().includes('laki') || s.jenis_kelamin === 'L' ? 'text-blue-400 bg-blue-950/40' : 'text-pink-400 bg-pink-950/40'}`}>
+                        {(s.jenis_kelamin || '').toLowerCase().includes('laki') || s.jenis_kelamin === 'L' ? 'L' : 'P'}
+                      </span>
+                    </td>
+                    {levelTab === 'SD' ? (
+                      <>
+                        <td className="px-4 py-3 text-slate-300">{s.kelas_kelompok}</td>
+                        <td className="px-4 py-3 text-slate-400 text-[11px]">{s.rombel && s.rombel.toLowerCase() !== s.kelas_kelompok.toLowerCase() ? s.rombel : '-'}</td>
+                      </>
+                    ) : (
+                      <td className="px-4 py-3 text-slate-300">{s.rombel || s.kelas_kelompok}</td>
+                    )}
+                    <td className="px-4 py-3 text-slate-300 text-[11px]">{npsnToSchool.get(s.school_npsn) || s.school_npsn}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono uppercase ${s.status_siswa === 'aktif' ? 'text-emerald-400 bg-emerald-950/40' : 'text-red-400 bg-red-950/40'}`}>{s.status_siswa}</span>
+                        {s.status_anak && s.status_anak !== 'normal' && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono border ${STATUS_ANAK_COLOR[s.status_anak] || ''}`}>
+                            {STATUS_ANAK_LABEL[s.status_anak] || s.status_anak}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => openDetail(s)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-emerald-400" title="Detail Siswa"><Eye className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => openEdit(s)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-cyan-400"><Edit3 className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => remove(s.id)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
         {/* Pagination */}
         <div className="px-4 py-2 border-t border-slate-800 text-[10px] text-slate-500 font-mono flex items-center justify-between">
-          <span>Total: {filtered.length} siswa {levelTab} {filterSchool !== 'ALL' || filterKelas !== 'ALL' ? '(difilter)' : ''}</span>
+          <span>Total: {filtered.length} siswa {view === 'baru-kelas1' ? 'Kelas 1' : levelTab} {filterSchool !== 'ALL' || filterKelas !== 'ALL' ? '(difilter)' : ''}</span>
           <div className="flex items-center gap-2">
             <span className="text-slate-600">Hal {currentPage}/{totalPages || 1}</span>
             <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
@@ -892,6 +1085,167 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                 Luluskan {gradStudents.length} Siswa
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Excel Modal */}
+      {uploadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { setUploadModalOpen(false); resetUpload(); }}>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <FileSpreadsheet className="h-5 w-5 text-emerald-400" /> Import Siswa dari Excel
+                </h2>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">Upload file .xlsx sesuai template PD Baru</p>
+              </div>
+              <button onClick={() => { setUploadModalOpen(false); resetUpload(); }} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-white transition-colors cursor-pointer">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Step 1: Select school + file */}
+            {uploadStatus === 'idle' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-mono text-slate-400 uppercase">Sekolah Tujuan</label>
+                    <select value={uploadSchoolNpsn} onChange={e => setUploadSchoolNpsn(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700">
+                      <option value="">Pilih Sekolah</option>
+                      {schoolsList.filter(s => s.level === 'SD').map(s => <option key={s.npsn} value={s.npsn}>{s.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-mono text-slate-400 uppercase">Tahun Pelajaran</label>
+                    <input value={uploadTp} onChange={e => setUploadTp(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white mt-1 focus:outline-none focus:border-cyan-700" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-mono text-slate-400 uppercase">File Excel (.xlsx)</label>
+                  <div className="mt-1 flex items-center gap-3">
+                    <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleUploadFile}
+                      className="hidden" id="upload-excel-input" />
+                    <button onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-600 hover:border-cyan-700 rounded-lg text-sm text-white transition-colors cursor-pointer">
+                      <Upload className="h-4 w-4" /> {uploadFile ? uploadFile.name : 'Pilih File'}
+                    </button>
+                    {uploadFile && <span className="text-xs text-slate-400">{uploadFile.name}</span>}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Parsing */}
+            {uploadStatus === 'parsing' && (
+              <div className="flex items-center justify-center py-12 gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-cyan-400" />
+                <span className="text-sm text-slate-400">Membaca file Excel...</span>
+              </div>
+            )}
+
+            {/* Preview */}
+            {uploadStatus === 'preview' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-slate-300">
+                    <span className="text-white font-bold">{uploadPreview.length}</span> baris pertama ditampilkan (total akan diproses dari file)
+                  </p>
+                </div>
+                <div className="overflow-x-auto border border-slate-700 rounded-lg">
+                  <table className="w-full text-[11px]">
+                    <thead>
+                      <tr className="bg-slate-800 text-slate-400 font-mono uppercase">
+                        <th className="px-2 py-2 text-left">No</th>
+                        <th className="px-2 py-2 text-left">Nama PD</th>
+                        <th className="px-2 py-2 text-center">Kelas</th>
+                        <th className="px-2 py-2 text-center">JK</th>
+                        <th className="px-2 py-2 text-left">NISN</th>
+                        <th className="px-2 py-2 text-left">Tempat Lahir</th>
+                        <th className="px-2 py-2 text-left">Tgl Lahir</th>
+                        <th className="px-2 py-2 text-left">NIK</th>
+                        <th className="px-2 py-2 text-left">Nama Ayah</th>
+                        <th className="px-2 py-2 text-left">Nama Ibu</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                      {uploadPreview.map((row, i) => (
+                        <tr key={i} className="hover:bg-slate-800/30">
+                          <td className="px-2 py-1.5 text-slate-500 font-mono">{i + 1}</td>
+                          <td className="px-2 py-1.5 text-white font-medium">{row.nama_pd}</td>
+                          <td className="px-2 py-1.5 text-center text-slate-300">{row.kelas}</td>
+                          <td className="px-2 py-1.5 text-center">
+                            <span className={`px-1 py-0.5 rounded font-mono ${row.jk === 'L' ? 'text-blue-400 bg-blue-950/40' : 'text-pink-400 bg-pink-950/40'}`}>{row.jk}</span>
+                          </td>
+                          <td className="px-2 py-1.5 text-slate-400 font-mono">{row.nisn || '-'}</td>
+                          <td className="px-2 py-1.5 text-slate-300">{row.tempat_lahir}</td>
+                          <td className="px-2 py-1.5 text-slate-300">{row.tanggal_lahir ? String(row.tanggal_lahir).split('T')[0] : '-'}</td>
+                          <td className="px-2 py-1.5 text-slate-400 font-mono text-[10px]">{row.nik || '-'}</td>
+                          <td className="px-2 py-1.5 text-slate-300">{row.nama_ayah || '-'}</td>
+                          <td className="px-2 py-1.5 text-slate-300">{row.nama_ibu || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button onClick={() => { resetUpload(); }} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Batal</button>
+                  <button onClick={doUploadImport} disabled={!uploadSchoolNpsn}
+                    className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg transition-colors flex items-center gap-2">
+                    <Upload className="h-3.5 w-3.5" /> Import Semua Data
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Uploading */}
+            {uploadStatus === 'uploading' && (
+              <div className="flex items-center justify-center py-12 gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
+                <span className="text-sm text-slate-400">Mengimpor data ke server...</span>
+              </div>
+            )}
+
+            {/* Done */}
+            {uploadStatus === 'done' && uploadResult && (
+              <div className="space-y-4">
+                <div className="bg-emerald-950/30 border border-emerald-900/50 rounded-lg p-4">
+                  <p className="text-sm text-emerald-400 font-bold">Import Selesai!</p>
+                  <div className="mt-2 text-xs text-slate-300 space-y-1">
+                    <p><span className="text-emerald-400 font-mono">{uploadResult.created}</span> siswa berhasil ditambahkan</p>
+                    <p><span className="text-amber-400 font-mono">{uploadResult.skipped}</span> siswa dilewati (error/empty)</p>
+                    {uploadResult.errors.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-red-400 font-mono text-[10px]">ERROR:</p>
+                        {uploadResult.errors.map((e, i) => <p key={i} className="text-[10px] text-red-300">{e}</p>)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={() => { setUploadModalOpen(false); resetUpload(); }}
+                    className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors">
+                    Tutup
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Error */}
+            {uploadStatus === 'error' && (
+              <div className="space-y-4">
+                <div className="bg-red-950/30 border border-red-900/50 rounded-lg p-4">
+                  <p className="text-sm text-red-400 font-bold">Gagal Import</p>
+                  {uploadResult?.errors.map((e, i) => <p key={i} className="text-[11px] text-red-300 mt-1">{e}</p>)}
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={() => { resetUpload(); }}
+                    className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Coba Lagi</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

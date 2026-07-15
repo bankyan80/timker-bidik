@@ -8,7 +8,7 @@ import rateLimit from 'express-rate-limit';
 import { google } from 'googleapis';
 import { GoogleGenAI } from '@google/genai';
 import { SimulationScenario, SimulationResult } from './types';
-import { getDb, initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getRombelList, insertStudent, updateStudent, deleteStudent, getStudentByNik, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod, getMonthlyReport, getUserByUsername, changePassword, deleteEmployeeDocument, getStudentDetail, upsertStudentParents, upsertStudentAddress, upsertStudentHealth, getAllUsers, getUserById, createUser, updateUser, deleteUser, getAlumni, getAlumniById, insertAlumni, updateAlumni, insertActivityLog, getActivityLogs, getMonthlySubmissions, submitMonthlyReport } from './db';
+import { getDb, initSchema, seedData, getAllSchools, getAlerts, getRecommendations, getDocuments, searchDocuments, getEmployees, getEmployeesBySchool, getEmployeeDocuments, getStudentAggregates, getTeacherAggregates, getEmployeeCount, insertEmployee, updateEmployee, deleteEmployee, upsertEmployeeDocument, verifyEmployeeDocument, getStudents, getStudentsBySchool, getStudentsByRombel, getStudentsWithDetail, getRombelList, insertStudent, updateStudent, deleteStudent, getStudentByNik, getCalendarEvents, getCalendarEventById, insertCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployeePeriods, insertEmployeePeriod, updateEmployeePeriod, deleteEmployeePeriod, getMonthlyReport, getUserByUsername, changePassword, deleteEmployeeDocument, getStudentDetail, upsertStudentParents, upsertStudentAddress, upsertStudentHealth, getAllUsers, getUserById, createUser, updateUser, deleteUser, getAlumni, getAlumniById, insertAlumni, updateAlumni, insertActivityLog, getActivityLogs, getMonthlySubmissions, submitMonthlyReport } from './db';
 import { getAuth as getDriveAuth } from './drive';
 
 const app = express();
@@ -1051,6 +1051,19 @@ app.get('/api/students', authenticateToken, async (req, res) => {
   }
 });
 
+// Students with parent/address detail (for baru-kelas1 view)
+app.get('/api/students/with-detail', authenticateToken, async (req, res) => {
+  try {
+    const data = await getStudentsWithDetail();
+    const schoolScope = getSchoolScope(req);
+    const filtered = schoolScope ? data.filter((s: any) => s.school_npsn === schoolScope) : data;
+    res.json(filtered);
+  } catch (err) {
+    console.error('GET /api/students/with-detail error:', err);
+    res.status(500).json({ error: 'Gagal memuat data siswa' });
+  }
+});
+
 app.get('/api/students/rombels', authenticateToken, async (req, res) => {
   const list = await getRombelList();
   const schoolScope = getSchoolScope(req);
@@ -1070,6 +1083,75 @@ app.post('/api/students', authenticateToken, async (req, res) => {
   if (!stu) return res.status(400).json({ error: 'Gagal menambah siswa' });
   await logActivity(req, 'create', 'student', stu.id, { nama: sanitized.nama, school_npsn: sanitized.school_npsn });
   res.status(201).json(stu);
+});
+
+// Bulk import students from Excel (parsed client-side)
+app.post('/api/students/import', authenticateToken, async (req, res) => {
+  try {
+    const { rows, school_npsn, tahun_pelajaran } = req.body;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ error: 'Data kosong' });
+    }
+    const schoolScope = getSchoolScope(req);
+    if (schoolScope && school_npsn !== schoolScope) {
+      return res.status(403).json({ error: 'Forbidden: you can only import students to your own school' });
+    }
+    const db = getDb();
+    let created = 0, skipped = 0, errors: string[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const nama = (row.nama_pd || '').trim();
+      if (!nama) { skipped++; continue; }
+      const jk = (row.jk || '').toUpperCase() === 'P' ? 'Perempuan' : 'Laki-laki';
+      const kelasNum = row.kelas || 1;
+      const kelas_kelompok = 'Kelas ' + kelasNum;
+      const nisn = row.nisn ? String(row.nisn).trim() : null;
+      const nik = row.nik ? String(row.nik).trim() : null;
+      const tl = row.tanggal_lahir;
+      let tanggalLahir: string | null = null;
+      if (tl) {
+        if (typeof tl === 'string' && tl.includes('/')) {
+          const [d, m, y] = tl.split('/');
+          tanggalLahir = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        } else if (typeof tl === 'string') {
+          tanggalLahir = tl.split('T')[0];
+        }
+      }
+      try {
+        const stu = await insertStudent({
+          school_npsn, nama, nisn, nik,
+          jenis_kelamin: jk,
+          tempat_lahir: row.tempat_lahir || null,
+          tanggal_lahir: tanggalLahir,
+          jenjang: 'SD',
+          kelas_kelompok,
+          rombel: null,
+          status_siswa: 'aktif',
+          tahun_pelajaran,
+        });
+        if (stu && nisn) {
+          const parentData: Record<string, any> = {};
+          if (row.nama_ayah) parentData.nama_ayah = row.nama_ayah;
+          if (row.nama_ibu) parentData.nama_ibu = row.nama_ibu;
+          if (Object.keys(parentData).length > 0) await upsertStudentParents(nisn, parentData);
+          const addrData: Record<string, any> = {};
+          if (row.alamat_rmh) addrData.alamat = row.alamat_rmh;
+          if (row.desa) addrData.desa = row.desa;
+          if (row.kecamatan_rmh) addrData.kecamatan = row.kecamatan_rmh;
+          if (Object.keys(addrData).length > 0) await upsertStudentAddress(nisn, addrData);
+        }
+        if (stu) created++; else skipped++;
+      } catch (e: any) {
+        skipped++;
+        errors.push(`Baris ${i + 1}: ${e.message || 'error'}`);
+      }
+    }
+    await logActivity(req, 'import', 'student', null, { created, skipped, school_npsn, tahun_pelajaran });
+    res.json({ created, skipped, errors: errors.slice(0, 20) });
+  } catch (err) {
+    console.error('POST /api/students/import error:', err);
+    res.status(500).json({ error: 'Gagal mengimpor siswa' });
+  }
 });
 
 app.get('/api/students/lookup-by-nik/:nik', authenticateToken, async (req, res) => {
