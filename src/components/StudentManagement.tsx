@@ -582,6 +582,11 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
               <tr className="bg-slate-900/60 text-slate-400 text-[10px] font-mono uppercase tracking-wider">
                 {view === 'baru-kelas1' ? (
                   <>
+                    <th className="w-10 px-2 py-3 text-center">
+                      <input type="checkbox" checked={paginated.length > 0 && paginated.every(st => checkedIds.has(st.id))}
+                        onChange={toggleAllPage}
+                        className="accent-cyan-600 cursor-pointer" />
+                    </th>
                     <th className="w-10 px-2 py-3 text-center">No</th>
                     <th className="text-left px-3 py-3">Nama PD</th>
                     <th className="text-center px-2 py-3">Kelas</th>
@@ -625,14 +630,17 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
-                <tr><td colSpan={view === 'baru-kelas1' ? 21 : (levelTab === 'SD' ? 9 : 8)} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
+                <tr><td colSpan={view === 'baru-kelas1' ? 22 : (levelTab === 'SD' ? 9 : 8)} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={view === 'baru-kelas1' ? 21 : (levelTab === 'SD' ? 9 : 8)} className="text-center py-12 text-slate-500">
+                <tr><td colSpan={view === 'baru-kelas1' ? 22 : (levelTab === 'SD' ? 9 : 8)} className="text-center py-12 text-slate-500">
                   {view === 'baru-kelas1' ? 'Tidak ada data siswa baru Kelas 1' : `Tidak ada data siswa untuk jenjang ${levelTab}`}
                 </td></tr>
               ) : view === 'baru-kelas1' ? (
                 paginated.map((s, idx) => (
-                  <tr key={s.id} className="hover:bg-slate-800/30 transition-colors">
+                  <tr key={s.id} className={`hover:bg-slate-800/30 transition-colors ${checkedIds.has(s.id) ? 'bg-cyan-950/20' : ''}`}>
+                    <td className="w-10 px-2 py-3 text-center">
+                      <input type="checkbox" checked={checkedIds.has(s.id)} onChange={() => toggleCheck(s.id)} className="accent-cyan-600 cursor-pointer" />
+                    </td>
                     <td className="w-10 px-2 py-3 text-center text-slate-500 font-mono text-[11px]">{(currentPage - 1) * pageSize + idx + 1}</td>
                     <td className="px-3 py-3 text-white font-medium text-[12px]">{s.nama}</td>
                     <td className="px-2 py-3 text-center text-slate-300 font-mono text-[11px]">1</td>
