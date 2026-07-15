@@ -851,16 +851,16 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                         <th className="text-left px-4 py-3">Status Lanjutan</th>
                       </>
                     )}
-                    {view !== 'kelulusan' && <th className="text-right px-4 py-3">Aksi</th>}
+                    {view !== 'kelulusan' && view !== 'melanjutkan' && <th className="text-right px-4 py-3">Aksi</th>}
                   </>
                 )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
-                <tr><td colSpan={view === 'baru-kelas1' ? 22 : (view === 'melanjutkan' ? (levelTab === 'SD' ? 13 : 12) : (view === 'kelulusan' ? (levelTab === 'SD' ? 8 : 7) : (levelTab === 'SD' ? 9 : 8)))} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
+                <tr><td colSpan={view === 'baru-kelas1' ? 22 : (view === 'melanjutkan' ? (levelTab === 'SD' ? 12 : 11) : (view === 'kelulusan' ? (levelTab === 'SD' ? 8 : 7) : (levelTab === 'SD' ? 9 : 8)))} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={view === 'baru-kelas1' ? 22 : (view === 'melanjutkan' ? (levelTab === 'SD' ? 13 : 12) : (view === 'kelulusan' ? (levelTab === 'SD' ? 8 : 7) : (levelTab === 'SD' ? 9 : 8)))} className="text-center py-12 text-slate-500">
+                <tr><td colSpan={view === 'baru-kelas1' ? 22 : (view === 'melanjutkan' ? (levelTab === 'SD' ? 12 : 11) : (view === 'kelulusan' ? (levelTab === 'SD' ? 8 : 7) : (levelTab === 'SD' ? 9 : 8)))} className="text-center py-12 text-slate-500">
                   {view === 'baru-kelas1' ? 'Tidak ada data siswa baru Kelas 1' : `Tidak ada data siswa untuk jenjang ${levelTab}`}
                 </td></tr>
               ) : view === 'baru-kelas1' ? (
@@ -950,7 +950,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                         </td>
                       </>
                     )}
-                    {view !== 'kelulusan' && (
+                    {view !== 'kelulusan' && view !== 'melanjutkan' && (
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button onClick={() => openDetail(s)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-emerald-400" title="Detail Siswa"><Eye className="h-3.5 w-3.5" /></button>
