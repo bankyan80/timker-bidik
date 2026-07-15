@@ -1136,7 +1136,8 @@ app.post('/api/students/import', authenticateToken, async (req, res) => {
           status_siswa: 'aktif',
           tahun_pelajaran,
         });
-        if (stu && nisn) {
+        // Upsert parent/address regardless of insertStudent result (student may already exist)
+        if (nisn) {
           const parentData: Record<string, any> = {};
           if (row.nama_ayah) parentData.nama_ayah = row.nama_ayah;
           if (row.nama_ibu) parentData.nama_ibu = row.nama_ibu;
