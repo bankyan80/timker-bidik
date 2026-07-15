@@ -356,6 +356,16 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
       const wb = XLSX.read(data, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(ws);
+      function excelDateToDDMMYYYY(val: any): string {
+        if (typeof val === 'number' && val > 30000 && val < 50000) {
+          const d = new Date((val - 25569) * 86400000);
+          const dd = String(d.getDate()).padStart(2, '0');
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const yyyy = d.getFullYear();
+          return `${dd}/${mm}/${yyyy}`;
+        }
+        return String(val || '');
+      }
       const preview = json.slice(0, 10).map((row: any) => ({
         npsn_sekolah: row.npsn_sekolah || '',
         nama_pd: row.nama_pd || row.nama || '',
@@ -364,7 +374,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
         nipd: row.nipd || '',
         nisn: row.nisn || null,
         tempat_lahir: row.tempat_lahir || '',
-        tanggal_lahir: row.tanggal_lahir || '',
+        tanggal_lahir: excelDateToDDMMYYYY(row.tanggal_lahir),
         nik: row.nik || '',
         alamat_rmh: row.alamat_rmh || '',
         desa: row.desa || '',
@@ -393,6 +403,16 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
       const wb = XLSX.read(data, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(ws);
+      function excelDateToDDMMYYYY(val: any): string {
+        if (typeof val === 'number' && val > 30000 && val < 50000) {
+          const d = new Date((val - 25569) * 86400000);
+          const dd = String(d.getDate()).padStart(2, '0');
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const yyyy = d.getFullYear();
+          return `${dd}/${mm}/${yyyy}`;
+        }
+        return String(val || '');
+      }
       const rows = json.map((row: any) => ({
         npsn_sekolah: row.npsn_sekolah || '',
         nama_pd: row.nama_pd || row.nama || '',
@@ -401,7 +421,7 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
         nipd: row.nipd || '',
         nisn: row.nisn || null,
         tempat_lahir: row.tempat_lahir || '',
-        tanggal_lahir: row.tanggal_lahir || '',
+        tanggal_lahir: excelDateToDDMMYYYY(row.tanggal_lahir),
         nik: row.nik || '',
         alamat_rmh: row.alamat_rmh || '',
         desa: row.desa || '',
