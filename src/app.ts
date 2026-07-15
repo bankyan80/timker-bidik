@@ -1205,6 +1205,58 @@ app.post('/api/students/import', authenticateToken, async (req, res) => {
   }
 });
 
+// Import melanjutkan data — match by NISN, set destination school + status
+app.post('/api/students/import-melanjutkan', authenticateToken, async (req, res) => {
+  try {
+    const { rows } = req.body;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ error: 'Data kosong' });
+    }
+    const db = getDb();
+    let updated = 0, skipped = 0, errors: string[] = [];
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const nisn = row.nisn ? String(row.nisn).trim() : '';
+      const nama = (row.nama_siswa || row.nama_pd || '').trim();
+      const sekolahTujuan = (row.sekolah_tujuan || '').trim();
+      const kecTujuan = (row.kecamatan_sekolah_tujuan || '').trim();
+      const kabTujuan = (row.kab_kota_tujuan || '').trim();
+      if (!nisn && !nama) { skipped++; continue; }
+      try {
+        // Find student by NISN first, then by name
+        let stu: any = null;
+        if (nisn && nisn !== '-') {
+          const r = await db?.execute({ sql: 'SELECT * FROM students WHERE nisn = ? LIMIT 1', args: [nisn] });
+          stu = r?.rows[0] || null;
+        }
+        if (!stu && nama) {
+          const r = await db?.execute({ sql: 'SELECT * FROM students WHERE nama = ? LIMIT 1', args: [nama] });
+          stu = r?.rows[0] || null;
+        }
+        if (!stu) {
+          skipped++;
+          errors.push(`Baris ${i + 1}: Siswa tidak ditemukan (${nisn || nama})`);
+          continue;
+        }
+        const statusLanjutan = sekolahTujuan ? 'melanjutkan' : 'tidak_melanjutkan';
+        await db?.execute({
+          sql: `UPDATE students SET sekolah_tujuan = ?, kecamatan_tujuan = ?, kab_kota_tujuan = ?, status_lanjutan = ? WHERE id = ?`,
+          args: [sekolahTujuan || null, kecTujuan || null, kabTujuan || null, statusLanjutan, stu.id]
+        });
+        updated++;
+      } catch (e: any) {
+        skipped++;
+        errors.push(`Baris ${i + 1}: ${e.message || 'error'}`);
+      }
+    }
+    await logActivity(req, 'import', 'student', null, { action: 'import-melanjutkan', updated, skipped });
+    res.json({ updated, skipped, errors: errors.slice(0, 20) });
+  } catch (err) {
+    console.error('POST /api/students/import-melanjutkan error:', err);
+    res.status(500).json({ error: 'Gagal mengimpor data melanjutkan' });
+  }
+});
+
 app.get('/api/students/lookup-by-nik/:nik', authenticateToken, async (req, res) => {
   const { nik } = req.params;
   if (!nik || nik.length < 5) return res.json(null);

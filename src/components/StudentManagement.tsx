@@ -86,6 +86,14 @@ export default function StudentManagement({ view = 'all' }: { view?: StudentView
   const [uploadResult, setUploadResult] = useState<{ created: number; updated: number; skipped: number; errors: string[] } | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Melanjutkan upload state
+  const [melUploadOpen, setMelUploadOpen] = useState(false);
+  const [melUploadFile, setMelUploadFile] = useState<File | null>(null);
+  const [melUploadPreview, setMelUploadPreview] = useState<any[]>([]);
+  const [melUploadStatus, setMelUploadStatus] = useState<'idle' | 'parsing' | 'preview' | 'uploading' | 'done' | 'error'>('idle');
+  const [melUploadResult, setMelUploadResult] = useState<{ updated: number; skipped: number; errors: string[] } | null>(null);
+  const melFileInputRef = React.useRef<HTMLInputElement>(null);
+
   const viewConfig: Record<StudentView, { title: string; desc: string; icon: React.ComponentType<{ className?: string }> }> = {
     all: { title: 'Data Siswa Tahun Pelajaran ' + currentTP, desc: 'Semua data siswa aktif — jenjang SD, TK, KB', icon: GraduationCap },
     'baru-kelas1': { title: 'Data Siswa Baru', desc: 'Siswa baru masuk Kelas 1 SD — TP ' + currentTP, icon: UserPlus },
@@ -454,6 +462,81 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
     }
   }
 
+  // Melanjutkan Excel handlers
+  async function handleMelUploadFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMelUploadFile(file);
+    setMelUploadStatus('parsing');
+    try {
+      const XLSX = await import('xlsx');
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws);
+      const preview = json.slice(0, 10).map((row: any) => ({
+        nisn: row.nisn ? String(row.nisn).trim() : '',
+        nama_siswa: row.nama_siswa || row.nama_pd || '',
+        npsn: row.npsn || '',
+        nama_sekolah: row.nama_sekolah || '',
+        kecamatan: row.kecamatan || '',
+        sekolah_tujuan: row.sekolah_tujuan || '',
+        kecamatan_sekolah_tujuan: row.kecamatan_sekolah_tujuan || '',
+        kab_kota_tujuan: row.kab_kota_tujuan || '',
+      }));
+      setMelUploadPreview(preview);
+      setMelUploadStatus('preview');
+    } catch {
+      setMelUploadStatus('error');
+    }
+  }
+
+  async function doMelUpload() {
+    if (!melUploadFile) return;
+    setMelUploadStatus('uploading');
+    try {
+      const XLSX = await import('xlsx');
+      const data = await melUploadFile.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws);
+      const rows = json.map((row: any) => ({
+        nisn: row.nisn ? String(row.nisn).trim() : '',
+        nama_siswa: row.nama_siswa || row.nama_pd || '',
+        npsn: row.npsn || '',
+        nama_sekolah: row.nama_sekolah || '',
+        kecamatan: row.kecamatan || '',
+        sekolah_tujuan: row.sekolah_tujuan || '',
+        kecamatan_sekolah_tujuan: row.kecamatan_sekolah_tujuan || '',
+        kab_kota_tujuan: row.kab_kota_tujuan || '',
+      }));
+      const res = await api('/api/students/import-melanjutkan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setMelUploadResult(result);
+        setMelUploadStatus('done');
+        load();
+      } else {
+        setMelUploadResult({ updated: 0, skipped: 0, errors: [result.error || 'Gagal'] });
+        setMelUploadStatus('error');
+      }
+    } catch {
+      setMelUploadResult({ updated: 0, skipped: 0, errors: ['Gagal terhubung ke server'] });
+      setMelUploadStatus('error');
+    }
+  }
+
+  function resetMelUpload() {
+    setMelUploadFile(null);
+    setMelUploadPreview([]);
+    setMelUploadStatus('idle');
+    setMelUploadResult(null);
+  }
+
   const levels = isOperator ? [operatorLevel!] : ['SD', 'TK', 'KB'];
   const levelCount = (lv: string) => {
     let base = students;
@@ -488,6 +571,11 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
           <div className="flex items-center gap-2">
             {view === 'baru-kelas1' && (
               <button onClick={() => { resetUpload(); setUploadModalOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors">
+                <Upload className="h-4 w-4" /> Upload Excel
+              </button>
+            )}
+            {view === 'melanjutkan' && (
+              <button onClick={() => { resetMelUpload(); setMelUploadOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors">
                 <Upload className="h-4 w-4" /> Upload Excel
               </button>
             )}
@@ -623,6 +711,14 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                     {levelTab === 'SD' && <th className="text-left px-4 py-3">Rombel</th>}
                     <th className="text-left px-4 py-3">Sekolah</th>
                     <th className="text-left px-4 py-3">Status</th>
+                    {view === 'melanjutkan' && (
+                      <>
+                        <th className="text-left px-4 py-3">Sekolah Tujuan</th>
+                        <th className="text-left px-4 py-3">Kec. Tujuan</th>
+                        <th className="text-left px-4 py-3">Kab/Kota Tujuan</th>
+                        <th className="text-left px-4 py-3">Status Lanjutan</th>
+                      </>
+                    )}
                     <th className="text-right px-4 py-3">Aksi</th>
                   </>
                 )}
@@ -630,9 +726,9 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
-                <tr><td colSpan={view === 'baru-kelas1' ? 22 : (levelTab === 'SD' ? 9 : 8)} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
+                <tr><td colSpan={view === 'baru-kelas1' ? 22 : (view === 'melanjutkan' ? (levelTab === 'SD' ? 13 : 12) : (levelTab === 'SD' ? 9 : 8))} className="text-center py-12 text-slate-500">Memuat data...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={view === 'baru-kelas1' ? 22 : (levelTab === 'SD' ? 9 : 8)} className="text-center py-12 text-slate-500">
+                <tr><td colSpan={view === 'baru-kelas1' ? 22 : (view === 'melanjutkan' ? (levelTab === 'SD' ? 13 : 12) : (levelTab === 'SD' ? 9 : 8))} className="text-center py-12 text-slate-500">
                   {view === 'baru-kelas1' ? 'Tidak ada data siswa baru Kelas 1' : `Tidak ada data siswa untuk jenjang ${levelTab}`}
                 </td></tr>
               ) : view === 'baru-kelas1' ? (
@@ -708,6 +804,20 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                         )}
                       </div>
                     </td>
+                    {view === 'melanjutkan' && (
+                      <>
+                        <td className="px-4 py-3 text-slate-300 text-[11px]">{(s as any).sekolah_tujuan || '-'}</td>
+                        <td className="px-4 py-3 text-slate-300 text-[11px]">{(s as any).kecamatan_tujuan || '-'}</td>
+                        <td className="px-4 py-3 text-slate-300 text-[11px]">{(s as any).kab_kota_tujuan || '-'}</td>
+                        <td className="px-4 py-3">
+                          {(s as any).status_lanjutan ? (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${(s as any).status_lanjutan === 'melanjutkan' ? 'text-emerald-400 bg-emerald-950/40' : 'text-amber-400 bg-amber-950/40'}`}>
+                              {(s as any).status_lanjutan === 'melanjutkan' ? 'Melanjutkan' : 'Tidak Melanjutkan'}
+                            </span>
+                          ) : <span className="text-slate-500">-</span>}
+                        </td>
+                      </>
+                    )}
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={() => openDetail(s)} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-emerald-400" title="Detail Siswa"><Eye className="h-3.5 w-3.5" /></button>
@@ -1324,6 +1434,157 @@ function normalizeGender(val: string | null | undefined): 'Laki-laki' | 'Perempu
                 <div className="flex justify-end">
                   <button onClick={() => { resetUpload(); }}
                     className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Coba Lagi</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Melanjutkan Upload Modal */}
+      {melUploadOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { setMelUploadOpen(false); resetMelUpload(); }}>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <FileSpreadsheet className="h-5 w-5 text-emerald-400" /> Import Data Melanjutkan
+                </h2>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">Upload Excel — NISN/Siswa dicocokkan, sekolah tujuan & status diupdate</p>
+              </div>
+              <button onClick={() => { setMelUploadOpen(false); resetMelUpload(); }} className="p-1.5 hover:bg-slate-700/50 rounded text-slate-400 hover:text-white transition-colors cursor-pointer">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Step 1: Select file */}
+            {melUploadStatus === 'idle' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-mono text-slate-400 uppercase">File Excel (.xlsx)</label>
+                  <div className="mt-1 flex items-center gap-3">
+                    <input ref={melFileInputRef} type="file" accept=".xlsx,.xls" onChange={handleMelUploadFile} className="hidden" />
+                    <button onClick={() => melFileInputRef.current?.click()}
+                      className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-600 hover:border-cyan-700 rounded-lg text-sm text-white transition-colors cursor-pointer">
+                      <Upload className="h-4 w-4" /> {melUploadFile ? melUploadFile.name : 'Pilih File'}
+                    </button>
+                    {melUploadFile && <span className="text-xs text-slate-400">{melUploadFile.name}</span>}
+                  </div>
+                </div>
+                <div>
+                  <button onClick={async () => {
+                    const XLSX = await import('xlsx');
+                    const headers = ['npsn','nama_sekolah','kecamatan','nisn','nama_siswa','sekolah_tujuan','kecamatan_sekolah_tujuan','kab_kota_tujuan'];
+                    const sample = ['20215216','SDN 1 LEMAHABANG','LEMAHABANG','','','','',''];
+                    const ws = XLSX.utils.aoa_to_sheet([headers, sample]);
+                    ws['!cols'] = headers.map(() => ({ wch: 22 }));
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Template Melanjutkan');
+                    XLSX.writeFile(wb, 'template_melanjutkan.xlsx');
+                  }} className="flex items-center gap-2 px-3 py-1.5 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/30 border border-emerald-700/50 hover:border-emerald-600 rounded-lg transition-colors cursor-pointer">
+                    <Download className="h-3.5 w-3.5" /> Unduh Template Excel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Parsing */}
+            {melUploadStatus === 'parsing' && (
+              <div className="flex items-center justify-center py-12 gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-cyan-400" />
+                <span className="text-sm text-slate-400">Membaca file Excel...</span>
+              </div>
+            )}
+
+            {/* Preview */}
+            {melUploadStatus === 'preview' && (
+              <div className="space-y-4">
+                <p className="text-xs text-slate-400">Preview {melUploadPreview.length} baris pertama:</p>
+                <div className="border border-slate-700 rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto max-h-[300px]">
+                    <table className="w-full text-[11px]">
+                      <thead>
+                        <tr className="bg-slate-800 text-slate-400 font-mono uppercase">
+                          <th className="px-2 py-2 text-left">No</th>
+                          <th className="px-2 py-2 text-left">NISN</th>
+                          <th className="px-2 py-2 text-left">Nama Siswa</th>
+                          <th className="px-2 py-2 text-left">NPSN</th>
+                          <th className="px-2 py-2 text-left">Nama Sekolah</th>
+                          <th className="px-2 py-2 text-left">Kecamatan</th>
+                          <th className="px-2 py-2 text-left">Sekolah Tujuan</th>
+                          <th className="px-2 py-2 text-left">Kec. Tujuan</th>
+                          <th className="px-2 py-2 text-left">Kab/Kota Tujuan</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800">
+                        {melUploadPreview.map((row, i) => (
+                          <tr key={i} className="hover:bg-slate-800/30">
+                            <td className="px-2 py-1.5 text-slate-500 font-mono">{i + 1}</td>
+                            <td className="px-2 py-1.5 text-slate-400 font-mono">{row.nisn || '-'}</td>
+                            <td className="px-2 py-1.5 text-white font-medium">{row.nama_siswa}</td>
+                            <td className="px-2 py-1.5 text-cyan-400 font-mono text-[10px]">{row.npsn || '-'}</td>
+                            <td className="px-2 py-1.5 text-slate-300">{row.nama_sekolah || '-'}</td>
+                            <td className="px-2 py-1.5 text-slate-300">{row.kecamatan || '-'}</td>
+                            <td className="px-2 py-1.5 text-emerald-400">{row.sekolah_tujuan || '-'}</td>
+                            <td className="px-2 py-1.5 text-slate-300">{row.kecamatan_sekolah_tujuan || '-'}</td>
+                            <td className="px-2 py-1.5 text-slate-300">{row.kab_kota_tujuan || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button onClick={resetMelUpload} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Batal</button>
+                  <button onClick={doMelUpload} className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors flex items-center gap-2">
+                    <Upload className="h-3.5 w-3.5" /> Import Sekarang
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Uploading */}
+            {melUploadStatus === 'uploading' && (
+              <div className="flex items-center justify-center py-12 gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-cyan-400" />
+                <span className="text-sm text-slate-400">Mengimpor data...</span>
+              </div>
+            )}
+
+            {/* Done */}
+            {melUploadStatus === 'done' && melUploadResult && (
+              <div className="space-y-4">
+                <div className="bg-emerald-950/30 border border-emerald-900/50 rounded-lg p-4">
+                  <p className="text-sm text-emerald-400 font-bold">Import Selesai!</p>
+                  <div className="mt-2 text-xs text-slate-300 space-y-1">
+                    <p><span className="text-cyan-400 font-mono">{melUploadResult.updated}</span> siswa diperbarui</p>
+                    {melUploadResult.skipped > 0 && <p><span className="text-amber-400 font-mono">{melUploadResult.skipped}</span> dilewati (error/tidak ditemukan)</p>}
+                    {melUploadResult.errors.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-red-400 font-mono text-[10px]">ERROR:</p>
+                        {melUploadResult.errors.map((e, i) => <p key={i} className="text-[10px] text-red-300">{e}</p>)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={() => { setMelUploadOpen(false); resetMelUpload(); }}
+                    className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors">
+                    Tutup
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Error */}
+            {melUploadStatus === 'error' && (
+              <div className="space-y-4">
+                <div className="bg-red-950/30 border border-red-900/50 rounded-lg p-4">
+                  <p className="text-sm text-red-400 font-bold">Gagal Import</p>
+                  {melUploadResult?.errors.map((e, i) => <p key={i} className="text-[11px] text-red-300 mt-1">{e}</p>)}
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={resetMelUpload} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Coba Lagi</button>
                 </div>
               </div>
             )}

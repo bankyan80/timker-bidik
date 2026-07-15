@@ -425,6 +425,10 @@ export async function initSchema() {
       });
     } catch { /* ignore */ }
   }
+  // Migration: add melanjutkan destination columns to students
+  for (const col of ['sekolah_tujuan', 'kecamatan_tujuan', 'kab_kota_tujuan', 'status_lanjutan']) {
+    try { await client.execute(`ALTER TABLE students ADD COLUMN ${col} TEXT`); } catch { /* column may already exist */ }
+  }
 }
 
 export async function seedData() {
